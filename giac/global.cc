@@ -3232,6 +3232,10 @@ extern "C" void Sleep(unsigned int miliSecond);
     }
   }
 
+#ifndef CLK_TCK 
+  #define CLK_TCK      CLOCKS_PER_SEC 
+#endif 
+
 #ifndef HAVE_NO_SYS_TIMES_H
    double delta_tms(struct tms tmp1,struct tms tmp2){
 #if defined(HAVE_SYSCONF) && !defined(EMCC)

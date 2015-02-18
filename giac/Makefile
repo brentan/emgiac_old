@@ -25,10 +25,12 @@ giac.js:	$(GIACOBJS)
 #	/bin/rm giac.js.lz
 #	lzma/lzma-native < giacggb.js > giacggb.js.compress
 #	cp giacggb.js /shared/ggbjs/giac.js
-	scp giac.js malherbe:public_html/giac
-	lzip giac.js
-	scp giac.js.lz malherbe:public_html/giac
-	lzip -d giac.js.lz
+#	scp giac.js malherbe:public_html/giac
+#	lzip giac.js
+#	scp giac.js.lz malherbe:public_html/giac
+#	lzip -d giac.js.lz
+	cp giac.js ..
+	cp giac.js.mem ..
 giac:	$(GIACOBJS) 
 	$(CXX) $(LDJSFLAGS) $(GIACOBJS) $(LIBS) -o giac.js #--closure 1 
 #	/bin/cp giacggb.js giac.js
