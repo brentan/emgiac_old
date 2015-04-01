@@ -7246,7 +7246,7 @@ namespace giac {
   const mksa_unit __K_unit={1,0,0,0,0,1,0,0,0};
   const mksa_unit __mol_unit={1,0,0,0,0,0,1,0,0};
   const mksa_unit __cd_unit={1,0,0,0,0,0,0,1,0};
-  const mksa_unit __E_unit={1,0,0,0,0,0,0,0,1};
+  const mksa_unit __E_unit={1,0,0,0,0,0,0,0,1};  // CURRENCY- Euro to Franc.  A WAY TO HIJACK THIS? FOR MY OWN USE?
   const mksa_unit __Bq_unit={1,0,0,-1,0,0,0,0,0};
   const mksa_unit __C_unit={1,0,0,1,1,0,0,0,0};
   const mksa_unit __F_unit={1,-2,-1,4,2,0,0,0,0};

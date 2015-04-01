@@ -11117,7 +11117,10 @@ namespace giac {
 	s="ggbpnt[";
       break;
     default:
-      s=calc_mode(contextptr)==1?"{":"[";
+      if(tex)
+        s="\\begin{bmatrix}";
+      else
+        s=calc_mode(contextptr)==1?"{":"[";
     }
     return s;
   }
@@ -11129,35 +11132,51 @@ namespace giac {
       return s;
     case _SET__VECT:
       if (xcas_mode(contextptr)>0 || calc_mode(contextptr)==1){
-	if (tex)
-	  return "\\}";
-	else
-	  return "}";
+  if (tex)
+    return "\\}";
+  else
+    return "}";
       }
       else
-	return "]";
+  return "]";
     case _RPN_STACK__VECT:
       return ")";
     case _RPN_FUNC__VECT:
       return " >>";
     case _LIST__VECT:
       if (tex)
-	return "\\}";
+  return "\\}";
       else
-	return abs_calc_mode(contextptr)==38?"}":"]";
+  return abs_calc_mode(contextptr)==38?"}":"]";
     case _GGB__VECT:
       if (calc_mode(contextptr)==1)
-	return ")";
+  return ")";
       else
-	return "]";
+  return "]";
     case _POINT__VECT: case _VECTOR__VECT: 
       return "]";
     case _GGBVECT:
       return calc_mode(contextptr)==1?")":"]";
-    case 0: case _MATRIX__VECT:
+    case _MATRIX__VECT:
       return calc_mode(contextptr)==1?"}":"]";
     default:
-      return calc_mode(contextptr)==1?"}":"]";
+      if(tex)
+        return "\\end{bmatrix}";
+      else
+        return calc_mode(contextptr)==1?"}":"]";
+    }    
+  }
+
+  string mid_VECT_string(int subtype,bool tex,GIAC_CONTEXT){
+    string s;
+    switch (subtype){
+    case _SEQ__VECT: case _SET__VECT: case _RPN_STACK__VECT: case _RPN_FUNC__VECT: case _LIST__VECT: case _GGB__VECT: case _POINT__VECT: case _VECTOR__VECT: case _GGBVECT: case _MATRIX__VECT:
+      return ",";
+    default:
+      if(tex)
+        return " & ";
+      else
+        return ",";
     }    
   }
 

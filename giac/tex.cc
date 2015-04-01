@@ -20,6 +20,7 @@
 //#include <fcntl.h>
 #include <stdlib.h>
 #include <stdio.h>
+ #include "emscripten.h"
 #ifdef __ANDROID__
 using std::vector;
 #endif
@@ -187,6 +188,8 @@ namespace giac {
   // dimension of the LaTeX output figures default 12 cm x 12 cm
   double horiz_latex=12.;
   double vert_latex=12.;
+  bool unit_mode = false;
+  bool function_mode = false;
   const char tex_preamble[]="\\documentclass{article} \n\\usepackage{pst-plot,color} \n\\usepackage{graphicx} \n\\begin{document}\n";
 #ifdef RTOS_THREADX
   const char tex_color[]="";
@@ -196,6 +199,8 @@ namespace giac {
   const char tex_end[]="\n\\end{document}";
   const char mbox_begin[]="\\mathrm{"; // ("\\mbox{");
   const char mbox_end[]="}";
+  const char opname_begin[]="\\operatorname{";
+  const char opname_end[]="}";
 
   string spread2tex(const matrice & m,int formule,GIAC_CONTEXT){
     int l=m.size();
@@ -263,12 +268,9 @@ namespace giac {
   static string matrix2tex(const matrice & m,GIAC_CONTEXT){
     int l=m.size();
     if (!l)
-      return string("()");
+      return string("\\begin{bmatrix}\\end{bmatrix}");
     int c=m.front()._VECTptr->size();
-    string s("\\left(\\begin{array}{");
-    for (int j=0;j<c;++j)
-      s += 'c';
-    s += "}\n";
+    string s("\\begin{bmatrix}");
     for (int i=0;i<l;++i){
       for (int j=0;j<c;++j){
 	  s += gen2tex(m[i][j],contextptr) ;
@@ -279,18 +281,19 @@ namespace giac {
 	s += " \\\\";
       s+='\n';
     }
-    s += "\\end{array}\\right) ";
+    s += "\\end{bmatrix} ";
     return s;
   }
 
   static string _VECT2tex(const vecteur & v,int subtype,GIAC_CONTEXT){
     string s(begin_VECT_string(subtype,true,contextptr));
+    string m(mid_VECT_string(subtype,true,contextptr));
     vecteur::const_iterator it=v.begin(),itend=v.end();
     for (;it!=itend;){
       s += gen2tex(*it,contextptr);
       ++it;
       if (it!=itend)
-	s += ',';
+  s += m;
     }
     s += end_VECT_string(subtype,true,contextptr);
     return s;
@@ -303,7 +306,7 @@ namespace giac {
     string s;
     for (;;){
       if ( (it->type==_CPLX && !is_zero(*it->_CPLXptr) && !is_zero(*(it->_CPLXptr+1))) || (it->type==_SYMB && ( it->_SYMBptr->sommet==at_plus || (it->_SYMBptr->sommet==at_neg && need_parenthesis(it->_SYMBptr->feuille)) ) ) )
-	s += string("(")+gen2tex(*it,contextptr)+string(")");
+	s += string("\\left(")+gen2tex(*it,contextptr)+string("\\right)");
       else 
 	s += gen2tex(*it,contextptr);
       ++it;
@@ -612,7 +615,7 @@ namespace giac {
   static string idnt2tex(const string & sorig,bool & mathmode){
     string s0;
     mathmode=greek2tex(sorig,s0,true)!=0;
-    if (mathmode)
+    if (mathmode && !giac::unit_mode)
       return s0;
     mathmode=true;
     int n=s0.size(),j;
@@ -659,15 +662,25 @@ namespace giac {
 
   static string idnt2tex(const string & e){
     bool mathmode;
-    if (e.size()==3 && (e=="sin" || e=="cos" || e=="tan" || e=="exp" || e=="log"))
+    if (e.size()==3 && (e=="sin" || e=="cos" || e=="tan" || e=="exp" || e=="log")) {
       return "\\"+e;
+    }
     if (e.size()==2 && (e=="ln"))
       return "\\"+e;
-    string s=idnt2tex(e,mathmode);
-    if (mathmode || s.size()==1)
+    if(giac::unit_mode) {
+      string s = e;
+      s.erase(0,1);
       return s;
-    else
-      return mbox_begin+translate_underscore(s)+mbox_end;
+    }
+    string s = idnt2tex(e,mathmode);
+    if (mathmode)
+      return s;
+    else if(s.compare(string("_")) == 0)
+      return string("");
+    else if(giac::function_mode)
+      return opname_begin + s + opname_end;  //mbox_begin+translate_underscore(s)+mbox_end;
+    else 
+      return s;
   }
 
   static string idnt2tex(const gen & e,GIAC_CONTEXT){
@@ -1103,7 +1116,7 @@ namespace giac {
       if (mys.sommet==at_inv && (feu.is_symb_of_sommet(at_prod) || feu.is_symb_of_sommet(at_plus) || feu.type<=_IDNT) ){
 	return string("\\frac{1}{") + gen2tex(feu,contextptr) +string("}");
       }
-      return opstring + "\\left(" + gen2tex(feu,contextptr) +"\\right)" ;
+      return opstring + "\\left({" + gen2tex(feu,contextptr) +"}\\right)" ;
     }
     string s;
     int l=feu._VECTptr->size();
@@ -1170,17 +1183,37 @@ namespace giac {
 	res ="\\left("+res+"\\right)";
       return res+"^{"+gen2tex(v.back(),contextptr)+'}';
     }
+    /*
     s = opstring +"\\left(";
     for (int i=0;;++i){
       s += gen2tex((*(feu._VECTptr))[i],contextptr);
       if (i==l-1)
 	return s+"\\right)";
-      s += ',';
+      s += ':';
     }
+    */
+
+      s = opstring +"\\Unit{";
+      s += gen2tex((*(feu._VECTptr))[0],contextptr);
+      s += "}{";
+      if(l == 1)
+        return s+"}";
+      giac::unit_mode = true;
+      for (int i=1;;++i){
+        s += gen2tex((*(feu._VECTptr))[i],contextptr);
+        if (i==l-1) {
+          giac::unit_mode = false;
+          return s+"}";
+        }
+        s += ',';
+      }
   }
 
   // assume math mode enabled
   string gen2tex(const gen & e,GIAC_CONTEXT){
+    EM_ASM_({
+      console.log($0);
+    },e.type);
     switch (e.type){
     case _INT_: case _ZINT: case _REAL:
       return e.print(contextptr);

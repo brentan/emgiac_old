@@ -26,6 +26,7 @@ namespace giac {
   // dimension of the LaTeX output figures default 12 cm x 12 cm
   extern double horiz_latex; 
   extern double vert_latex;  
+  extern bool function_mode;
   extern const char tex_preamble[];
   extern const char tex_end[];
   extern const char mbox_begin[];
