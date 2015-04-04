@@ -24,6 +24,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+#include "emscripten.h"
 using namespace std;
 #ifndef NSPIRE
 #include <cstdlib>
@@ -1812,7 +1813,7 @@ namespace giac {
       evaled=global_eval(*g._IDNTptr,level);
     else {
       if (!g._IDNTptr->in_eval(level-1,g,evaled,contextptr))
-	return false;
+	     return false;
     }
     if ( evaled.type!=_VECT || evaled.subtype!=_ASSUME__VECT )
       return true;
@@ -1923,7 +1924,7 @@ namespace giac {
       *logptr(contextptr) << "Stopped in in_eval" << endl;
       gensizeerr(gettext("Stopped by user interruption."),evaled);
       return true;
-    }    
+    }        
     switch (type) {
     case _INT_: case _DOUBLE_: case _FLOAT_: case _ZINT: case _REAL: case _CPLX: case _POLY: case _FRAC: case _SPOL1: case _EXT: case _STRNG: case _MAP: case _EQW: case _GROB: case _POINTER_:
       return false;
@@ -1933,7 +1934,7 @@ namespace giac {
       return in_eval_vect(*this,evaled,level,contextptr);
     case _SYMB:
       if (subtype==_SPREAD__SYMB)
-	return false;
+	      return false;
       if (_SYMBptr->sommet==at_plus || _SYMBptr->sommet==at_prod || _SYMBptr->sommet==at_pow || _SYMBptr->sommet==at_of || _SYMBptr->sommet==at_local || _SYMBptr->sommet==at_ifte || _SYMBptr->sommet==at_bloc){
 	int & elevel=eval_level(contextptr);
 	short int slevel=elevel;
@@ -1979,19 +1980,53 @@ namespace giac {
 	if (_SYMBptr->sommet==at_of || _SYMBptr->sommet==at_local || is_ifte || _SYMBptr->sommet==at_bloc){
 	  elevel=level;
 	  evaled=_SYMBptr->feuille; // FIXME must also set eval_level to level
-	}
-	else {
+	} else {
 	  if (!_SYMBptr->feuille.in_eval(level,evaled,contextptr))
-	  evaled=_SYMBptr->feuille;
+	    evaled=_SYMBptr->feuille;
 	}
-	if (is_ifte)
+	if (is_ifte) 
 	  evaled=ifte(evaled,true,contextptr);
-	else
-	  evaled=(*_SYMBptr->sommet.ptr())(evaled,contextptr);
+	else {
+    // CODE ADDED TO CALL OUTSIDE FUNCTION 'eval_method' AND TEST FOR PRESENCE OF THIS METHOD...IF SO, RETURN VALUE!
+    // First, zip up all the inputs for the 'function' into a string to send to the function (as array so we can use the 'apply' method)
+    vecteur::const_iterator it=_SYMBptr->feuille._VECTptr->begin(), itend=_SYMBptr->feuille._VECTptr->end();
+    std::string all_inputs;
+    std::string method_call;
+    if (it<itend) {
+      add_print(method_call, *it, contextptr);
+      ++it;
+      for(;;){
+        if ( (it->type==_SYMB) && (it->_SYMBptr->sommet==at_quote))
+          all_inputs += "'"+it->_SYMBptr->feuille.evalf(eval_level(contextptr),contextptr).print(contextptr)+"'";
+        else if ( (it->type==_SYMB) && (it->_SYMBptr->sommet==at_sto) )
+          all_inputs += "("+it->evalf(eval_level(contextptr),contextptr).print(contextptr)+")";
+        else
+          all_inputs += it->evalf(eval_level(contextptr),contextptr).print(contextptr); 
+        ++it;
+        if (it==itend)
+          break;
+        all_inputs += ",";
+      }
+    }
+    std::string asm_code;
+    asm_code += "eval_method( '";
+    asm_code += method_call;
+    asm_code += "' , '";
+    asm_code += all_inputs;
+    asm_code += "' );";
+    std::string out = emscripten_run_script_string( asm_code.data() );
+    if(out.length() > 0) {
+      if(out.compare(0,5,"ERROR") == 0)
+        evaled = gensizeerr(out.substr(7,string::npos));
+      else
+        evaled = gen(out, contextptr);
+    } else
+	   evaled=(*_SYMBptr->sommet.ptr())(evaled,contextptr); 
+  }
 	elevel=slevel;
       }
       else
-	evaled=_SYMBptr->eval(level,contextptr);
+        evaled=_SYMBptr->eval(level,contextptr);
       return true;
     case _USER:
       return in_eval_user(*this,evaled,level,contextptr);
@@ -8203,7 +8238,7 @@ namespace giac {
 	if (lid.front()==vx_var)
 	// suspect something like P:=x^3+1 then P(2)
 	  *logptr(contextptr) << "Warning, evaluating univariate expression of x(value) like if expression was a function.\nYou should write subst(" << *this << "," << lid.front() << "," << i << ")" << endl;
-	else
+	else 
 	  return gensizeerr("Expression used like a function "+this->print(contextptr)+"\nYou should write subst("+this->print(contextptr)+","+lid.front().print(contextptr)+","+i.print(contextptr)+")");
 	return subst(*this,lid.front(),i,false,contextptr);
       }

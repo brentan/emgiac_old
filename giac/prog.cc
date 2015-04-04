@@ -814,7 +814,7 @@ namespace giac {
       warn=true;
 #endif
     if (warn){
-      *logptr(contextptr) << gettext("// Parsing ") << d << endl;
+      //*logptr(contextptr) << gettext("// Parsing ") << d << endl;
       if (c.is_symb_of_sommet(at_derive))
 	*logptr(contextptr) << gettext("Warning, defining a derivative function should be done with function_diff or unapply: ") << c << endl;
        if (c.type==_SYMB && c._SYMBptr->sommet!=at_local && c._SYMBptr->sommet!=at_bloc && c._SYMBptr->sommet!=at_when && c._SYMBptr->sommet!=at_for && c._SYMBptr->sommet!=at_ifte){
@@ -7730,7 +7730,7 @@ namespace giac {
     "_g_",
     "_galC",
     "_galUK",
-    "_galUS",
+    "_gal",
     "_gf",
     "_gmol",
     "_gon",
@@ -7743,7 +7743,7 @@ namespace giac {
     "_hp",
     "_inH2O",
     "_inHg",
-    "_inch"       ,
+    "_inch",
     "_j",
     "_k_",
     "_kg",
@@ -7903,7 +7903,7 @@ namespace giac {
   gen _ftUS_unit(mksa_register("_ftUS",&__ftUS_unit));
   gen _Gal(mksa_register("_Gal",&__Gal));
   gen _g_unit(mksa_register("_g",&__g_unit));
-  gen _galUS_unit(mksa_register("_galUS",&__galUS_unit));
+  gen _galUS_unit(mksa_register("_gal",&__galUS_unit));
   gen _galC_unit(mksa_register("_galC",&__galC_unit));
   gen _galUK_unit(mksa_register("_galUK",&__galUK_unit));
   gen _gf_unit(mksa_register("_gf",&__gf_unit));

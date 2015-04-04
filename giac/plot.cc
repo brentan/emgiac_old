@@ -10477,8 +10477,12 @@ namespace giac {
 
   gen _archive(const gen & args,GIAC_CONTEXT){
     if ( args.type==_STRNG && args.subtype==-1) return  args;
-    gen tmp=check_secure();
-    if (is_undef(tmp)) return tmp;
+
+    #ifndef EMCC //Emscripten allows us to 'store' archive in memory file system that is removed on refresh
+      gen tmp=check_secure();
+      if (is_undef(tmp)) return tmp;
+    #endif
+
     if (args.type==_STRNG){ // archive session state
       return archive_session(true,*args._STRNGptr,contextptr);
     }

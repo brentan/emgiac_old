@@ -18,6 +18,7 @@
  *  along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 using namespace std;
+#include "emscripten.h"
 #include <cmath>
 #include <fstream>
 #include <string>
@@ -1069,35 +1070,46 @@ namespace giac {
     if (contextptr){
       const context * cur=contextptr;
       for (;cur->previous;cur=cur->previous){
-	sym_tab::const_iterator it=cur->tabptr->find(id_name);
-	if (it!=cur->tabptr->end()){
-	  if (!it->second.in_eval(level,evaled,contextptr->globalcontextptr))
-	    evaled=it->second;
-	  return true;
-	}
+      	sym_tab::const_iterator it=cur->tabptr->find(id_name);
+      	if (it!=cur->tabptr->end()){
+      	  if (!it->second.in_eval(level,evaled,contextptr->globalcontextptr))
+      	    evaled=it->second;
+      	  return true;
+      	}
       }
       // now at global level
       // check for quoted
       if (cur->quoted_global_vars && !cur->quoted_global_vars->empty() && equalposcomp(*cur->quoted_global_vars,orig)) 
-	return false;
+	     return false;
       // printsymtab(cur->tabptr);
       sym_tab::const_iterator it=cur->tabptr->find(id_name);
       if (it==cur->tabptr->end()){
         if (No38Lookup) return false;
-	if (sto_38 && abs_calc_mode(contextptr)==38)
-	  return eval_38(level,orig,evaled,id_name,contextptr);
-	return false;
+      	if (sto_38 && abs_calc_mode(contextptr)==38)
+      	  return eval_38(level,orig,evaled,id_name,contextptr);
+        // CODE ADDED TO CALL OUTSIDE FUNCTION 'eval_function' AND TEST FOR PRESENCE OF THIS VARIABLE...IF SO, RETURN VALUE!
+        std::string asm_code;
+        asm_code += "eval_function( '";
+        asm_code += id_name;
+        asm_code += "' );";
+        std::string out = emscripten_run_script_string( asm_code.data() );
+        if(out.length() > 0) {
+          evaled = gen(out, contextptr);
+          return true;
+        }
+      	return false;
       }
       else {
-	if (!it->second.in_eval(level,evaled,contextptr->globalcontextptr))
-	  evaled=it->second;
-	return true;
+      	if (!it->second.in_eval(level,evaled,contextptr->globalcontextptr))
+      	  evaled=it->second;
+      	return true;
       }
       if (!No38Lookup && sto_38){ //  && abs_calc_mode(contextptr)==38)
-	if (eval_38(level,orig,evaled,id_name,contextptr))
-	  return true;
+      	if (eval_38(level,orig,evaled,id_name,contextptr))
+      	  return true;
       }
     }
+
     if (local_eval(contextptr) && localvalue && !localvalue->empty()){
       evaled=do_local_eval(*this,level,true);
       return true;

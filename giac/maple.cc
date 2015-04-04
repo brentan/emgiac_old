@@ -317,7 +317,11 @@ namespace giac {
   gen _time(const gen & a,GIAC_CONTEXT){
     if ( a.type==_STRNG && a.subtype==-1) return  a;
     if (a.type==_VECT && a.subtype==_SEQ__VECT){
-      return total_time(contextptr);
+      #if defined(EMCC) && !defined(PNACL)
+        return emcctime();
+      #else
+        return total_time(contextptr);
+      #endif
     }
     double delta;
     int ntimes=1,i=0;

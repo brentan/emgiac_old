@@ -18,7 +18,6 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-
 using namespace std;
 #include "global.h"
 // #include <time.h>
@@ -4204,6 +4203,7 @@ unsigned int ConvertUTF8toUTF16 (
   */
 
   bool archive_save(void * f,const gen & g,size_t writefunc(void const* p, size_t nbBytes,size_t NbElements, void *file),GIAC_CONTEXT, bool noRecurse){
+
     // write the gen first
     writefunc(&g,sizeof(gen),1,f);
     if (g.type<=_DOUBLE_ || g.type==_FLOAT_)

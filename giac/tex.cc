@@ -611,6 +611,48 @@ namespace giac {
     return res;
   }
 
+  static string convertToGreek(string s0, bool & mathmode) {
+    int n=s0.size(),j;
+    for (j=n-1;j>=2;--j){
+      if (s0[j]>32 && isalpha(s0[j]))
+        break;
+    }
+    string s=s0.substr(0,j+1),sadd;
+    if (j<n-1)
+      sadd=s0.substr(j+1,n-1-j);
+    switch (s.size()){
+      case 2:
+        if (s=="mu" || s=="nu" || s=="pi" || s=="xi" || s=="Xi")
+          return "\\"+s+sadd;
+        if (s=="im")
+          return "\\Im"+s+sadd;
+        if (s=="re")
+          return "\\Re"+sadd;
+        break;
+      case 3:
+        if (s=="chi" || s=="phi" || s=="Phi" || s=="eta" || s=="rho" || s=="tau" || s=="psi" || s=="Psi")
+          return "\\"+s+sadd;
+        break;
+      case 4:
+        if (s=="beta" || s=="zeta")
+          return "\\"+s+sadd;
+        break;
+      case 5:
+        if (s=="alpha" || s=="delta" || s=="Delta" || s=="gamma" || s=="Gamma" || s=="kappa" || s=="theta" || s=="Theta" || s=="sigma" || s=="Sigma" || s=="Omega" || s=="omega" || s=="aleph")
+          return "\\"+s+sadd;      
+        break;
+      case 6:
+        if (s=="lambda" || s=="Lambda" || s=="approx")
+          return "\\"+s+sadd;      
+        break;
+      case 7:
+        if (s=="epsilon" || s=="product")
+          return "\\"+s+sadd;      
+      break;
+    }
+    mathmode=false;
+    return s0;
+  }
 
   static string idnt2tex(const string & sorig,bool & mathmode){
     string s0;
@@ -618,46 +660,17 @@ namespace giac {
     if (mathmode && !giac::unit_mode)
       return s0;
     mathmode=true;
-    int n=s0.size(),j;
-    for (j=n-1;j>=2;--j){
-      if (s0[j]>32 && isalpha(s0[j]))
-	break;
-    }
-    string s=s0.substr(0,j+1),sadd;
-    if (j<n-1)
-      sadd=s0.substr(j+1,n-1-j);
-    switch (s.size()){
-    case 2:
-      if (s=="mu" || s=="nu" || s=="pi" || s=="xi" || s=="Xi")
-	return "\\"+s+sadd;
-      if (s=="im")
-	return "\\Im"+s+sadd;
-      if (s=="re")
-	return "\\Re"+sadd;
-      break;
-    case 3:
-      if (s=="chi" || s=="phi" || s=="Phi" || s=="eta" || s=="rho" || s=="tau" || s=="psi" || s=="Psi")
-	return "\\"+s+sadd;
-      break;
-    case 4:
-      if (s=="beta" || s=="zeta")
-	return "\\"+s+sadd;
-      break;
-    case 5:
-      if (s=="alpha" || s=="delta" || s=="Delta" || s=="gamma" || s=="Gamma" || s=="kappa" || s=="theta" || s=="Theta" || s=="sigma" || s=="Sigma" || s=="Omega" || s=="omega" || s=="aleph")
-	return "\\"+s+sadd;      
-      break;
-    case 6:
-      if (s=="lambda" || s=="Lambda" || s=="approx")
-	return "\\"+s+sadd;      
-      break;
-    case 7:
-      if (s=="epsilon" || s=="product")
-	return "\\"+s+sadd;      
-      break;
-    }
-    mathmode=false;
-    return s0;
+    #ifdef EMCC
+      std::size_t found_index = s0.find_first_of("_"); 
+      if(found_index == std::string::npos)
+        s0= convertToGreek(s0, mathmode);
+      else
+        s0= convertToGreek(s0.substr(0,found_index), mathmode) + "_" + convertToGreek(s0.substr(found_index+1,std::string::npos), mathmode);
+      mathmode = false;
+      return s0;
+    #else
+      return convertToGreek(s0, mathmode);
+    #endif
   }
 
   static string idnt2tex(const string & e){
@@ -1211,9 +1224,6 @@ namespace giac {
 
   // assume math mode enabled
   string gen2tex(const gen & e,GIAC_CONTEXT){
-    EM_ASM_({
-      console.log($0);
-    },e.type);
     switch (e.type){
     case _INT_: case _ZINT: case _REAL:
       return e.print(contextptr);
