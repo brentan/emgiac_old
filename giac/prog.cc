@@ -7745,7 +7745,7 @@ namespace giac {
     "_hp",
     "_inH2O",
     "_inHg",
-    "_inch",
+    "_in",
     "_j",
     "_k_",
     "_kg",
@@ -7916,7 +7916,7 @@ namespace giac {
   gen _ha_unit(mksa_register("_ha",&__ha_unit));
   gen _h_unit(mksa_register("_h",&__h_unit));
   gen _hp_unit(mksa_register("_hp",&__hp_unit));
-  gen _in_unit(mksa_register("_inch",&__in_unit));
+  gen _in_unit(mksa_register("_in",&__in_unit));
   gen _inHg_unit(mksa_register("_inHg",&__inHg_unit));
   gen _inH2O_unit(mksa_register("_inH2O",&__inH2O_unit));
   gen _j_unit(mksa_register("_j",&__j_unit));

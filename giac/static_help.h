@@ -260,7 +260,11 @@
 {"_ga",{"Standard freefall (chute libre standard)","Standard freefall",0,0},""," 5_ga; mksa(_ga)",0},
 {"_galC",{"gallon canadien","Canadian gallon",0,0},""," 5_galC; mksa(_galC)",0},
 {"_galUK",{"gallon britannique","UK gallon",0,0},""," 5_galUK; mksa(_galUK)",0},
+#ifdef SWIFT_CALCS_OPTIONS
 {"_gal",{"gallon EUA","US gallon",0,0},""," 5_gal; mksa(_gal)",0},
+#else
+{"_galUS",{"gallon EUA","US gallon",0,0},""," 5_galUS; mksa(_galUS)",0},
+#endif
 {"_gf",{"gramme-force (gravet)","Gram-force",0,0},""," 5_gf; mksa(_gf)",0},
 {"_gmol",{"gramme-mole","Gram-mole",0,0},""," 5_gmol; mksa(_gmol)",0},
 {"_gon",{"grade","Grade",0,0},""," 5_gon; mksa(_gon)",0},
@@ -271,7 +275,11 @@
 {"_ha",{"hectare","Hectare",0,0},""," 5_ha; mksa(_ha)",0},
 {"_hbar_",{"Constante de Dirac","Dirac's constant",0,0},""," mksa(_hbar_)",0},
 {"_hp",{"horsepower (cheval-vapeur)","Horsepower",0,0},""," 5_hp; mksa(_hp)",0},
+#ifdef SWIFT_CALCS_OPTIONS
+{"_in",{"inch (pouce)","Inch",0,0},""," 5_in; mksa(_in)",0},
+#else
 {"_inch",{"inch (pouce)","Inch",0,0},""," 5_inch; mksa(_inch)",0},
+#endif
 {"_inH2O",{"inch of water, 60 degrés Fahrenheit","Inches of water, 60 degrees Fahrenheit",0,0},""," _inH2O; mksa(_inH2O)",0},
 {"_inHg",{"inch of mercury (pouce de mercure), 0 degré Celsius","Inches of mercury, 0 degree Celsius",0,0},""," 5_inHg; mksa(_inHg)",0},
 {"_in^2",{"inch carré (pouce carré)","Square inch",0,0},""," 5_in^2; mksa(_in^2)",0},
