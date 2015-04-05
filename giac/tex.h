@@ -25,8 +25,10 @@ namespace giac {
 #endif // ndef NO_NAMESPACE_GIAC
   // dimension of the LaTeX output figures default 12 cm x 12 cm
   extern double horiz_latex; 
-  extern double vert_latex;  
-  extern bool function_mode;
+  extern double vert_latex; 
+  #ifdef SWIFT_CALCS_OPTIONS 
+    extern bool function_mode;
+  #endif
   extern const char tex_preamble[];
   extern const char tex_end[];
   extern const char mbox_begin[];

@@ -44,6 +44,7 @@
 
 
 #define EMCC
+#define SWIFT_CALCS_OPTIONS
 #define GIAC_NO_OPTIMIZATIONS
 #define HAVE_NO_HOME_DIRECTORY
 

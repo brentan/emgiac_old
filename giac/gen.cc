@@ -24,7 +24,9 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-#include "emscripten.h"
+#ifdef SWIFT_CALCS_OPTIONS
+  #include "emscripten.h"
+#endif
 using namespace std;
 #ifndef NSPIRE
 #include <cstdlib>
@@ -1987,41 +1989,45 @@ namespace giac {
 	if (is_ifte) 
 	  evaled=ifte(evaled,true,contextptr);
 	else {
-    // CODE ADDED TO CALL OUTSIDE FUNCTION 'eval_method' AND TEST FOR PRESENCE OF THIS METHOD...IF SO, RETURN VALUE!
-    // First, zip up all the inputs for the 'function' into a string to send to the function (as array so we can use the 'apply' method)
-    vecteur::const_iterator it=_SYMBptr->feuille._VECTptr->begin(), itend=_SYMBptr->feuille._VECTptr->end();
-    std::string all_inputs;
-    std::string method_call;
-    if (it<itend) {
-      add_print(method_call, *it, contextptr);
-      ++it;
-      for(;;){
-        if ( (it->type==_SYMB) && (it->_SYMBptr->sommet==at_quote))
-          all_inputs += "'"+it->_SYMBptr->feuille.evalf(eval_level(contextptr),contextptr).print(contextptr)+"'";
-        else if ( (it->type==_SYMB) && (it->_SYMBptr->sommet==at_sto) )
-          all_inputs += "("+it->evalf(eval_level(contextptr),contextptr).print(contextptr)+")";
-        else
-          all_inputs += it->evalf(eval_level(contextptr),contextptr).print(contextptr); 
+    #ifdef SWIFT_CALCS_OPTIONS
+      // CODE ADDED TO CALL OUTSIDE FUNCTION 'eval_method' AND TEST FOR PRESENCE OF THIS METHOD...IF SO, RETURN VALUE!
+      // First, zip up all the inputs for the 'function' into a string to send to the function (as array so we can use the 'apply' method)
+      vecteur::const_iterator it=_SYMBptr->feuille._VECTptr->begin(), itend=_SYMBptr->feuille._VECTptr->end();
+      std::string all_inputs;
+      std::string method_call;
+      if (it<itend) {
+        add_print(method_call, *it, contextptr);
         ++it;
-        if (it==itend)
-          break;
-        all_inputs += ",";
+        for(;;){
+          if ( (it->type==_SYMB) && (it->_SYMBptr->sommet==at_quote))
+            all_inputs += "'"+it->_SYMBptr->feuille.evalf(eval_level(contextptr),contextptr).print(contextptr)+"'";
+          else if ( (it->type==_SYMB) && (it->_SYMBptr->sommet==at_sto) )
+            all_inputs += "("+it->evalf(eval_level(contextptr),contextptr).print(contextptr)+")";
+          else
+            all_inputs += it->evalf(eval_level(contextptr),contextptr).print(contextptr); 
+          ++it;
+          if (it==itend)
+            break;
+          all_inputs += ",";
+        }
       }
-    }
-    std::string asm_code;
-    asm_code += "eval_method( '";
-    asm_code += method_call;
-    asm_code += "' , '";
-    asm_code += all_inputs;
-    asm_code += "' );";
-    std::string out = emscripten_run_script_string( asm_code.data() );
-    if(out.length() > 0) {
-      if(out.compare(0,5,"ERROR") == 0)
-        evaled = gensizeerr(out.substr(7,string::npos));
-      else
-        evaled = gen(out, contextptr);
-    } else
-	   evaled=(*_SYMBptr->sommet.ptr())(evaled,contextptr); 
+      std::string asm_code;
+      asm_code += "eval_method( '";
+      asm_code += method_call;
+      asm_code += "' , '";
+      asm_code += all_inputs;
+      asm_code += "' );";
+      std::string out = emscripten_run_script_string( asm_code.data() );
+      if(out.length() > 0) {
+        if(out.compare(0,5,"ERROR") == 0)
+          evaled = gensizeerr(out.substr(7,string::npos));
+        else
+          evaled = gen(out, contextptr);
+      } else
+  	    evaled=(*_SYMBptr->sommet.ptr())(evaled,contextptr); 
+      #else
+        evaled=(*_SYMBptr->sommet.ptr())(evaled,contextptr); 
+      #endif
   }
 	elevel=slevel;
       }
@@ -11152,10 +11158,14 @@ namespace giac {
 	s="ggbpnt[";
       break;
     default:
-      if(tex)
-        s="\\begin{bmatrix}";
-      else
+      #ifdef SWIFT_CALCS_OPTIONS
+        if(tex)
+          s="\\begin{bmatrix}";
+        else
+          s=calc_mode(contextptr)==1?"{":"[";
+      #else
         s=calc_mode(contextptr)==1?"{":"[";
+      #endif
     }
     return s;
   }
@@ -11192,6 +11202,7 @@ namespace giac {
       return "]";
     case _GGBVECT:
       return calc_mode(contextptr)==1?")":"]";
+  #ifdef SWIFT_CALCS_OPTIONS
     case _MATRIX__VECT:
       return calc_mode(contextptr)==1?"}":"]";
     default:
@@ -11199,21 +11210,29 @@ namespace giac {
         return "\\end{bmatrix}";
       else
         return calc_mode(contextptr)==1?"}":"]";
+  #else
+    case 0: case _MATRIX__VECT:
+      return calc_mode(contextptr)==1?"}":"]";
+    default: 
+      return calc_mode(contextptr)==1?"}":"]";
+  #endif
     }    
   }
 
-  string mid_VECT_string(int subtype,bool tex,GIAC_CONTEXT){
-    string s;
-    switch (subtype){
-    case _SEQ__VECT: case _SET__VECT: case _RPN_STACK__VECT: case _RPN_FUNC__VECT: case _LIST__VECT: case _GGB__VECT: case _POINT__VECT: case _VECTOR__VECT: case _GGBVECT: case _MATRIX__VECT:
-      return ",";
-    default:
-      if(tex)
-        return " & ";
-      else
+  #ifdef SWIFT_CALCS_OPTIONS
+    string mid_VECT_string(int subtype,bool tex,GIAC_CONTEXT){
+      string s;
+      switch (subtype){
+      case _SEQ__VECT: case _SET__VECT: case _RPN_STACK__VECT: case _RPN_FUNC__VECT: case _LIST__VECT: case _GGB__VECT: case _POINT__VECT: case _VECTOR__VECT: case _GGBVECT: case _MATRIX__VECT:
         return ",";
-    }    
-  }
+      default:
+        if(tex)
+          return " & ";
+        else
+          return ",";
+      }    
+    }
+  #endif
 
   string print_VECT(const vecteur & v,int subtype,GIAC_CONTEXT){
     if (v.empty()){

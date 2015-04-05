@@ -1163,7 +1163,9 @@ namespace giac {
   std::string printinner_VECT(const vecteur & v, int subtype,GIAC_CONTEXT);
   std::string & add_printinner_VECT(std::string & s,const vecteur &v,int subtype,GIAC_CONTEXT);
   std::string begin_VECT_string(int subtype,bool tex,GIAC_CONTEXT);
-  std::string mid_VECT_string(int subtype,bool tex,GIAC_CONTEXT);
+  #ifdef SWIFT_CALCS_OPTIONS
+    std::string mid_VECT_string(int subtype,bool tex,GIAC_CONTEXT);
+  #endif
   std::string end_VECT_string(int subtype,bool tex,GIAC_CONTEXT);
   std::string print_VECT(const vecteur & v,int subtype,GIAC_CONTEXT); // subtype was 0 by default
   std::string print_SPOL1(const sparse_poly1 & p,GIAC_CONTEXT);

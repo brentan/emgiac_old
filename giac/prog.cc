@@ -814,7 +814,9 @@ namespace giac {
       warn=true;
 #endif
     if (warn){
-      //*logptr(contextptr) << gettext("// Parsing ") << d << endl;
+      #ifndef SWIFT_CALCS_OPTIONS
+        *logptr(contextptr) << gettext("// Parsing ") << d << endl;
+      #endif
       if (c.is_symb_of_sommet(at_derive))
 	*logptr(contextptr) << gettext("Warning, defining a derivative function should be done with function_diff or unapply: ") << c << endl;
        if (c.type==_SYMB && c._SYMBptr->sommet!=at_local && c._SYMBptr->sommet!=at_bloc && c._SYMBptr->sommet!=at_when && c._SYMBptr->sommet!=at_for && c._SYMBptr->sommet!=at_ifte){
@@ -7246,7 +7248,7 @@ namespace giac {
   const mksa_unit __K_unit={1,0,0,0,0,1,0,0,0};
   const mksa_unit __mol_unit={1,0,0,0,0,0,1,0,0};
   const mksa_unit __cd_unit={1,0,0,0,0,0,0,1,0};
-  const mksa_unit __E_unit={1,0,0,0,0,0,0,0,1};  // CURRENCY- Euro to Franc.  A WAY TO HIJACK THIS? FOR MY OWN USE?
+  const mksa_unit __E_unit={1,0,0,0,0,0,0,0,1};  // CURRENCY- Euro to Franc are only 2 defined.  Perhaps a way in future to define more/define the exchange rate on the fly?
   const mksa_unit __Bq_unit={1,0,0,-1,0,0,0,0,0};
   const mksa_unit __C_unit={1,0,0,1,1,0,0,0,0};
   const mksa_unit __F_unit={1,-2,-1,4,2,0,0,0,0};

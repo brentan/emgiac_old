@@ -4359,18 +4359,24 @@ namespace giac {
     else
       return s+gen2string(g,format,contextptr)+')';
   }
-  static string texprintasof_(const gen & feuille,const char * sommetstr,int format,GIAC_CONTEXT){
-    if ( (feuille.type!=_VECT) || (feuille._VECTptr->size()!=2) )
-      return string(sommetstr)+('('+gen2string(feuille,format,contextptr)+')');
-    string s=print_with_parenthesis_if_required(feuille._VECTptr->front(),format,contextptr)+"\\left({";
-    gen & g=feuille._VECTptr->back();
-    if (format==0 && g.type==_VECT && g.subtype==_SEQ__VECT)
-      return s+printinner_VECT(*g._VECTptr,_SEQ__VECT,contextptr)+"}\\right)";
-    else
-      return s+gen2string(g,format,contextptr)+"}\\right)";
-  }
+  #ifdef SWIFT_CALCS_OPTIONS
+    static string texprintasof_(const gen & feuille,const char * sommetstr,int format,GIAC_CONTEXT){
+      if ( (feuille.type!=_VECT) || (feuille._VECTptr->size()!=2) )
+        return string(sommetstr)+('('+gen2string(feuille,format,contextptr)+')');
+      string s=print_with_parenthesis_if_required(feuille._VECTptr->front(),format,contextptr)+"\\left({";
+      gen & g=feuille._VECTptr->back();
+      if (format==0 && g.type==_VECT && g.subtype==_SEQ__VECT)
+        return s+printinner_VECT(*g._VECTptr,_SEQ__VECT,contextptr)+"}\\right)";
+      else
+        return s+gen2string(g,format,contextptr)+"}\\right)";
+    }
+  #endif
   static string texprintasof(const gen & feuille,const char * sommetstr,GIAC_CONTEXT){
-    return texprintasof_(feuille,sommetstr,1,contextptr);
+    #ifdef SWIFT_CALCS_OPTIONS
+      return texprintasof_(feuille,sommetstr,1,contextptr);
+    #else
+      return printasof_(feuille,sommetstr,1,contextptr);
+    #endif
   }
   static string printasof(const gen & feuille,const char * sommetstr,GIAC_CONTEXT){
     return printasof_(feuille,sommetstr,0,contextptr);
@@ -4556,12 +4562,14 @@ namespace giac {
   string print_with_parenthesis_if_required(const gen & g,int format,GIAC_CONTEXT){
     if (g.type==_SYMB || g.type==_FRAC || g.type==_CPLX || (g.type==_VECT && g.subtype==_SEQ__VECT) )
       return '('+gen2string(g,format,contextptr)+')';
-    else if(g.type == _IDNT && (format == 1)) {
-      giac::function_mode = true;
-      string output = gen2tex(g,contextptr);
-      giac::function_mode = false;
-      return output;
-    }
+    #ifdef SWIFT_CALCS_OPTIONS
+      else if(g.type == _IDNT && (format == 1)) {
+        giac::function_mode = true;
+        string output = gen2tex(g,contextptr);
+        giac::function_mode = false;
+        return output;
+      }
+    #endif
     else
       return gen2string(g,format,contextptr);
   }

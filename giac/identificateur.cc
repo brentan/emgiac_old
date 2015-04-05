@@ -18,7 +18,9 @@
  *  along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 using namespace std;
-#include "emscripten.h"
+#ifdef SWIFT_CALCS_OPTIONS
+  #include "emscripten.h"
+#endif
 #include <cmath>
 #include <fstream>
 #include <string>
@@ -1087,16 +1089,18 @@ namespace giac {
         if (No38Lookup) return false;
       	if (sto_38 && abs_calc_mode(contextptr)==38)
       	  return eval_38(level,orig,evaled,id_name,contextptr);
-        // CODE ADDED TO CALL OUTSIDE FUNCTION 'eval_function' AND TEST FOR PRESENCE OF THIS VARIABLE...IF SO, RETURN VALUE!
-        std::string asm_code;
-        asm_code += "eval_function( '";
-        asm_code += id_name;
-        asm_code += "' );";
-        std::string out = emscripten_run_script_string( asm_code.data() );
-        if(out.length() > 0) {
-          evaled = gen(out, contextptr);
-          return true;
-        }
+        #ifdef SWIFT_CALCS_OPTIONS
+          // CODE ADDED TO CALL OUTSIDE FUNCTION 'eval_function' AND TEST FOR PRESENCE OF THIS VARIABLE...IF SO, RETURN VALUE!
+          std::string asm_code;
+          asm_code += "eval_function( '";
+          asm_code += id_name;
+          asm_code += "' );";
+          std::string out = emscripten_run_script_string( asm_code.data() );
+          if(out.length() > 0) {
+            evaled = gen(out, contextptr);
+            return true;
+          }
+        #endif
       	return false;
       }
       else {
