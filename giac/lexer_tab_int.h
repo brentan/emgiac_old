@@ -215,7 +215,7 @@
       {"hybrids_solver"         ,1, _HYBRIDS_SOLVER, _INT_SOLVER,T_NUMBER},
       {"hybridsj_solver"         ,1, _HYBRIDSJ_SOLVER, _INT_SOLVER,T_NUMBER},
       #ifdef SWIFT_CALCS_OPTIONS
-      {"inn",0,0,0,T_IN}, // Not sure where the 'in' keyword gets used.  Seems to be a control structure thing but cant find documentation or make it work with for(x in y) type of syntax.  Renaming 'inn' for the time being since '_in' is more important to me for inch.  
+      {"within",0,0,0,T_IN}, // Renaming since '_in' is more important to me for inch than this control name. 
       #else
       {"in",0,0,0,T_IN},
       #endif
