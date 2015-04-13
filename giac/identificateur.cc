@@ -1092,9 +1092,11 @@ namespace giac {
         #ifdef SWIFT_CALCS_OPTIONS
           // CODE ADDED TO CALL OUTSIDE FUNCTION 'eval_function' AND TEST FOR PRESENCE OF THIS VARIABLE...IF SO, RETURN VALUE!
           std::string asm_code;
-          asm_code += "eval_function( '";
+          asm_code += "eval_function( ";
+          if(id_name[0] != '\'') asm_code += "'";
           asm_code += id_name;
-          asm_code += "' );";
+          if(id_name[strlen(id_name)-1] != '\'') asm_code += "'";
+          asm_code += " );";
           std::string out = emscripten_run_script_string( asm_code.data() );
           if(out.length() > 0) {
             evaled = gen(out, contextptr);

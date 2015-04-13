@@ -1999,11 +1999,11 @@ namespace giac {
         add_print(method_call, *it, contextptr);
         ++it;
         for(;;){
-          if ( (it->type==_SYMB) && (it->_SYMBptr->sommet==at_quote))
-            all_inputs += "'"+it->_SYMBptr->feuille.evalf(eval_level(contextptr),contextptr).print(contextptr)+"'";
-          else if ( (it->type==_SYMB) && (it->_SYMBptr->sommet==at_sto) )
-            all_inputs += "("+it->evalf(eval_level(contextptr),contextptr).print(contextptr)+")";
-          else
+          if ( (it->type==_SYMB) && (it->_SYMBptr->sommet==at_quote)) 
+            all_inputs += it->_SYMBptr->feuille.evalf(eval_level(contextptr),contextptr).print(contextptr);
+          else if ( (it->type==_SYMB) && (it->_SYMBptr->sommet==at_sto) ) 
+            all_inputs += "(" + it->evalf(eval_level(contextptr),contextptr).print(contextptr) + ")";
+          else 
             all_inputs += it->evalf(eval_level(contextptr),contextptr).print(contextptr); 
           ++it;
           if (it==itend)
@@ -2012,9 +2012,16 @@ namespace giac {
         }
       }
       std::string asm_code;
-      asm_code += "eval_method( '";
+      asm_code += "eval_method( ";
+      if(method_call[0] != '\'') asm_code += "'";
       asm_code += method_call;
-      asm_code += "' , '";
+      if(method_call[method_call.length()-1] != '\'') asm_code += "'";
+      asm_code += " , '";
+      size_t pos;
+      while ((pos = all_inputs.find('\'', pos)) != std::string::npos) {
+           all_inputs.replace(pos, 1, " ");
+           pos += 1;
+      }
       asm_code += all_inputs;
       asm_code += "' );";
       std::string out = emscripten_run_script_string( asm_code.data() );
