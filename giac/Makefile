@@ -29,8 +29,8 @@ giac.js:	$(GIACOBJS)
 #	lzip giac.js
 #	scp giac.js.lz malherbe:public_html/giac
 #	lzip -d giac.js.lz
-	cp giac.js ..
-	cp giac.js.mem ..
+	cp giac.js ../../swift_calcs/public
+	cp giac.js.mem ../../swift_calcs/public
 giac:	$(GIACOBJS) 
 	$(CXX) $(LDJSFLAGS) $(GIACOBJS) $(LIBS) -o giac.js #--closure 1 
 #	/bin/cp giacggb.js giac.js
