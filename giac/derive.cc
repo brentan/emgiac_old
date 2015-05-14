@@ -701,7 +701,7 @@ namespace giac {
       return gensizeerr(contextptr);
     return _derive(args,contextptr);
   }
-  static const char _grad_s []="grad";
+  static const char _grad_s []="gradient";
   static define_unary_function_eval_quoted (__grad,&_grad,_grad_s);
   define_unary_function_ptr5( at_grad ,alias_at_grad,&__grad,_QUOTE_ARGUMENTS,true);
 

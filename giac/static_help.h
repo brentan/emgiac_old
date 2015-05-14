@@ -1064,7 +1064,7 @@
 {"gl_ztick",{"Option globale permettant de définir l'espacement des marques sur l'axe des x (resp y, z).","Global option that defines the interval between tick marks on the x (resp. y, z) axis.",0,0},"Opt=Real"," gl_xtick=0.5; gl_ytick=1",0},
 {"gnuplot",{"Exécute une instruction dans le processus gnuplot (fenêtre 3-d).","Run a gnuplot command (in the 3-d screen).",0,0},"Str","gnuplot(\"splot u,v,u+v\")",0},
 {"goto",{"Dans un programme, permet de sauter à l'instruction repérée par le label nom.","In a program, is used to jump to an instruction with the label nom.",0,0},"Var(nom)"," essai(a):={label truc;a:=a+2;if (a<10) goto truc;print(a);}","label"},
-{"grad",{"Renvoie le gradient de l'expression Xpr","Returns the gradient of the expression Xpr",0,0},"Expr(Xpr),LstVar","grad(2*x^2*y-x*z^3,[x,y,z])","hessian"},
+{"gradient",{"Renvoie le gradient de l'expression Xpr","Returns the gradient of the expression Xpr",0,0},"Expr(Xpr),LstVar","gradient(2*x^2*y-x*z^3,[x,y,z])","hessian"},
 {"gramschmidt",{"Renvoie une base orthonormale de E de base B pour le produit scalaire Sp","Returns an orthonormal base of E of base B for the scalar product Sp",0,0},"Basis(B),ScalarProd(Sp)","-2;gramschmidt([1,1+x],(p,q)->integrate(p*q,x,-1,1))",""},
 {"graph2tex",{"Convertit le graphique en fichier LaTeX","Converts the graph screen to a LaTeX file",0,0},"[Str(\"filename\")]","graph2tex(\"graph.tex\");graph2tex()","graph3d2tex"},
 {"graph3d2tex",{"Convertit le graphe 3D en fichier LaTeX","Converts the 3d graph screen to a LaTeX file",0,0},"[Str\"filename\")]","graph3d2tex(\"graph.tex\");graph3d2tex()","graph2tex"},
