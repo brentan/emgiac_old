@@ -13,35 +13,46 @@
     </style>
 </head>
 <body>
-  <canvas id='canvas' width=1 height=1></canvas>
-  This is a simple web CAS (computer algebra system). 
-  This CAS does not need any server, you are running it locally with the javascript
-  engine of your browser (need a recent browser, e.g. Firefox 19 or Chrome)
-  the 6.5M CAS code is downloaded once (giac.js javascript 
-  compiled from native <a href="http://www-fourier.ujf-grenoble.fr/~parisse/giac/emgiac.tgz">Giac/Xcas</a> by emscripten).
-  The javascript code is at least 10 times and often 100 times slower than the native 
-  code, it is therefore recommended to run large computations with
-  <a href="http://www-fourier.ujf-grenoble.fr/~parisse/giac.html">Xcas</a>!
-  <br>
-  <b>Examples of input:</b> <br>
+<h1>Giac/Xcas in your browser!</h1>
+<b>Examples of input:</b>
+<ul>
+  <li> Algebra :
   <tt> factor(x^4-1); cfactor(x^2+1); normal((x+1)^4)
-    <br> solve(x^2-3*x+2=0); csolve(x^2=2*i); solve([x+y=1,x-y=3],[x,y])
-    <br> simplify(sin(3x)/sin(x)); gcd(x^4-1,x^3-1)
-    <br> f(x):=sin(x^2):; f(sqrt(pi)); f'(2); f'(y) 
-    <br> int(1/(x^4-1)); int(1/(x^4+1)^4,x,0,+infinity)
-    <br> limit(sin(x)/x,x=0); series(sin(x),x=0,5);
-    <br> A:=[[1,2],[3,4]]; inv(A); det(A-x*idn(A)); A[0,0]; rref(A); eigenvalues(A); eigenvectors(A);
+    <br> simplify(sin(3x)/sin(x)); gcd(x^4-1,x^3-1) </tt>
+  </li>
+  <li> Solve equations :
+    <tt> solve(x^2-3*x+2=0); csolve(x^2=2*i);
+  solve([x+y=1,x-y=3],[x,y]) </tt>
+  </li>
+  <li>Calculus :
+    <tt> f(x):=sin(x^2):; f(sqrt(pi)); f'(2); f'(y) 
+    <br> int(1/(x^4-1)); int(1/(x^4+1)^4,x,0,+infinity) 
+  <br> limit(sin(x)/x,x=0); series(sin(x),x=0,5);</tt>
+  </li>
+  <li> Linear algebra :
+    <tt> A:=[[1,2],[3,4]]; inv(A); det(A-x*idn(A)); A[0,0]; rref(A);
+  eigenvalues(A); eigenvectors(A);</tt>
+  </li>
+  <li> Plots (you can change the viewpoint for 3d graphs with arrows
+  keys, press q to leave interactive mode):
+  <tt>plot([sin(x),x-x^3/3!],x=-3..3,color=[red,blue])
+  <br> plotfunc(x^2-y^2,[x=-2..2,y=-2..2]); plane(z=0,color=cyan+filled);
   </tt>
-  <br>
+  </ul>
   More <a href="http://www-fourier.ujf-grenoble.fr/~parisse/giac/doc/en/cascmd_en">documentation</a>.
-  <br>
-  Giac/Xcas, (c) B. Parisse, R. De Graeve, Institut Fourier, Université de Grenoble I., licensed under the GPL3.
+  Giac/Xcas, (c) B. Parisse, R. De Graeve, Institut Fourier,
+Université de Grenoble I., licensed under the GPL3, for commercial
+licenses contact us.
   <hr>
-  <form onsubmit="setTimeout(function() {     
-		  caseval = Module.cwrap('_ZN4giac7casevalEPKc', 'string', ['string']);    
-		  Module.print(entree.value+'\n  '+caseval(entree.value));}); 
+  <form onsubmit="setTimeout(function() {
+caseval = Module.cwrap('_ZN4giac7casevalEPKc', 'string', ['string']);    
+Module.print(entree.value);
+var res = caseval(entree.value);
+Module.print('  '+res);
+ var keyboardListeningElement = Module['keyboardListeningElement'];
+}); 
 		  return false">
-    Input: <input type="text" name="entree" value="factor(x^4-1)">
+    Input: <input type="text" name="entree" value="factor(x^4-1)" size=100>
     <input type="submit" value="Go!">
   </form>
 
@@ -56,6 +67,7 @@
     <hr/>
 
     <hr>
+<canvas id='canvas' width=600 height=50></canvas>
 
   <script type='text/javascript'>
       // connect to canvas
@@ -82,7 +94,7 @@
             console.log(text);
           }
         },
-        // canvas: document.getElementById('canvas'),
+        canvas: document.getElementById('canvas'),
         setStatus: function(text) {
           if (Module.setStatus.interval) clearInterval(Module.setStatus.interval);
           var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
@@ -110,6 +122,22 @@
     </script>      
   <script src="giac.js"></script>
 
+  <br>
+This is a demo interface to a full web-based CAS engine.
+This CAS does not need any server,
+all the computations are done locally with the javascript
+engine of your browser (requires Firefox version 19 or later,
+or Chrome, the latest version of Firefox is recommended).
+The code of the CAS is 10M, it is downloaded once
+(giac.js and giac.js.mem, javascript 
+  compiled from native <a href="http://www-fourier.ujf-grenoble.fr/~parisse/giac/emgiac.tgz">Giac/Xcas</a> by emscripten).
+  The javascript code is at least 2 times slower than the native 
+code, and sometimes much much slower (e.g. more than 100 times slower
+for computing a Groebner basis like cyclic7). Most of the time
+it is however fast enough (that would justify a better interface...),
+but it is recommended to run large computations with
+  <a href="http://www-fourier.ujf-grenoble.fr/~parisse/giac.html">Xcas</a>!
+<br>
 
 </body>
 </html>

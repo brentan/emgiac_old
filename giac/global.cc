@@ -113,6 +113,15 @@ int my_sprintf(char * s, const char * format, ...){
 #ifndef NO_NAMESPACE_GIAC
 namespace giac {
 #endif // ndef NO_NAMESPACE_GIAC
+  void opaque_double_copy(void * source,void * target){
+    *((double *) target) = * ((double *) source);
+  }
+
+  double opaque_double_val(const void * source){
+    longlong r = * (longlong *)(source) ;
+    (* (gen *) (&r)).type = 0;
+    return * (double *)(&r); 
+  }
 
 #ifdef TIMEOUT
 #ifndef EMCC
@@ -141,10 +150,11 @@ namespace giac {
 #ifdef EMCC
 	if (difftime(caseval_current,caseval_begin)>caseval_maxtime)
 #else
-	if (caseval_current-caseval_begin>caseval_maxtime)
+	if (caseval_current>caseval_maxtime+caseval_begin)
 #endif
 	  { 
 	    CERR << "Timeout" << endl; ctrl_c=true; interrupted=true; 
+	    caseval_begin=caseval_current;
 	  } 
       } 
     }
@@ -152,6 +162,10 @@ namespace giac {
   }
 #endif // TIMEOUT
 
+#ifdef NSPIRE_NEWLIB
+  void usleep(int t){
+  }
+#endif
 
 #if defined VISUALC || defined BESTA_OS
   int R_OK=4;
@@ -193,7 +207,11 @@ extern "C" void Sleep(unsigned int miliSecond);
     static std::vector<std::string> * ans = new  std::vector<std::string>;
     return ans;
   }
+#ifdef NSPIRE_NEWLIB
+  const context * context0=new context;
+#else
   const context * context0=0;
+#endif
   // Global variable when context is 0
   void (*fl_widget_delete_function)(void *) =0;
 #ifndef NSPIRE
@@ -356,7 +374,7 @@ extern "C" void Sleep(unsigned int miliSecond);
   }
 
 #if 1
-  static double _epsilon_=0;
+  static double _epsilon_=1e-12;
 #else
 #ifdef __SGI_CPP_LIMITS
   static double _epsilon_=100*numeric_limits<double>::epsilon();
@@ -884,7 +902,11 @@ extern "C" void Sleep(unsigned int miliSecond);
       res=contextptr->globalptr->_logptr_;
     else
       res= _logptr_;
+#ifdef EMCC
+    return res?res:&COUT;
+#else
     return res?res:&CERR;
+#endif
   }
 #endif
 #endif
@@ -1435,6 +1457,7 @@ extern "C" void Sleep(unsigned int miliSecond);
   bool in_texmacs=false;
   bool block_signal=false;
   bool CAN_USE_LAPACK = true;
+  bool simplify_sincosexp_pi=true;
   int history_begin_level=0; 
   // variable used to avoid copying the whole history between processes 
 #ifdef WIN32 // Temporary
@@ -1442,7 +1465,7 @@ extern "C" void Sleep(unsigned int miliSecond);
 #else
   int debug_infolevel=0;
 #endif
-#if defined __APPLE__ || defined VISUALC || defined __MINGW_H || defined BESTA_OS || defined NSPIRE
+#if defined __APPLE__ || defined VISUALC || defined __MINGW_H || defined BESTA_OS || defined NSPIRE || defined NSPIRE_NEWLIB
   int threads=1;
 #else
   int threads=sysconf (_SC_NPROCESSORS_ONLN);
@@ -1547,7 +1570,7 @@ extern "C" void Sleep(unsigned int miliSecond);
 
   void ctrl_c_signal_handler(int signum){
     ctrl_c=true;
-#if !defined WIN32 && !defined BESTA_OS && !defined NSPIRE
+#if !defined NSPIRE_NEWLIB && !defined WIN32 && !defined BESTA_OS && !defined NSPIRE
     if (child_id)
       kill(child_id,SIGINT);
 #endif
@@ -2382,6 +2405,12 @@ extern "C" void Sleep(unsigned int miliSecond);
       }
     }
 #ifdef __APPLE__
+    if (!access("/Applications/usr/share/giac/",R_OK))
+      return "/Applications/usr/share/giac/";
+    if (getenv("XCAS_ROOT")){
+      string s=getenv("XCAS_ROOT");
+      return s;
+    }
     return "/Applications/usr/share/giac/";
 #endif
 #ifdef WIN32
@@ -2679,9 +2708,9 @@ extern "C" void Sleep(unsigned int miliSecond);
       if (_epath != NULL && *_epath != 0
 	  && cygwin_posix_path_list_p (_epath)){
 #ifdef __x86_64__
-	int s = cygwin_conv_path (CCP_POSIX_TO_WIN_W , _epath, NULL, 0);
+	int s = cygwin_conv_path (CCP_POSIX_TO_WIN_A , _epath, NULL, 0);
 	char * _win32path = (char *) malloc(s);
-	cygwin_conv_path(CCP_POSIX_TO_WIN_W,_epath, _win32path,s);
+	cygwin_conv_path(CCP_POSIX_TO_WIN_A,_epath, _win32path,s);
 #else
 	char * _win32path = (char *) malloc (cygwin_posix_to_win32_path_list_buf_size (_epath));
 	cygwin_posix_to_win32_path_list (_epath, _win32path);
@@ -2834,10 +2863,11 @@ extern "C" void Sleep(unsigned int miliSecond);
     }
   }
 
-  void add_language(int i){
+  void add_language(int i,GIAC_CONTEXT){
     if (!equalposcomp(lexer_localization_vector(),i)){
       lexer_localization_vector().push_back(i);
-      update_lexer_localization(lexer_localization_vector(),lexer_localization_map(),back_lexer_localization_map());
+      update_lexer_localization(lexer_localization_vector(),lexer_localization_map(),back_lexer_localization_map(),contextptr);
+#ifndef EMCC
       if (vector_aide_ptr()){
 	// add locale command description
 	int count;
@@ -2875,10 +2905,11 @@ extern "C" void Sleep(unsigned int miliSecond);
 	sort(vector_aide_ptr()->begin(),vector_aide_ptr()->end(),alpha_order);
 	update_completions();
       }
+#endif
     }
   }
 
-  void remove_language(int i){
+  void remove_language(int i,GIAC_CONTEXT){
     if (int pos=equalposcomp(lexer_localization_vector(),i)){
       if (vector_aide_ptr()){
 	vector<aide> nv;
@@ -2902,7 +2933,7 @@ extern "C" void Sleep(unsigned int miliSecond);
       }
       --pos;
       lexer_localization_vector().erase(lexer_localization_vector().begin()+pos);
-      update_lexer_localization(lexer_localization_vector(),lexer_localization_map(),back_lexer_localization_map());
+      update_lexer_localization(lexer_localization_vector(),lexer_localization_map(),back_lexer_localization_map(),contextptr);
     }
   }
 
@@ -2929,8 +2960,10 @@ extern "C" void Sleep(unsigned int miliSecond);
   }
 
   std::string set_language(int i,GIAC_CONTEXT){
-    language(i,contextptr);
-    add_language(i);
+    if (language(contextptr)!=i){
+      language(i,contextptr);
+      add_language(i,contextptr);
+    }
     return find_doc_prefix(i);
   }
 
@@ -3231,6 +3264,10 @@ extern "C" void Sleep(unsigned int miliSecond);
 #endif
     }
   }
+
+#ifndef CLK_TCK
+#define CLK_TCK 1
+#endif
 
 #ifndef HAVE_NO_SYS_TIMES_H
    double delta_tms(struct tms tmp1,struct tms tmp2){
@@ -3552,7 +3589,13 @@ extern "C" void Sleep(unsigned int miliSecond);
 		     _lexer_close_parenthesis_(true),_rpn_mode_(false),_try_parse_i_(true),_specialtexprint_double_(false),_angle_mode_(0), _bounded_function_no_(0), _series_flags_(0x3),_default_color_(FL_BLACK), _epsilon_(1e-12), _proba_epsilon_(1e-15),  _show_axes_(1),_spread_Row_ (-1), _spread_Col_ (-1),_logptr_(&my_CERR),_prog_eval_level_val(1), _eval_level(DEFAULT_EVAL_LEVEL), _rand_seed(123457),_max_sum_sqrt_(3),_max_sum_add_(100000),_total_time_(0),_evaled_table_(0),_extra_ptr_(0)
 #else
 		     _ntl_on_(true),
-		     _lexer_close_parenthesis_(true),_rpn_mode_(false),_try_parse_i_(true),_specialtexprint_double_(false),_angle_mode_(0), _bounded_function_no_(0), _series_flags_(0x3),_default_color_(FL_BLACK), _epsilon_(1e-12), _proba_epsilon_(1e-15),  _show_axes_(1),_spread_Row_ (-1), _spread_Col_ (-1), _logptr_(&CERR), _prog_eval_level_val(1), _eval_level(DEFAULT_EVAL_LEVEL), _rand_seed(123457),_max_sum_sqrt_(3),_max_sum_add_(100000),_total_time_(0),_evaled_table_(0),_extra_ptr_(0)
+		     _lexer_close_parenthesis_(true),_rpn_mode_(false),_try_parse_i_(true),_specialtexprint_double_(false),_angle_mode_(0), _bounded_function_no_(0), _series_flags_(0x3),_default_color_(FL_BLACK), _epsilon_(1e-12), _proba_epsilon_(1e-15),  _show_axes_(1),_spread_Row_ (-1), _spread_Col_ (-1), 
+#ifdef EMCC
+		     _logptr_(&COUT), 
+#else
+		     _logptr_(&CERR), 
+#endif
+_prog_eval_level_val(1), _eval_level(DEFAULT_EVAL_LEVEL), _rand_seed(123457),_max_sum_sqrt_(3),_max_sum_add_(100000),_total_time_(0),_evaled_table_(0),_extra_ptr_(0)
 #endif
   { 
     _pl._i_sqrt_minus1_=1;
@@ -4252,7 +4295,11 @@ unsigned int ConvertUTF8toUTF16 (
       }
       return true;
     }
-    string s=g.print(contextptr);
+    string s;
+    if (g.type==_ZINT)
+      s=hexa_print_ZINT(*g._ZINTptr);
+    else
+      s=g.print(contextptr);
     // fprintf(f,"%s",s.c_str());
     writefunc(s.c_str(),1,s.size(),f);
     return true;
@@ -4431,7 +4478,7 @@ unsigned int ConvertUTF8toUTF16 (
     powlog2float=3e4;
     MPZ_MAXLOG2=33300;
 #ifdef TIMEOUT
-    caseval_maxtime=5;
+    //caseval_maxtime=5;
     caseval_n=0;
     caseval_mod=10;
 #endif
@@ -4659,7 +4706,7 @@ unsigned int ConvertUTF8toUTF16 (
 #ifdef USTL    
   // void update_lexer_localization(const std::vector<int> & v,ustl::map<std::string,std::string> &lexer_map,ustl::multimap<std::string,giac::localized_string> &back_lexer_map){}
 #else
-    void update_lexer_localization(const std::vector<int> & v,std::map<std::string,std::string> &lexer_map,std::multimap<std::string,giac::localized_string> &back_lexer_map){
+  void update_lexer_localization(const std::vector<int> & v,std::map<std::string,std::string> &lexer_map,std::multimap<std::string,giac::localized_string> &back_lexer_map,GIAC_CONTEXT){
       lexer_map.clear();
       back_lexer_map.clear();
       int s=v.size();
@@ -4668,12 +4715,13 @@ unsigned int ConvertUTF8toUTF16 (
 	if (lang>=1 && lang<=4){
 	  std::string doc=find_doc_prefix(lang);
 	  std::string file=giac::giac_aide_dir()+doc+"keywords";
+	  //COUT << "keywords " << file << endl;
 	  std::string giac_kw,local_kw;
 	  size_t l;
 	  char * line = (char *)malloc(1024);
 	  ifstream f(file.c_str());
 	  if (f.good()){
-	    CERR << "// Using keyword file " << file << endl;
+	    COUT << "// Using keyword file " << file << endl;
 	    for (;;){
 	      f.getline(line,1023,'\n');
 	      l=strlen(line);
@@ -4697,8 +4745,12 @@ unsigned int ConvertUTF8toUTF16 (
 		for (++j;j<l;++j){
 		  if (line[j]==' '){
 		    if (!local_kw.empty()){
+#ifdef EMCC
+		      sto(gen(giac_kw,contextptr),gen(local_kw,contextptr),contextptr);
+#else
 		      lexer_map[local_kw]=giac_kw;
 		      back_lexer_map.insert(pair<string,localized_string>(giac_kw,localized_string(lang,local_kw)));
+#endif
 		    }
 		    local_kw="";
 		  }
@@ -4706,8 +4758,12 @@ unsigned int ConvertUTF8toUTF16 (
 		    local_kw += line[j];
 		}
 		if (!local_kw.empty()){
+#ifdef EMCC
+		      sto(gen(giac_kw,contextptr),gen(local_kw,contextptr),contextptr);
+#else
 		  lexer_map[local_kw]=giac_kw;
 		  back_lexer_map.insert(pair<string,localized_string>(giac_kw,localized_string(lang,local_kw)));
+#endif
 		}
 	      }
 	    }
@@ -4752,7 +4808,13 @@ unsigned int ConvertUTF8toUTF16 (
 	registered_lexer_functions().push_back(user_function(s,parser_token));
       if (!builtin_lexer_functions_sorted){
 #ifndef STATIC_BUILTIN_LEXER_FUNCTIONS
+#ifdef NSPIRE_NEWLIB
 	builtin_lexer_functions_begin()[builtin_lexer_functions_number]=std::pair<const char *,gen>(s,gen(u));
+#else
+	builtin_lexer_functions_begin()[builtin_lexer_functions_number].first=s;
+	builtin_lexer_functions_begin()[builtin_lexer_functions_number].second.type=0;
+	builtin_lexer_functions_begin()[builtin_lexer_functions_number].second=gen(u);
+#endif
 	if (parser_token==1)
 	  builtin_lexer_functions_begin()[builtin_lexer_functions_number].second.subtype=T_UNARY_OP-256;
 	else
@@ -4874,13 +4936,13 @@ unsigned int ConvertUTF8toUTF16 (
 	  res=gen(int((*builtin_lexer_functions_())[p.first-builtin_lexer_functions_begin()]+p.first->second.val));
 	  res=gen(*res._FUNCptr);	  
 #else
-#ifdef SMARTPTR64
+#ifndef NSPIRE_NEWLIB
 	  res=0;
 	  int pos=p.first-builtin_lexer_functions_begin();
 	  size_t val=builtin_lexer_functions_[pos];
 	  unary_function_ptr * at_val=(unary_function_ptr *)val;
 	  res=at_val;
-#else
+#else // keep this code, required for the nspire otherwise evalf(pi)=reboot
 	  res=gen(int(builtin_lexer_functions_[p.first-builtin_lexer_functions_begin()]+p.first->second.val));
 	  res=gen(*res._FUNCptr);
 #endif

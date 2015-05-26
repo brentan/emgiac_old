@@ -13,7 +13,6 @@
     </style>
 </head>
 <body>
-  <canvas id='canvas' width=1 height=1></canvas>
   Webxcas est un système de calcul formel en javascript (traduit à partir de
   <a href="http://www-fourier.ujf-grenoble.fr/~parisse/giac/emgiac.tgz">Giac/Xcas</a> 
   par emscripten). Il n'a pas besoin de serveur, il s'exécute localement
@@ -59,7 +58,7 @@ commandes en anglais).
     <hr/>
 
     <hr>
-
+  <canvas id='canvas' width=800 height=200></canvas>
   <script type='text/javascript'>
       // connect to canvas
       var Module = {
@@ -85,7 +84,7 @@ commandes en anglais).
             console.log(text);
           }
         },
-        // canvas: document.getElementById('canvas'),
+        canvas: document.getElementById('canvas'),
         setStatus: function(text) {
           if (Module.setStatus.interval) clearInterval(Module.setStatus.interval);
           var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);

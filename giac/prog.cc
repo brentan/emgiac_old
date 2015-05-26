@@ -52,8 +52,13 @@ using namespace std;
 #include "lin.h"
 #include "pari.h"
 #include "intg.h"
+#include "csturm.h"
+#include "sparse.h"
 #include "giacintl.h"
 // #include "input_parser.h"
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
 #ifdef HAVE_LIBDL
 #include <dlfcn.h>
 #endif // HAVE_LIBDL
@@ -2707,14 +2712,14 @@ namespace giac {
     }
     gen v((*(args._VECTptr))[1]);
     int subtype;
-    unary_function_ptr * fn=0;
+    gen fn=0;
     if (v.type==_SYMB){
       if (v._SYMBptr->feuille.type==_VECT)
 	v=v._SYMBptr->feuille;
       else
 	v=makevecteur(v._SYMBptr->feuille);
       subtype=-1;
-      fn=&v._SYMBptr->sommet;
+      fn=v;
     }
     else
       subtype=v.subtype;
@@ -2749,8 +2754,8 @@ namespace giac {
 	  res.push_back(*it);
       }
     }
-    if (subtype<0)
-      return symbolic(*fn,res);
+    if (subtype<0 && fn.type==_SYMB)
+      return symbolic(fn._SYMBptr->sommet,res);
     else
       return gen(res,subtype);
   }
@@ -4519,7 +4524,7 @@ namespace giac {
 	      }
 	      else { // other user directory
 		current=current.substr(1,current.size()-1);
-#ifndef HAVE_NO_PWD_H
+#if !defined HAVE_NO_PWD_H && !defined NSPIRE_NEWLIB
 		passwd * p=getpwnam(current.c_str());
 		if (!p)
 		  return gensizeerr(gettext("No such user ")+current);
@@ -5408,6 +5413,33 @@ namespace giac {
 	res[i]=convert_interval(res[i],nbits,contextptr);
       return gen(res,g.subtype);
     }
+    if (g.is_symb_of_sommet(at_rootof) && g._SYMBptr->feuille.type==_VECT && g._SYMBptr->feuille._VECTptr->size()==2){
+      gen p=g._SYMBptr->feuille._VECTptr->front();
+      gen x=g._SYMBptr->feuille._VECTptr->back();
+      if (p.type==_VECT && x.type==_VECT){
+	// adjust (guess?) nbits
+	gen g_=evalf_double(g,1,contextptr); // rough evalf
+	vecteur P=*p._VECTptr;
+	gen val;
+	double err=0;
+	double absg=abs(g,contextptr)._DOUBLE_val;
+	for (int i=0;i<P.size();++i){
+	  err += abs(val,contextptr)._DOUBLE_val+absg;
+	  val = val*g+P[i];
+	}
+	err=err/abs(val,contextptr)._DOUBLE_val;
+	int nbitsmore=std::ceil(std::log(err)/std::log(2));
+	gen r=complexroot(makesequence(symb_horner(*x._VECTptr,vx_var),pow(plus_two,-nbits-nbitsmore-2,contextptr)),true,contextptr);
+	if (r.type==_VECT){
+	  vecteur R=*r._VECTptr;
+	  for (unsigned i=0;i<R.size();++i){
+	    R[i]=R[i][0];
+	  }
+	  x=in_select_root(R,is_real(*x._VECTptr,contextptr),contextptr);
+	  return horner(*p._VECTptr,x,contextptr);
+	}
+      }
+    }
     if (g.type==_SYMB)
       return g._SYMBptr->sommet(convert_interval(g._SYMBptr->feuille,nbits,contextptr),contextptr);
     if (g.type==_REAL){
@@ -5558,9 +5590,45 @@ namespace giac {
 	MAX_PRINTABLE_ZINT=maxp;
 	return res;
       }
-      if (f==at_matrix || f==at_vector || f==at_array){
-	g.subtype=_MATRIX__VECT;
-	return g;
+      if (g.type==_MAP){
+	if (f==at_matrix || f==at_vector){
+	  if (g.subtype==_SPARSE_MATRIX)
+	    *logptr(contextptr) << "Run convert(matrix,array) for dense conversion" << endl;
+	  g.subtype=_SPARSE_MATRIX;
+	  return g;
+	}
+	if (f==at_array){
+	  vecteur res;
+	  if (!convert(*g._MAPptr,res))
+	    return gensizeerr("Invalid map");
+	  return res;
+	}
+	if (f==at_table){
+	  g.subtype=0;
+	  return g;
+	}
+      }
+      if (g.type==_VECT){
+	if (f==at_matrix){
+	  if (!ckmatrix(g))
+	    return gentypeerr(contextptr);
+	  g.subtype=_MATRIX__VECT;
+	  return g;
+	}
+	if ( f==at_vector || f==at_array){
+	  g.subtype=_MATRIX__VECT;
+	  return g;
+	}
+	if (f==at_table){
+	  const vecteur & m = *g._VECTptr;
+	  // conversion to sparse matrix
+	  gen_map M;
+	  gen resg(M);
+	  resg.subtype=_SPARSE_MATRIX;
+	  gen_map & res=*resg._MAPptr;
+	  convert(m,res);
+	  return resg;
+	}
       }
       return f(g,contextptr);
       // setsizeerr();
@@ -6293,6 +6361,12 @@ namespace giac {
 
   gen _matrix(const gen & g,const context * contextptr){
     if ( g.type==_STRNG &&  g.subtype==-1) return  g;
+    if (g.type==_MAP){
+      vecteur res;
+      if (!convert(*g._MAPptr,res))
+	return gensizeerr(contextptr);
+      return res;
+    }
     if (g.type!=_VECT)
       return gentypeerr(contextptr);
     vecteur v=*g._VECTptr;
@@ -7293,7 +7367,7 @@ namespace giac {
   const mksa_unit __a_unit={100,2,0,0,0,0,0,0,0};
   const mksa_unit __acre_unit={4046.87260987,2,0,0,0,0,0,0,0};
   const mksa_unit __arcmin_unit={2.90888208666e-4,0,0,0,0,0,0,0,0};
-  const mksa_unit __arcs_unit={4.8481368111,0,0,0,0,0,0,0,0};
+  const mksa_unit __arcs_unit={4.8481368111e-6,0,0,0,0,0,0,0,0};
   const mksa_unit __atm_unit={101325.0,-1,1,-2,0,0,0,0,0};
   const mksa_unit __au_unit={1.495979e11,1,0,0,0,0,0,0,0};
   const mksa_unit __b_unit={1e-28,2,0,0,0,0,0,0,0};
@@ -7608,6 +7682,7 @@ namespace giac {
     &__rad_unit,
     &__rd_unit,
     &__rem_unit,
+    &__tr_unit,
     &__rod_unit,
     &__rpm_unit,
     &__s_unit,
@@ -7802,6 +7877,7 @@ namespace giac {
     "_rad",
     "_rd",
     "_rem",
+    "_rev",
     "_rod",
     "_rpm",
     "_s",
@@ -8339,7 +8415,7 @@ namespace giac {
     }
     return symbolic(at_unit,makevecteur(a,subst(b,v,w,true,contextptr)));
   }
-  static string printasunit(const gen & feuille,const char * sommetstr,GIAC_CONTEXT){
+  string printasunit(const gen & feuille,const char * sommetstr,GIAC_CONTEXT){
     if (feuille.type!=_VECT || feuille._VECTptr->size()!=2)
       return "printasunit error";
     vecteur & v=*feuille._VECTptr;

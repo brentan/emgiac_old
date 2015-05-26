@@ -1,21 +1,14 @@
-#include "giac.h"
-
+#include <iostream>
 using namespace std;
-using namespace giac;
+
+typedef long long longlong;
+longlong multiplication(longlong a,longlong b){
+  longlong c=a*b;
+  return c;
+}
 
 int main(){
-  //debug_infolevel=20;
-  context ct;
-  cout << "Enter expressions to evaluate" << endl;
-  cout << "Example: factor(x^4-1); simplify(sin(3x)/sin(x))" << endl;
-  cout << "int(1/(x^4-1)); int(1/(x^4+1)^4,x,0,inf)" << endl;
-  cout << "f(x):=sin(x^2); f'(2); f'(y)" << endl;
-  cout << "Enter 0 to stop" << endl;
-  for (;;){
-    gen g;
-    cin >> g;
-    if (is_zero(g))
-      break;
-    cout << g << "=" << eval(g,1,&ct) << endl;
-  }
+  long long a=1 <<30;
+  long long b=a;
+  cout << multiplication(a,b) << endl;
 }

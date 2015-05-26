@@ -825,8 +825,17 @@ namespace giac {
   define_unary_function_ptr( at_VARS ,alias_at_VARS ,&__VARS);
 
   gen purgenoassume(const gen & args,const context * contextptr){
+    if (args.type==_VECT){
+      vecteur & v=*args._VECTptr;
+      vecteur res;
+      for (unsigned i=0;i<v.size();++i)
+	res.push_back(purgenoassume(v[i],contextptr));
+      return res;
+    }
     if (args.type!=_IDNT)
       return gensizeerr("Invalid purgenoassume "+args.print(contextptr));
+    if (!contextptr)
+      return _purge(args,0);
     // purge a global variable
     sym_tab::iterator it=contextptr->tabptr->find(args._IDNTptr->id_name),itend=contextptr->tabptr->end();
     if (it==itend)
@@ -2322,12 +2331,7 @@ namespace giac {
   static define_unary_function_eval (__XPON,&giac::_XPON,_XPON_s); // FIXME
   define_unary_function_ptr5( at_XPON ,alias_at_XPON,&__XPON,0,T_UNARY_OP_38);
 
-  gen _MANT(const gen & g0,GIAC_CONTEXT){
-    if (g0.type==_STRNG && g0.subtype==-1) return g0;
-    if (is_equal(g0))
-      return apply_to_equal(g0,_MANT,contextptr);
-    if (g0.type==_VECT)
-      return apply(g0,_MANT,contextptr);
+  gen mantissa(const gen & g0,bool includesign,GIAC_CONTEXT){
 #if 0 // def BCD
     gen g=evalf2bcd(g0,1,contextptr);
 #else
@@ -2340,11 +2344,31 @@ namespace giac {
     if (abs_calc_mode(contextptr)!=38 && gf.type!=_INT_)
       return gensizeerr(contextptr);
     // FIXME number of digits
-    return evalf(gabs*alog10(-gf,contextptr),1,contextptr);
+    return (includesign?sign(g,contextptr):1)*evalf(gabs*alog10(-gf,contextptr),1,contextptr);
+  }
+  gen _MANT(const gen & g0,GIAC_CONTEXT){
+    if (g0.type==_STRNG && g0.subtype==-1) return g0;
+    if (is_equal(g0))
+      return apply_to_equal(g0,_MANT,contextptr);
+    if (g0.type==_VECT)
+      return apply(g0,_MANT,contextptr);
+    return mantissa(g0,true,contextptr);
   }
   static const char _MANT_s[]="MANT";
   static define_unary_function_eval (__MANT,&giac::_MANT,_MANT_s); 
   define_unary_function_ptr5( at_MANT ,alias_at_MANT,&__MANT,0,T_UNARY_OP_38);
+
+  gen _mantissa(const gen & g0,GIAC_CONTEXT){
+    if (g0.type==_STRNG && g0.subtype==-1) return g0;
+    if (is_equal(g0))
+      return apply_to_equal(g0,_mantissa,contextptr);
+    if (g0.type==_VECT)
+      return apply(g0,_mantissa,contextptr);
+    return mantissa(g0,false,contextptr);
+  }
+  static const char _mantissa_s[]="mantissa";
+  static define_unary_function_eval (__mantissa,&giac::_mantissa,_mantissa_s); 
+  define_unary_function_ptr5( at_mantissa ,alias_at_mantissa,&__mantissa,0,T_UNARY_OP);
 
   gen _HMSX(const gen & g0,GIAC_CONTEXT){
     if ( g0.type==_STRNG && g0.subtype==-1) return  g0;
@@ -2453,7 +2477,7 @@ namespace giac {
   static define_unary_function_eval (__WAIT,&giac::_Pause,_WAIT_s);
   define_unary_function_ptr5( at_WAIT ,alias_at_WAIT,&__WAIT,0,T_UNARY_OP_38);
 
-#ifdef GIAC_HAS_STO_38
+#if 0 // def GIAC_HAS_STO_38
   gen aspen_input(const vecteur & v,GIAC_CONTEXT);
   gen aspen_msgbox(const vecteur & v,GIAC_CONTEXT);
 #endif
@@ -2488,7 +2512,7 @@ namespace giac {
       v.pop_back();
       s=4;
     }
-#ifdef GIAC_HAS_STO_38
+#if 0 // def GIAC_HAS_STO_38
     return aspen_input(v,contextptr);
 #else
     // now make a dialog
@@ -2503,7 +2527,7 @@ namespace giac {
   static define_unary_function_eval_quoted (__INPUT,giac::_INPUT,_INPUT_s);
   define_unary_function_ptr5( at_INPUT ,alias_at_INPUT,&__INPUT,_QUOTE_ARGUMENTS,T_UNARY_OP_38);
 
-#ifdef GIAC_HAS_STO_38
+#if 0 // def GIAC_HAS_STO_38
   // MSGBOX(txt) or MSGBOX(txt, true/false) to have OK/Cancel or just OK menus
   gen _MSGBOX(const gen & args,GIAC_CONTEXT){
     vecteur v=gen2vecteur(args);
@@ -2521,7 +2545,7 @@ namespace giac {
   define_unary_function_ptr5( at_MSGBOX ,alias_at_MSGBOX,&__MSGBOX,0,T_UNARY_OP_38);
 
   static const char _GETKEY_s[]="GETKEY";
-#ifdef GIAC_HAS_STO_38
+#if 0 // def GIAC_HAS_STO_38
   static define_unary_function_eval(__GETKEY,&at_GETKEYAspen,_GETKEY_s);
   // unary_function_eval __GETKEY(0,&at_GETKEYAspen,_GETKEY_s);
 #else
@@ -2794,9 +2818,39 @@ namespace giac {
       res=gen2vecteur(_trn(res,contextptr));
       return res;
     }
-    // orthogonal projection of each vector of B on image of A
-    matrice r,Ag=gramschmidt(A,r,false,contextptr);
     matrice res;
+    if (has_num_coeff(v)){
+      // <Ax-b|Ax-b> minimal, i.e. A* Ax=A* b or 
+      // A=QR, if A has m rows and n cols and m>=n, then Q is m*m and R is m*n
+      // first n cols of Q are Q1, first n rows of R are R1
+      // solve R1*x=Q1^t*b
+      gen qrdec=qr(v[0],contextptr);
+      if (qrdec.type==_VECT && qrdec._VECTptr->size()==2){
+	gen q=qrdec._VECTptr->front(),r=qrdec._VECTptr->back();
+	if (ckmatrix(q) && ckmatrix(r)){ 
+	  if (!is_zero(r[A.size()-1])){
+	    gen qt=_trn(q,contextptr);
+	    vecteur R(r._VECTptr->begin(),r._VECTptr->begin()+A.size());
+	    for (int i=0;i<bs;++i){
+	      gen Bi=B[i];
+	      vecteur v;
+	      linsolve_u(R,multmatvecteur(*qt._VECTptr,*Bi._VECTptr),v);
+	      res.push_back(v);
+	    }
+	    return mtran(res);
+	  }
+	  // A* Ax=A* b => R* Rx=R* Qb
+	  gen rstar=_trn(r,contextptr);
+	  gen rr=rstar*r;
+	  gen rq=rstar*q*B;
+	  return _linsolve(makesequence(rr,rq),contextptr);
+	}
+      }
+    }
+    // orthogonal projection of each vector of B on image of A
+    if (A.size()>20)
+      *logptr(contextptr) << "LSQ: exact data, running Gramschmidt instead of qr, this is much slower for large matrices" << endl;
+    matrice r,Ag=gramschmidt(A,r,false,contextptr);
     for (int i=0;i<bs;++i){
       gen Bi=B[i];
       vecteur tmp(as);
@@ -3694,7 +3748,7 @@ namespace giac {
 
 
 
-#ifdef GIAC_HAS_STO_38
+#if 0 // def GIAC_HAS_STO_38
   // encoding is up to 8 nibbles with various values...
   // 1 optional graphic name
   // 2 graphic name
@@ -3767,9 +3821,9 @@ namespace giac {
   gen _TEXTOUT(const gen &args, GIAC_CONTEXT)
   {
     if (args.type!=_VECT) return gensizeerr(contextptr);
-    int s= args.__VECTptr->v.size(); 
+    int s= args._VECTptr->size(); 
     if (s<3) return gensizeerr(contextptr);
-    gen t= *args.__VECTptr->v.begin();
+    gen t= *args._VECTptr->begin();
     gen v(*args._VECTptr); v._VECTptr->erase(v._VECTptr->begin());
     void *g=0; int xy[2]={0, 0}, c[4]= {0, 0, 1023, -1};
     //TEXTOUT("text", [G?], x, y, [font, [color, [width, [color]]]])
@@ -3870,9 +3924,9 @@ namespace giac {
   gen _TEXTOUT_P(const gen &args, GIAC_CONTEXT)
   {
     if (args.type!=_VECT) return gensizeerr(contextptr);
-    int s= args.__VECTptr->v.size(); 
+    int s= args._VECTptr->size(); 
     if (s<3) return gensizeerr(contextptr);
-    gen t= *args.__VECTptr->v.begin();
+    gen t= *args._VECTptr->begin();
     gen v(*args._VECTptr); v._VECTptr->erase(v._VECTptr->begin());
     void *g=0; int xy[2]={0, 0}, c[4]= {0, 0, 1023, -1};
     //TEXTOUT("text", [G?], x, y, [font, [color, [width, [color]]]])
@@ -3900,7 +3954,7 @@ namespace giac {
   {
     void *g=0; int xy[2], c= 3;
     if (!GraphicVerifInputs2(args, &g, xy, 0x6c9, &c, false, contextptr)) return gensizeerr(contextptr);
-    dodimgrob((void**)g, xy[0], xy[1], c, args.__VECTptr->v.end()[-1]);
+    dodimgrob((void**)g, xy[0], xy[1], c, args._VECTptr->end()[-1]);
     return 1;
   }
   CyrilleFnc(DIMGROB_P);

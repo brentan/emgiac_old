@@ -360,7 +360,7 @@ namespace giac {
     return true;
   }
 
-  static gen subst_integrate(const gen & e,const gen & i,const gen & newi,bool quotesubst,GIAC_CONTEXT){
+  static gen subst_integrate(const gen & e,const gen & i,const gen & newi,bool quotesubst,int intg,GIAC_CONTEXT){
     vecteur v=*e._SYMBptr->feuille._VECTptr;
     int s=v.size();
     if ( (s>1) && (v[1]==i) ){
@@ -371,11 +371,15 @@ namespace giac {
 	return gensizeerr(contextptr);
       v[1]=l.front();
       v=subst(v,i,newi,quotesubst,contextptr);
-      v[0]=v[0]*derive(newi,l.front(),contextptr); 
+      gen der=derive(newi,l.front(),contextptr);
+      if (intg==0 && der!=1)
+	return gensizeerr("Unable to handle sum change of variables");
+      else
+	v[0]=v[0]*der; 
       if (is_undef(v[0]))
 	return v[0];
       if (s>2){
-	identificateur t(" t");
+	identificateur t(" tsubst");
 	vecteur w=solve(newi-t,*l.front()._IDNTptr,1,contextptr); 
 	if (w.empty())
 	  return gensizeerr(gettext("Unable to solve"));
@@ -387,9 +391,9 @@ namespace giac {
 	else
 	  v[2]=limit(w.front(),t,v[2],0,contextptr);	  
       }
-      return symbolic(at_integrate,gen(v,_SEQ__VECT));
+      return symbolic((intg==0?at_sum:at_integrate),gen(v,_SEQ__VECT));
     }
-    return symbolic(at_integrate,gen(subst(v,i,newi,quotesubst,contextptr),_SEQ__VECT));
+    return symbolic((intg==0?at_sum:at_integrate),gen(subst(v,i,newi,quotesubst,contextptr),_SEQ__VECT));
   }
 
   static gen subst_derive(const gen & e,const gen & i,const gen & newi,bool quotesubst,GIAC_CONTEXT){
@@ -424,13 +428,23 @@ namespace giac {
 	newe=newi;
 	return true;
       }
+      if (i.type==_FUNC && e._SYMBptr->sommet==i){
+	if (!has_subst(e._SYMBptr->feuille,i,newi,newe,quotesubst,contextptr))
+	  newe=e._SYMBptr->feuille;
+	newe=newi(newe,contextptr);
+	return true;
+      }
       if ( e._SYMBptr->sommet==at_pow && i.type==_SYMB && i._SYMBptr->sommet==at_exp && (*(e._SYMBptr->feuille._VECTptr))[1]*ln((*(e._SYMBptr->feuille._VECTptr))[0],contextptr) == i._SYMBptr->feuille ) {
 	CERR << e << "=" << i << endl;
 	newe=newi;
 	return true;
       }
       if ( (e._SYMBptr->sommet==at_integrate || !strcmp(e._SYMBptr->sommet.ptr()->s,"integration") || !strcmp(e._SYMBptr->sommet.ptr()->s,"int")) && (e._SYMBptr->feuille.type==_VECT) && (i.type==_IDNT) ){
-	newe=subst_integrate(e,i,newi,quotesubst,contextptr);
+	newe=subst_integrate(e,i,newi,quotesubst,1,contextptr);
+	return true;
+      }
+      if ( e._SYMBptr->sommet==at_sum && e._SYMBptr->feuille.type==_VECT && (i.type==_IDNT) ){
+	newe=subst_integrate(e,i,newi,quotesubst,0,contextptr);
 	return true;
       }
       if ( (e._SYMBptr->sommet==at_derive) && (e._SYMBptr->feuille.type==_VECT) &&(i.type==_IDNT) ){
@@ -1792,6 +1806,8 @@ namespace giac {
 	return symbolic(at_factorial,symbolic(at_plus,gen(v,_SEQ__VECT)));
       }
     }
+    if (x.type==_VECT)
+      return symbolic(at_Gamma,x);
     return symbolic(at_factorial,x-1);
   }
 
@@ -2123,7 +2139,6 @@ namespace giac {
     if (l1.empty())
       return e;
     f=subst(f,l1,l2,false,contextptr);
-    f=normal(f,contextptr);
     return f;
   }
 
@@ -2139,14 +2154,20 @@ namespace giac {
       return _evalc(e_orig,contextptr);
     // ratnormal added for E:=2*exp(t/25)/(19+exp(t/25)); F:=simplifier(int(E,t)); 
     // M:=(1/50)*int(E,t,50,100); simplify(M)
-    if (!lop(e,at_ln).empty())
-      e=lncollect(ratnormal(e_orig),contextptr);
+    vecteur lnv=lop(e,at_ln);
+    if (!lnv.empty()){
+      gen trye=lncollect(ratnormal(e_orig),contextptr);
+      if (lop(trye,at_ln).size()<lnv.size())
+	e=trye;
+    }
     if (!lop(e,at_exp).empty())
       e=_exp2pow(e,contextptr);
     if (!lop(e,at_pow).empty())
       e=powneg2invpow(e,contextptr);
-    if (contains(e,cst_pi))
+    if (contains(e,cst_pi)){
       e=cossinexp2rootof(e,contextptr);
+      e=normal(e,contextptr);
+    }
     if (e.type==_SYMB && e._SYMBptr->feuille.type!=_VECT){
       if (e._SYMBptr->sommet!=at_inv && e._SYMBptr->sommet!=at_neg)
 	return e._SYMBptr->sommet(simplify(e._SYMBptr->feuille,contextptr),contextptr); 
@@ -2163,19 +2184,35 @@ namespace giac {
     it=vabs2.begin(); itend=vabs2.end();
     for (;it!=itend;++it){
       gen tmp=it->_SYMBptr->feuille;
-      if (tmp.type==_VECT && tmp._VECTptr->size()==2)
-	*it=normal(pow(simplify(tmp._VECTptr->front(),contextptr),tmp._VECTptr->back(),contextptr),contextptr);
+      if (tmp.type==_VECT && tmp._VECTptr->size()==2){
+	gen tmp1=simplify(tmp._VECTptr->front(),contextptr);
+	tmp1=pow(tmp1,tmp._VECTptr->back(),contextptr);
+	gen tmp2=normal(tmp1,contextptr);
+	*it=tmp2;
+      }
     }
     // try to rewrite powers with less indep. vars
-    if (vabs2.size()>1)
+    if (vabs2.size()>1){
+#ifdef NO_STDEXCEPT
+      vecteur vabs2tmp=*tsimplify_common(vabs2,contextptr)._VECTptr;
+      if (is_undef(vabs2tmp)){
+	*logptr(contextptr) << vabs2tmp << endl;
+	return e_orig;
+      }
+      // check for rootof?
+      vabs2=vabs2tmp;
+#else
       vabs2=*tsimplify_common(vabs2,contextptr)._VECTptr;
+#endif
+    }
     e=quotesubst(e,vabs,vabs2,contextptr);
     e=recursive_normal(e,contextptr); 
+    if (is_undef(e)) return e;
     // Don't touch fractional powers and absolute value anymore
     vabs2=lvar(e);
     vabs.clear();
     for (unsigned int i=0;i<vabs2.size();++i){
-      if (vabs2[i].is_symb_of_sommet(at_abs) || vabs2[i].is_symb_of_sommet(at_pow))
+      if (vabs2[i].is_symb_of_sommet(at_abs) || vabs2[i].is_symb_of_sommet(at_pow) || vabs2[i].is_symb_of_sommet(at_integrate))
 	vabs.push_back(vabs2[i]);
     }
     if (!vabs.empty() && debug_infolevel)
@@ -2275,6 +2312,10 @@ namespace giac {
     g=normal(trigcos(reg,contextptr),contextptr)+cst_i*normal(trigcos(img,contextptr),contextptr);
     return g;
   }
+  static const char _expln2trig_s []="expln2trig";
+  static define_unary_function_eval (__expln2trig,&giac::expln2trig,_expln2trig_s);
+  define_unary_function_ptr5( at_expln2trig ,alias_at_expln2trig,&__expln2trig,0,true);
+
   gen _simplify(const gen & args,GIAC_CONTEXT){
     if ( args.type==_STRNG && args.subtype==-1) return  args;
     gen var,res;

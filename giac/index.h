@@ -35,7 +35,7 @@
 #endif
 ///////////////////////////////////////////
 
-#ifdef C11_UNORDERED_MAP
+#if defined C11_UNORDERED_MAP && (defined __clang__ || !defined __APPLE__)
 #undef HASH_MAP
 #undef EXT_HASH_MAP
 #undef UNORDERED_MAP
@@ -230,7 +230,7 @@ namespace giac {
 
   class ref_index_t {
   public:
-    int ref_count;
+    ref_count_t ref_count;
     index_t i;
     ref_index_t():ref_count(1) {}
     ref_index_t(int s):ref_count(1),i(s) {}

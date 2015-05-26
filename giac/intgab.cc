@@ -331,13 +331,18 @@ namespace giac {
     }
     if (s<2)
       return gensizeerr(contextptr);
+    if (s>2 && v[1].type==_IDNT){
+      vecteur res=find_singularities(v[0],*v[1]._IDNTptr,(is_zero(v[2])?1:9),contextptr);
+      comprim(res);
+      return res;
+    }
     return singular(v[0],v[1],contextptr);
   } 
   static const char _singular_s []="singular";
   static define_unary_function_eval (__singular,&_singular,_singular_s);
   define_unary_function_ptr5( at_singular ,alias_at_singular,&__singular,0,true);
 
-  bool assume_t_in_ab(gen & t,const gen & a,const gen & b,bool exclude_a,bool exclude_b,GIAC_CONTEXT){
+  bool assume_t_in_ab(const gen & t,const gen & a,const gen & b,bool exclude_a,bool exclude_b,GIAC_CONTEXT){
     vecteur v_interval(1,gen(makevecteur(a,b),_LINE__VECT));
     vecteur v_excluded;
     if (exclude_a)
@@ -895,7 +900,7 @@ namespace giac {
 	gen expo=g0_._VECTptr->back();
 	gen base=g0_._VECTptr->front();
 	vecteur lv=lvarxwithinv(base,x,contextptr);//rlvarx(base,x);
-	if (lv.size()==1){
+	if (lv.size()==1 && lv.front()==x){
 	  int na=0,nb=0;
 	  for (;;){
 	    gen tmp=_quorem(makesequence(base,x-a,x),contextptr);
@@ -913,6 +918,7 @@ namespace giac {
 	  if (derive(base,x,contextptr)==0){
 	    g0mult=pow(base,expo,contextptr);
 	    g0_=symbolic(at_pow,makesequence(x-a,na*expo))*symbolic(at_pow,makesequence(b-x,nb*expo));
+	    nb=0; // insure next test is not true
 	  }
 	  if (nb==1 && !na){
 	    base=g0_._VECTptr->front();
@@ -1305,8 +1311,11 @@ namespace giac {
 	      gof=recursive_normal(gof,contextptr);
 	      // complex_mode(b,contextptr);
 	      // Sucess! Now integration of gof on the unit circle using residues
-	      *logptr(contextptr) << gettext("Searching int of ") << gof << gettext(" where ") << x << gettext(" is on the unit circle, using residues") << endl;
-	      vecteur w=singular(gof,x,contextptr);
+	      if (debug_infolevel)
+		*logptr(contextptr) << gettext("Searching int of ") << gof << gettext(" where ") << x << gettext(" is on the unit circle, using residues") << endl;
+	      // replace x by another variable because we might have assumptions on x
+	      identificateur tmpid("_intgab38");
+	      vecteur w=singular(subst(gof,x,tmpid,false,contextptr),tmpid,contextptr);
 	      if (is_undef(w))
 		return false;
 	      int s=w.size();
@@ -1700,22 +1709,24 @@ namespace giac {
 	if (diffa.type==_INT_ && diffb.type==_INT_){
 	  gen P=r2sym(p,v,contextptr);
 	  if (p.lexsorted_degree()==0){
-	    res = simplify(pow(P*(-Qa/Ra)+1,truen,contextptr)*subst(g,x,truea,false,contextptr),contextptr);
+	    res = P*(-Qa/Ra)+1;
+	    if (!is_zero(res))
+	      res=simplify(pow(res,truen,contextptr)*limit(g,*x._IDNTptr,truea,0,contextptr),contextptr);
 	    if (diffb.val>0){ // b>trueb: add sum(g,x,trueb+1,b-1)
 	      for (int i=0;i<diffb.val;++i)
-		res += simplify(subst(g,x,trueb+1+i,false,contextptr),contextptr);
+		res += simplify(limit(g,*x._IDNTptr,trueb+1+i,0,contextptr),contextptr);
 	    }
 	    else { // b<=trueb substract sum(g,x,b+1,trueb)
 	      for (int i=0;i<-diffb.val;++i)
-		res -= simplify(subst(g,x,b+1+i,false,contextptr),contextptr); 
+		res -= simplify(limit(g,*x._IDNTptr,b+1+i,0,contextptr),contextptr); 
 	    }
 	    if (diffa.val>0){ // a>truea : substract sum(g,x,truea,a-1)
 	      for (int i=0;i<diffa.val;++i)
-		res -= simplify(subst(g,x,truea+i,false,contextptr),contextptr);
+		res -= simplify(limit(g,*x._IDNTptr,truea+i,0,contextptr),contextptr);
 	    }
 	    else { // a<=truea: add sum(g,x,a,truea-1)
 	      for (int i=0;i<-diffa.val;++i)
-		res += simplify(subst(g,x,a+i,false,contextptr),contextptr);
+		res += simplify(limit(g,*x._IDNTptr,a+i,0,contextptr),contextptr);
 	    }
 	    return true;
 	  }

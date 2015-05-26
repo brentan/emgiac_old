@@ -2435,9 +2435,9 @@ namespace giac {
     }
     double pq=double(p.coord.size())*q.coord.size();
     unsigned dim=p.dim;
-#if 1 // def HAVE_LIBPARI
+#if 0 // def HAVE_LIBPARI : PARI is faster but has problems with some large inputs
     // we must keep the same variable ordering than in PARI
-    if (dim>=2 && dim<=4 && pq>256){
+    if (dim>=2 && dim<=4 && pq>256 && p>4 && q>4){
       gen coefft,coeffqt;
       int pt=coefftype(p,coefft),qt=coefftype(q,coeffqt);
       if (pt==0 && qt==0){
@@ -4891,12 +4891,12 @@ namespace giac {
       return false;
     }
     gen ip=im(p,context0);
-    if (!is_zero(ip)){
+    if (!is_zero(ip) ||complexmode){
       // replace i by [1,0]:[1,0,1]
-      gen newp=re(p,context0)+algebraic_EXTension(makevecteur(1,0),makevecteur(1,0,1))*ip;
+      gen bn=1,the_ext=algebraic_EXTension(makevecteur(1,0),makevecteur(1,0,1));
+      gen newp=re(p,context0)+the_ext*ip;
       if (newp.type!=_POLY)
 	return false;
-      gen bn=1,the_ext;
       lcmdeno(*newp._POLYptr,bn);
       newp=bn*newp;
       vector< monomial<gen> >::iterator it=newp._POLYptr->coord.begin(),itend=newp._POLYptr->coord.end();
@@ -4911,6 +4911,12 @@ namespace giac {
 	  else
 	    the_ext=it->value;
 	}
+      }
+      if (e.type==_EXT){
+	common_EXT(*(e._EXTptr+1),*(the_ext._EXTptr+1),0,context0);
+	the_ext=ext_reduce(the_ext);
+	if (the_ext.type==_FRAC)
+	  the_ext=the_ext._FRACptr->num;
       }
       for (it=newp._POLYptr->coord.begin();it!=itend;++it){
 	if (it->value.type==_EXT)
@@ -5023,7 +5029,7 @@ namespace giac {
       }
 #endif
       int k;
-      if (!algfactor(p_y,p_mini,k,fz,complexmode,extra_div))
+      if (!algfactor(p_y,p_mini,k,fz,false,extra_div))
 	return false;
       factorization::const_iterator f_it=fz.begin(),f_itend=fz.end();
       if (f_itend-f_it==1){ // irreducible (after sqff)
@@ -5879,7 +5885,21 @@ namespace giac {
     return (is_positive(p.coord.front().value,context0));
   }
 
-  void partfrac(const polynome & num, const polynome & den, const vector< facteur< polynome > > & v , vector < pf <gen> > & pfdecomp, polynome & ipnum, polynome & ipden,bool rational ){
+  void partfrac(const polynome & num_, const polynome & den_, const vector< facteur< polynome > > & v_ , vector < pf <gen> > & pfdecomp, polynome & ipnum, polynome & ipden,bool rational ){
+    polynome num(num_),den(den_);
+    vector< facteur< polynome > > v(v_);
+    vector< facteur< polynome > >::iterator jt=v.begin(),jtend=v.end()
+;
+    for (;jt!=jtend;++jt){
+      gen tmp(1);
+      lcmdeno(jt->fact,tmp);
+      if (!is_one(tmp)){
+	jt->fact=tmp*jt->fact;
+	tmp=pow(tmp,jt->mult,context0);
+	num=tmp*num;
+	den=tmp*den;
+      }
+    }
     // check that all mult == 1 and deg<=2
     // later will split in 2 parts, 1st having this property
     vector< facteur< polynome > >::const_iterator it=v.begin(),itend=v.end();

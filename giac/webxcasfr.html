@@ -13,51 +13,87 @@
     </style>
 </head>
 <body>
-  <canvas id='canvas' width=1 height=1></canvas>
-  Webxcas est un système de calcul formel en javascript (traduit à partir de
-  <a href="http://www-fourier.ujf-grenoble.fr/~parisse/giac/emgiac.tgz">Giac/Xcas</a> 
-  par emscripten). Il n'a pas besoin de serveur, il s'exécute localement
-  (avec le moteur javascript de votre navigateur qui doit être récent, par
-  exemple Firefox 19 ou Chrome) à partir du code du CAS (6.5M) qui est téléchargé
-  une fois. Le prix à payer pour cette simplicité
-  est la vitesse, le code est au moins 10 fois plus lent, souvent 100, que
-  le même code natif, si vous devez exécuter un calcul un peu compliqué,
-  installez
-  <a href="http://www-fourier.ujf-grenoble.fr/~parisse/giac_fr.html">Xcas</a>!
-  <br>
-  <b>Exemples d'entrées:</b> <br>
-  <tt> factor(x^4-1); cfactor(x^2+1); normal((x+1)^4)
-    <br> solve(x^2-3*x+2=0); csolve(x^2=2*i); solve([x+y=1,x-y=3],[x,y])
-    <br> simplify(sin(3x)/sin(x)); gcd(x^4-1,x^3-1)
-    <br> f(x):=sin(x^2):; f(sqrt(pi)); f'(2); f'(y) 
-    <br> int(1/(x^4-1)); int(1/(x^4+1)^4,x,0,+infinity)
-    <br> limit(sin(x)/x,x=0); series(sin(x),x=0,5);
-    <br> A:=[[1,2],[3,4]]; inv(A); det(A-x*idn(A)); A[0,0]; rref(A); eigenvalues(A); eigenvectors(A);
+<h1>Xcas dans votre navigateur!</h1>
+<a
+href="http://www-fourier.ujf-grenoble.fr/~parisse/giac/doc/fr/cascmd_fr">Documentation</a>, <b>exemples
+de commandes :</b>
+<ul>
+  <li> Alg&egrave;bre :
+  <tt> factor(x^4-1); cfactor(x^2+1); normal((x+1)^4);
+    simplify(sin(3x)/sin(x)); gcd(x^4-1,x^3-1) </tt>
+  </li>
+  <li> R&eacute;soudre une ou des &eacute;quations :
+    <tt> solve(x^2-3*x+2=0); csolve(x^2=2*i);
+  solve([x+y=1,x-y=3],[x,y]) </tt>
+  </li>
+  <li>Analyse :
+    <tt> f(x):=sin(x^2):; f(sqrt(pi)); f'(2); f'(y) 
+    <br> int(1/(x^4-1)); int(1/(x^4+1)^4,x,0,+infinity); 
+  limit(sin(x)/x,x=0); series(sin(x),x=0,5);</tt>
+  </li>
+  <li> Alg&egrave;bre lin&eacute;aire :
+    <tt> A:=[[1,2],[3,4]]; inv(A); det(A-x*idn(A)); A[0,0]; rref(A);
+  eigenvalues(A); eigenvectors(A);</tt>
+  </li>
+  <li> Graphes (pour les graphes 3d, vous pouvez changer de point de
+  vue en utilisant les touches de d&eacute;placement,
+  taper q pour quitter le mode interactif) :
+  <tt>plot([sin(x),x-x^3/3!],x=-3..3,color=[red,blue])
+  <br> plotfunc(x^2-y^2,[x=-2..2,y=-2..2]); plane(z=0,color=cyan+filled);
   </tt>
-  <br>
-  Plus de <a href="http://www-fourier.ujf-grenoble.fr/~parisse/giac/doc/fr/cascmd_fr">documentation</a> (attention il faut saisir les commandes en anglais).
-  <br>
-  Giac/Xcas (c) B. Parisse, R. De Graeve, Institut Fourier, Université de Grenoble I, sous licence GPL3.
+  </ul>
   <hr>
-  <form onsubmit="setTimeout(function() {     
-		  caseval = Module.cwrap('_ZN4giac7casevalEPKc', 'string', ['string']);    
-		  Module.print(entree.value+'\n  '+caseval(entree.value));}); 
+  
+<table border="0" align="left" summary="">
+<tr>
+<td>  
+  <form onsubmit="setTimeout(function() {
+  entree.autocomplete=false;
+		  caseval = Module.cwrap('_ZN4giac7casevalEPKc',
+  'string', ['string']);
+		  Module.print(entree.value+'\n  '+caseval('set_language(1);'+entree.value));entree.autocomplete=true; entree.select();entree.focus();}); 
 		  return false">
-    Input: <input type="text" name="entree" value="factor(x^4-1)">
-    <input type="submit" value="Go!">
+    Commande: <input type="text" name="entree" value="factor(x^4-1)"
+  size=60>
+    <input type="submit" value="ok">
   </form>
+</td>
+<td>
+  <form onsubmit="setTimeout(function() {     
+		  caseval = Module.cwrap('_ZN4giac7casevalEPKc',
+  'string', ['string']);
+		  Module.print('  '+caseval('set_language(1);'+prog.value));prog.focus();}); 
+		  return false">
+  Programme/Figure: <textarea name="prog" rows=5 cols=60>
+A:=point(1,1);
+B:=point(2,3);
+D:=droite(A,B);
+C:=cercle(A,2);</textarea>
+    <input type="submit" value="ok">
+  </form>
+</td>
+</tr>
+</table>
 
-    <hr/>
-    <div class="emscripten" id="status">Downloading...</div>
-    <div class="emscripten">
-      <progress value="0" max="100" id="progress" hidden=1></progress>  
-    </div>
-    <hr/>
-    <textarea class="emscripten" id="output" rows="8"></textarea>
-    <!--- <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()"></canvas> --->
-    <hr/>
+<hr/>
+<div class="emscripten" id="status">Downloading...</div>
+<div class="emscripten">
+  <progress value="0" max="100" id="progress" hidden=1></progress>  
+</div>
 
-    <hr>
+<table border="0" align="left" summary="">
+<tr>
+<td> Historique 
+    <textarea class="emscripten" id="output" rows="18" cols="80"></textarea>
+</td>
+<td> Graphe 2d/3d (q quitte, -/+ zoom, fleches: point de vue 3d)
+    <!--- <canvas class="emscripten" id="canvas"
+  oncontextmenu="event.preventDefault()"></canvas> --->
+<canvas id='canvas' width=400 height=250></canvas>
+</td>
+</tr>
+</table>
+
 
   <script type='text/javascript'>
       // connect to canvas
@@ -74,7 +110,7 @@
             //text = text.replace(/>/g, "&gt;");
             //text = text.replace('\n', '<br>', 'g');
             element.value += text + "\n";
-            element.scrollTop = 99999; // focus on bottom
+    element.scrollTop = 99999; // focus on bottom
           };
         })(),
         printErr: function(text) {
@@ -84,7 +120,7 @@
             console.log(text);
           }
         },
-        // canvas: document.getElementById('canvas'),
+        canvas: document.getElementById('canvas'),
         setStatus: function(text) {
           if (Module.setStatus.interval) clearInterval(Module.setStatus.interval);
           var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
@@ -112,6 +148,27 @@
     </script>      
   <script src="giac.js"></script>
 
+<br>
+
+Webxcas est une interface de demo du
+système de calcul formel
+<a
+href="http://www-fourier.ujf-grenoble.fr/~parisse/giac/emgiac.tgz">Giac/Xcas</a>
+compil&eacute; en javascript par emscripten.
+Il n'a pas besoin de serveur, il s'exécute localement
+  (avec le moteur javascript de votre navigateur qui doit être récent, par
+  exemple Firefox 19 ou Chrome) à partir du code du CAS (10M) qui est téléchargé
+  une fois. Le prix à payer pour cette simplicité
+est la vitesse, le code est au moins 2 fois plus lent, parfois plus
+de 100 fois plus lent (par exemple pour le calcul de bases de
+Groebner comme cyclic7). La plupart du temps, cela n'est pas vraiment
+genant (ce qui justifierait une interface plus conviviale...), mais
+si vous devez exécuter un gros calcul, il
+vaut mieux installer
+  <a href="http://www-fourier.ujf-grenoble.fr/~parisse/giac_fr.html">Xcas</a>!
+<br>
+Giac/Xcas (c) B. Parisse, R. De Graeve, Institut Fourier, Université
+de Grenoble I, sous licence GPL3, pour une licence commerciale nous contacter.
 
 </body>
 </html>
