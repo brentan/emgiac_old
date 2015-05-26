@@ -31,7 +31,7 @@
 #if defined VISUALC || defined BESTA_OS 
 typedef long pid_t;
 #else // VISUALC
-#if !defined(__MINGW_H) && !defined(BESTA_OS) && !defined(NSPIRE) && !defined(__ANDROID__)
+#if !defined(__MINGW_H) && !defined(BESTA_OS) && !defined(NSPIRE) && !defined(__ANDROID__) && !defined(NSPIRE_NEWLIB)
 #include "wince_replacements.h"
 #endif
 #ifdef __MINGW_H
@@ -43,9 +43,6 @@ typedef long pid_t;
 #if defined VISUALC || defined BESTA_OS
 #include <math.h>
 #include <float.h>
-#ifndef RTOS_THREADX
-#include <io.h>
-#endif
 #endif
 #ifndef WIN32
 #include <math.h>
@@ -104,6 +101,8 @@ inline double giac_log(double d){
 #ifndef NO_NAMESPACE_GIAC
 namespace giac {
 #endif // ndef NO_NAMESPACE_GIAC
+  void opaque_double_copy(void * source,void * target);
+  double opaque_double_val(const void * source);
 
   double giac_floor(double d);
   double giac_ceil(double d);
@@ -176,6 +175,9 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
   int access(const char * ch,int mode);
   void usleep(int );
 #endif
+#ifdef NSPIRE_NEWLIB
+  void usleep(int );
+#endif
 
   double delta_tms(struct tms tmp1,struct tms tmp2);
 
@@ -217,6 +219,7 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
   extern unsigned short int GIAC_PADIC;
 
   extern bool CAN_USE_LAPACK;
+  extern bool simplify_sincosexp_pi;
 #ifndef RTOS_THREADX
 #ifndef BESTA_OS
   extern int CALL_LAPACK; // lapack is used if dim of matrix is >= CALL_LAPACK
@@ -856,8 +859,8 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
   std::string find_lang_prefix(int i);
   int string2lang(const std::string & s); // convert "fr" to 1, "es" to 3 etc.
   void update_completions();
-  void add_language(int i);
-  void remove_language(int i);
+  void add_language(int i,GIAC_CONTEXT);
+  void remove_language(int i,GIAC_CONTEXT);
   std::string set_language(int i,GIAC_CONTEXT);
   std::string read_env(GIAC_CONTEXT,bool verbose=true); // return doc prefix
   std::string home_directory();

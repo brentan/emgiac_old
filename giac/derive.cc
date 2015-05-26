@@ -83,6 +83,15 @@ namespace giac {
 
   static gen derive_SYMB(const gen &g_orig,const identificateur & i,GIAC_CONTEXT){
     const symbolic & s = *g_orig._SYMBptr;
+    if (s.sommet==at_pnt){
+      gen f=g_orig._SYMBptr->feuille;
+      if (f.type==_VECT && !f._VECTptr->empty()){
+	vecteur v=*f._VECTptr;
+	v[0]=derive(v[0],i,contextptr);
+	f=gen(v,f.subtype);
+	return symbolic(at_pnt,f);
+      }
+    }
     // if s does not depend on i return 0
     if (!depend(g_orig,i))
       return zero;
@@ -489,8 +498,11 @@ namespace giac {
 	return 0;
     case _SYMB:
       return derive_SYMB(e,i,contextptr);
-    case _VECT:
-      return derive_VECT(*e._VECTptr,i,contextptr);
+    case _VECT: {
+      gen res=derive_VECT(*e._VECTptr,i,contextptr);
+      if (res.type==_VECT) res.subtype=e.subtype;
+      return res;
+    }
     case _FRAC:
       return fraction(derive(e._FRACptr->num,i,contextptr)*e._FRACptr->den-(e._FRACptr->num)*derive(e._FRACptr->den,i,contextptr),e._FRACptr->den);
     default:
@@ -600,6 +612,8 @@ namespace giac {
       v=plotpreprocess(gen(*args._VECTptr,_SEQ__VECT),contextptr);
     else
       v=plotpreprocess(makesequence(args,vx_var),contextptr);
+    if (v.size()>1 && v[1].is_symb_of_sommet(at_unquote))
+      v[1]=eval(v[1],1,contextptr);
     if (is_undef(v))
       return v;
     gen var,res;

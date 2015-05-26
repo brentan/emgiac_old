@@ -43,6 +43,7 @@ using namespace std;
 #include "input_lexer.h"
 #include "maple.h"
 #include "quater.h"
+#include "sparse.h"
 #include "giacintl.h"
 
 #ifndef NO_NAMESPACE_GIAC
@@ -124,6 +125,13 @@ namespace giac {
     }
     if (s>=3)
       x=v[2];
+    if (v0.type!=_VECT && v1.type==_VECT){
+      gen tmp=v1;
+      v1=_apply(makesequence(v0,v1),contextptr);
+      v0=tmp;
+    }
+    if (v1.type!=_VECT && v0.type==_VECT)
+      v1=_apply(makesequence(v1,v0),contextptr);
     if ( (v0.type!=_VECT) || (v1.type!=_VECT) )
       return gensizeerr(contextptr);
     vecteur & vx =*v0._VECTptr;
@@ -138,6 +146,8 @@ namespace giac {
       return res;
     }
     vecteur w=divided_differences(vx,vy);
+    if (x==at_lagrange)
+      return w;
     gen pi(1),res(w[s-1]);
     for (int i=s-2;i>=0;--i){
       res = res*(x-vx[i])+w[i];
@@ -284,7 +294,7 @@ namespace giac {
   gen _acot(const gen & args,GIAC_CONTEXT){
     if ( args.type==_STRNG && args.subtype==-1) return  args;
     if (is_zero(args))
-      return cst_pi_over_2;
+      return angle_radian(contextptr)?cst_pi_over_2:90;
 #if 0
     if (abs_calc_mode(contextptr)==38)
       return cst_pi_over_2-atan(args,contextptr);
@@ -336,9 +346,10 @@ namespace giac {
     gen uprime(normal(rdiv(uprimev,v,contextptr),contextptr));
     u=integrate_gen(uprime,x,contextptr);
     if (is_undef(u)) return u;
-    F += u*v;
     if (bound)
-      F = preval(F,x,a,b,contextptr);
+      F += preval(u*v,x,a,b,contextptr);
+    else
+      F += u*v;      
     return makevecteur(F,normal(-u*derive(v,x,contextptr),contextptr));
   }
   static const char _ibpu_s []="ibpu";
@@ -1172,6 +1183,41 @@ namespace giac {
     }
   }
 
+  /*
+  gen exptorootof(const gen & g,GIAC_CONTEXT){
+    gen h=ratnormal(g/cst_two_pi/cst_i);
+    if (h.type!=_FRAC || h._FRACptr->num.type!=_INT_ || h._FRACptr->den.type!=_INT_)
+      return symbolic(at_exp,g);
+    int n=h._FRACptr->num.val,d=h._FRACptr->den.val;
+    n=n%d;
+    if (d<0){ d=-d; n=-n; }
+    vecteur v=cyclotomic(d);
+    vecteur w(absint(n)+1);
+    w[0]=1;
+    w=w%v;
+    h=symbolic(at_rootof,makesequence(w,v));
+    if (n>0)
+      return h;
+    return inv(h,contextptr);
+  }
+  const gen_op_context exp2rootof_tab[]={exptorootof,0};
+  gen exp2rootof(const gen & g,GIAC_CONTEXT){
+    return subst(g,exp_tab,exp2rootof_tab,false,contextptr);
+  }
+  gen _exp2rootof(const gen & args,GIAC_CONTEXT){
+    if ( args.type==_STRNG && args.subtype==-1) return  args;
+    gen var,res;
+    if (is_algebraic_program(args,var,res))
+      return symbolic(at_program,makesequence(var,0,_exp2rootof(res,contextptr)));
+    if (is_equal(args))
+      return apply_to_equal(args,_exp2rootof,contextptr);
+    return exp2rootof(args,contextptr);
+  }
+  static const char _exp2rootof_s []="exp2rootof";
+  static define_unary_function_eval (__exp2rootof,&giac::_exp2rootof,_exp2rootof_s);
+  define_unary_function_ptr5( at_exp2rootof ,alias_at_exp2rootof,&__exp2rootof,0,true);
+  */
+
   static gen pmin(const matrice & m,GIAC_CONTEXT){
     int s=m.size();
     matrice mpow(midn(s));
@@ -1212,7 +1258,8 @@ namespace giac {
       return pmin(m,contextptr);
     }
     if (is_integer(g) || g.type==_MOD)
-      return gen(makevecteur(1,g),_POLY1__VECT);
+      return gen(makevecteur(1,-g),_POLY1__VECT);
+    // if (g.type==_FRAC) return gen(makevecteur(g._FRACptr->den,-g._FRACptr->num),_POLY1__VECT);
     if (is_cinteger(g) && g.type==_CPLX){
       gen a=*g._CPLXptr,b=*(g._CPLXptr+1);
       // z=(a+i*b), (z-a)^2=-b^2
@@ -1261,9 +1308,12 @@ namespace giac {
     if (g.type==_EXT)
       return minimal_polynomial(g,true,contextptr);
     if (g.type!=_VECT){
-      vecteur v=alg_lvar(g);
+      gen g_(g);
+      //if (!lop(g_,at_exp).empty())
+      g_=cossinexp2rootof(g_,contextptr);
+      vecteur v=alg_lvar(g_);
       if (v.size()==1 && v.front().type==_VECT && v.front()._VECTptr->empty()){
-	gen tmp=e2r(g,v,contextptr);
+	gen tmp=e2r(g_,v,contextptr);
 	gen d=1;
 	if (tmp.type==_FRAC){
 	  d=tmp._FRACptr->den;
@@ -1442,7 +1492,7 @@ namespace giac {
       return l2norm(v,contextptr);      
     }
     if (ckmatrix(g))
-      return _max(_SVL(g,contextptr),contextptr);
+      return _max(_SVL(g,contextptr)[1],contextptr);
     v=*g._VECTptr;
     return l2norm(v,contextptr);
   }
@@ -1759,6 +1809,68 @@ namespace giac {
       return gensizeerr(contextptr);
     vecteur v=*g._VECTptr;
     int l=v.size();
+    if (l==2 && ckmatrix(v[0])){
+      if (v[1]==at_left){
+	matrice m=*v[0]._VECTptr,res;
+	int n=m.size();
+	res.reserve(n);
+	for (int i=0;i<n;++i){
+	  vecteur v=*m[i]._VECTptr;
+	  int s=v.size();
+	  for (int j=i+1;j<s;++j)
+	    v[j]=0;
+	  res.push_back(v);
+	}
+	return res;
+      }
+      if (v[1]==at_right){
+	matrice m=*v[0]._VECTptr,res;
+	int n=m.size();
+	res.reserve(n);
+	for (int i=0;i<n;++i){
+	  vecteur v=*m[i]._VECTptr;
+	  for (int j=0;j<i;++j)
+	    v[j]=0;
+	  res.push_back(v);
+	}
+	return res;
+      }
+      if (v[1]==at_lu){
+	matrice m=*v[0]._VECTptr,resl,resu,diag;
+	int n=m.size();
+	resl.reserve(n); resu.reserve(n);
+	for (int i=0;i<n;++i){
+	  vecteur v=*m[i]._VECTptr;
+	  diag.push_back(v[i]);
+	  for (int j=0;j<=i;++j)
+	    v[j]=0;
+	  resu.push_back(v);
+	  v=*m[i]._VECTptr;
+	  int s=v.size();
+	  for (int j=i;j<s;++j)
+	    v[j]=0;
+	  resl.push_back(v);
+	}
+	return makesequence(resl,diag,resu);
+      }
+    }
+    if (l==3 && v[0].type==_VECT && v[1].type==_VECT && v[2].type==_VECT && v[0]._VECTptr->size()+1==v[1]._VECTptr->size() && v[0]._VECTptr->size()==v[2]._VECTptr->size() ){
+      vecteur & l=*v[0]._VECTptr;
+      vecteur & d=*v[1]._VECTptr;
+      vecteur & u=*v[2]._VECTptr;
+      int n=d.size();
+      matrice res(n);
+      for (int i=0;i<n;++i){
+	vecteur w(n);
+	if (i)
+	  w[i-1]=l[i-1];
+	w[i]=d[i];
+	if (i<n-1)
+	  w[i+1]=u[i];
+	res[i]=w;
+      }
+      return res;
+    }
     if (is_squarematrix(v)){
       vecteur res(l);
       for (int i=0;i<l;++i)
@@ -2092,7 +2204,7 @@ namespace giac {
       if (!is_zero(partial_sum) && is_strictly_greater(partial_sum,sigma,contextptr))
 	return data[i];
       if (partial_sum==sigma && i<s)
-	return (data[i]+data[i+1])/2;
+	return (i==s-1 || (calc_mode(contextptr)!=1 && abs_calc_mode(contextptr)!=38) )?data[i]:(data[i]+data[i+1])/2;
     }
     return undef;
   }
@@ -4889,7 +5001,7 @@ static define_unary_function_eval (__hamdist,&_hamdist,_hamdist_s);
   gen _add_language(const gen & args,GIAC_CONTEXT){
     if ( args.type==_STRNG && args.subtype==-1) return  args;
     if (args.type==_INT_){
-      add_language(args.val);
+      add_language(args.val,contextptr);
       return 1;
     }
     if (args.type==_STRNG){
@@ -4897,7 +5009,7 @@ static define_unary_function_eval (__hamdist,&_hamdist,_hamdist_s);
       s=s.substr(0,2);
       int i=string2lang(s);
       if (i){
-	add_language(i);
+	add_language(i,contextptr);
 	return 1;
       }
     }
@@ -4910,7 +5022,7 @@ static define_unary_function_eval (__add_language,&_add_language,_add_language_s
   gen _remove_language(const gen & args,GIAC_CONTEXT){
     if ( args.type==_STRNG && args.subtype==-1) return  args;
     if (args.type==_INT_){
-      remove_language(args.val);
+      remove_language(args.val,contextptr);
       return 1;
     }
     if (args.type==_STRNG){
@@ -4918,7 +5030,7 @@ static define_unary_function_eval (__add_language,&_add_language,_add_language_s
       s=s.substr(0,2);
       int i=string2lang(s);
       if (i){
-	remove_language(i);
+	remove_language(i,contextptr);
 	return 1;
       }
     }
@@ -4935,6 +5047,24 @@ static define_unary_function_eval (__remove_language,&_remove_language,_remove_l
   static const char _show_language_s []="show_language";
 static define_unary_function_eval (__show_language,&_show_language,_show_language_s);
   define_unary_function_ptr5( at_show_language ,alias_at_show_language,&__show_language,0,true);
+
+  gen _set_language(const gen & args,GIAC_CONTEXT){
+    if ( args.type==_STRNG && args.subtype==-1) return  args;
+    if (args.type!=_INT_)
+      return undef;
+#if 0
+    static int i=0;
+    if (language(contextptr)==args.val){
+      ++i;
+      return string2gen("ans("+print_INT_(i)+")= ",false);
+    }
+#endif
+    gen res=string2gen(set_language(args.val,contextptr),false);
+    return res;
+  }
+  static const char _set_language_s []="set_language";
+static define_unary_function_eval (__set_language,&_set_language,_set_language_s);
+  define_unary_function_ptr5( at_set_language ,alias_at_set_language,&__set_language,0,true);
 
   gen _os_version(const gen & args,GIAC_CONTEXT){
     if ( args.type==_STRNG && args.subtype==-1) return  args;
@@ -5235,14 +5365,14 @@ static define_unary_function_eval (__os_version,&_os_version,_os_version_s);
     return res;
   }
 
-  gen conjugate_gradient(const matrice & A,const vecteur & b_orig,const vecteur & x0,double eps,GIAC_CONTEXT){
+  gen conjugate_gradient(const matrice & A,const vecteur & b_orig,const vecteur & x0,double eps,int maxiter,GIAC_CONTEXT){
     int n=A.size();
     vecteur b=subvecteur(b_orig,multmatvecteur(A,x0));
     vecteur xk(x0);
     vecteur rk(b),pk(b);
     gen rk2=scalarproduct(rk,rk,contextptr);
     vecteur Apk(n),tmp(n);
-    for (int k=1;k<=n;++k){
+    for (int k=1;k<=maxiter;++k){
       multmatvecteur(A,pk,Apk);
       gen alphak=rk2/scalarproduct(pk,Apk,contextptr);
       multvecteur(alphak,pk,tmp);
@@ -5260,42 +5390,167 @@ static define_unary_function_eval (__os_version,&_os_version,_os_version_s);
     return xk;
   }
 
-
+  // Ax=b where A=D+B, Dx_{n+1}=b-B*x_n
+  gen jacobi_linsolve(const matrice & A,const vecteur & b_orig,const vecteur & x0,double eps,int maxiter,GIAC_CONTEXT){
+    int n=A.size();
+    matrice B(A);
+    vecteur D(n);
+    vecteur b=*evalf_double(b_orig,1,contextptr)._VECTptr;
+    for (int i=0;i<n;++i){
+      vecteur Ai=*evalf(A[i],1,contextptr)._VECTptr;
+      D[i]=Ai[i];
+      Ai[i]=0;
+      B[i]=Ai;
+    }
+    vecteur tmp(n),xn(x0),prev(n);
+    gen bn=l2norm(b,contextptr);
+    for (int i=0;i<maxiter;++i){
+      prev=xn;
+      multmatvecteur(B,xn,tmp);
+      subvecteur(b,tmp,xn);
+      iterateur jt=xn.begin(),jtend=xn.end(),dt=D.begin();
+      for (;jt!=jtend;++jt){
+	*jt=*jt / *dt;
+      }
+      gen g=l2norm(xn-prev,contextptr)/bn;
+      if (is_greater(eps,g,contextptr))
+	return xn;
+    }
+    *logptr(contextptr) << gettext("Warning! Leaving Jacobi iterative algorithm after maximal number of iterations. Check that your matrix is diagonal dominant.") << endl;
+    return xn;    
+  }
+  
+  // Ax=b where A=L+D+U, (D+L)x_{n+1}=b-U*x_n (Gauss-Seidel for omega==1)
+  // or (L+D/omega)*x_{n+1}=b-(U+D*(1-1/omega))*x_n
+  gen gauss_seidel_linsolve(const matrice & A,const vecteur & b_orig,const vecteur & x0,double omega,double eps,int maxiter,GIAC_CONTEXT){
+    int n=A.size();
+    double invomega=1/omega;
+    matrice L(n),U(n);
+    vecteur b=*evalf_double(b_orig,1,contextptr)._VECTptr;
+    for (int i=0;i<n;++i){
+      vecteur Ai=*evalf(A[i],1,contextptr)._VECTptr;
+      L[i]=vecteur(Ai.begin(),Ai.begin()+i); 
+      L[i]._VECTptr->reserve(n);
+      L[i]._VECTptr->push_back(invomega*Ai[i]);
+      for (int j=i+1;j<n;++j) L[i]._VECTptr->push_back(0.0);
+      vecteur tmp(i+1,0.0);
+      tmp[i]=(1-invomega)*Ai[i];
+      U[i]=mergevecteur(tmp,vecteur(Ai.begin()+i+1,Ai.end()));
+    }
+    vecteur tmp(n),xn(x0),prev(n);
+    gen bn=l2norm(b,contextptr);
+    for (int i=0;i<maxiter;++i){
+      prev=xn;
+      multmatvecteur(U,xn,tmp);
+      subvecteur(b,tmp,tmp);
+      linsolve_l(L,tmp,xn);
+      gen g=l2norm(xn-prev,contextptr)/bn;
+      if (is_greater(eps,g,contextptr))
+	return xn;
+    }
+    *logptr(contextptr) << gettext("Warning! Leaving Gauss-Seidel iterative algorithm after maximal number of iterations. Check that your matrix is diagonal dominant.") << endl;
+    return xn;    
+  }
+  
   // params: matrix A, vector b, optional init value x0, optional precision eps
-  gen _conjugate_gradient(const gen & args,GIAC_CONTEXT){
+  gen iterative_solver(const gen & args,int method,GIAC_CONTEXT){
     if ( args.type==_STRNG && args.subtype==-1) return  args;
     if (args.type!=_VECT || args._VECTptr->size()<2)
       return gensizeerr(contextptr);
     vecteur v = *args._VECTptr;
+    double omega=1.0;
+    if (!v.empty() && v[0].type!=_VECT && v[0].type!=_MAP){
+      gen v0=evalf_double(v[0],1,contextptr);
+      if (v0.type!=_DOUBLE_)
+	return gensizeerr("Bad omega value or bad first argument value");
+      omega=v0._DOUBLE_val;
+      if (omega<=0)
+	omega=epsilon(contextptr);
+      if (omega>=2)
+	omega=2-epsilon(contextptr);
+      v.erase(v.begin());
+    }
     int s=v.size();
     gen A=v[0];
     gen b=v[1];
-    if (!is_squarematrix(A) || b.type!=_VECT)
-      return gensizeerr(contextptr);
-    int n=A._VECTptr->size();
-    if (n!=int(b._VECTptr->size()))
-      return gensizeerr(contextptr);
+    bool creux=A.type==_MAP && b.type==_VECT;
+    int n;
+    if (creux)
+      n=b._VECTptr->size();
+    else {
+      if (!is_squarematrix(A) || b.type!=_VECT)
+	return gensizeerr(contextptr);
+      n=A._VECTptr->size();
+      if (n!=int(b._VECTptr->size()))
+	return gensizeerr(contextptr);
+    }
     vecteur x0(n);
-    gen eps;
+    gen eps; gen niter(-1);
     if (s>=3){
       if (v[2].type==_VECT){
 	if (int(v[2]._VECTptr->size())!=n)
 	  return gensizeerr(contextptr);
 	x0=*v[2]._VECTptr;
-	if (s>3)
+	if (s>3){
 	  eps=v[3];
+	  if (s>4)
+	    niter=v[4];
+	}
       }
-      else
+      else {
 	eps=v[2];
+	if (s>3)
+	  niter=v[3];
+      }
+    }
+    if (is_greater(eps,1,contextptr))
+      swapgen(eps,niter);
+    if (niter==-1){
+      switch (method){
+      case 1: case 2:
+	niter=SOLVER_MAX_ITERATE*n;
+	break;
+      case 4:
+	niter=n;
+	break;
+      default:
+	niter=n;
+      }
     }
     eps=evalf_double(eps,1,contextptr);
     if (eps.type!=_DOUBLE_ || eps._DOUBLE_val < 0 || eps._DOUBLE_val>=1)
       return gentypeerr(contextptr);
-    return conjugate_gradient(*A._VECTptr,*b._VECTptr,x0,eps._DOUBLE_val,contextptr);
+    if (!is_integral(niter) || niter.val<1)
+      return gentypeerr(contextptr);
+    if (method==1)
+      return creux?sparse_jacobi_linsolve(*A._MAPptr,*b._VECTptr,x0,eps._DOUBLE_val,niter.val,contextptr):jacobi_linsolve(*A._VECTptr,*b._VECTptr,x0,eps._DOUBLE_val,niter.val,contextptr);
+    if (method==2)
+      return creux?sparse_gauss_seidel_linsolve(*A._MAPptr,*b._VECTptr,x0,omega,eps._DOUBLE_val,niter.val,contextptr):gauss_seidel_linsolve(*A._VECTptr,*b._VECTptr,x0,omega,eps._DOUBLE_val,niter.val,contextptr);
+    if (method==4)
+      return creux?sparse_conjugate_gradient(*A._MAPptr,*b._VECTptr,x0,eps._DOUBLE_val,niter.val,contextptr):conjugate_gradient(*A._VECTptr,*b._VECTptr,x0,eps._DOUBLE_val,niter.val,contextptr);
+    return gensizeerr(contextptr);
+  }
+  // params: matrix A, vector b, optional init value x0, optional precision eps
+  gen _conjugate_gradient(const gen & args,GIAC_CONTEXT){
+    return iterative_solver(args,4,contextptr);
   }
   static const char _conjugate_gradient_s []="conjugate_gradient";
   static define_unary_function_eval (__conjugate_gradient,&_conjugate_gradient,_conjugate_gradient_s);
   define_unary_function_ptr5( at_conjugate_gradient ,alias_at_conjugate_gradient,&__conjugate_gradient,0,true);
+
+  gen _jacobi_linsolve(const gen & args,GIAC_CONTEXT){
+    return iterative_solver(args,1,contextptr);
+  }
+  static const char _jacobi_linsolve_s []="jacobi_linsolve";
+  static define_unary_function_eval (__jacobi_linsolve,&_jacobi_linsolve,_jacobi_linsolve_s);
+  define_unary_function_ptr5( at_jacobi_linsolve ,alias_at_jacobi_linsolve,&__jacobi_linsolve,0,true);
+
+  gen _gauss_seidel_linsolve(const gen & args,GIAC_CONTEXT){
+    return iterative_solver(args,2,contextptr);
+  }
+  static const char _gauss_seidel_linsolve_s []="gauss_seidel_linsolve";
+  static define_unary_function_eval (__gauss_seidel_linsolve,&_gauss_seidel_linsolve,_gauss_seidel_linsolve_s);
+  define_unary_function_ptr5( at_gauss_seidel_linsolve ,alias_at_gauss_seidel_linsolve,&__gauss_seidel_linsolve,0,true);
 
   gen _subtype(const gen & args,GIAC_CONTEXT){
     if (args.type==_INT_ && args.subtype==0)
@@ -5850,6 +6105,35 @@ static define_unary_function_eval (__os_version,&_os_version,_os_version_s);
   static const char _evalfa_s []="evalfa";
   static define_unary_function_eval (__evalfa,&_evalfa,_evalfa_s);
   define_unary_function_ptr5( at_evalfa ,alias_at_evalfa,&__evalfa,0,true);
+
+  gen _linspace(const gen & args,GIAC_CONTEXT){
+    if (args.type!=_VECT || args._VECTptr->size()<2) return gensizeerr(contextptr);
+    int n=100;
+    vecteur v = *args._VECTptr;
+    gen start=v[0],stop=v[1];
+    if (v.size()>2){
+      gen N=v[2];
+      if (!is_integral(N) || N.val<2)
+	return gendimerr(contextptr);
+      n=N.val;
+    }
+    gen step=(stop-start)/(n-1);
+    vecteur w(n);
+    for (int i=0;i<n;++i){
+      w[i]=start+i*step;
+    }
+    return w;
+  }
+  static const char _linspace_s []="linspace";
+  static define_unary_function_eval (__linspace,&_linspace,_linspace_s);
+  define_unary_function_ptr5( at_linspace ,alias_at_linspace,&__linspace,0,true);
+
+  gen _Li(const gen & args,GIAC_CONTEXT){
+    return _Ei(ln(args,contextptr),contextptr);
+  }
+  static const char _Li_s []="Li";
+  static define_unary_function_eval (__Li,&_Li,_Li_s);
+  define_unary_function_ptr5( at_Li ,alias_at_Li,&__Li,0,true);
 
 
 #if 0

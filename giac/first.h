@@ -45,7 +45,14 @@
 #else
 #define CIN std::cin
 #define COUT std::cout
+#ifdef EMCC
+#define CERR std::cout
+extern "C" double emcctime(); 
+#define CLOCK emcctime
+#else
 #define CERR std::cerr
+#define CLOCK clock
+#endif
 #endif
 
 #ifdef __sparc__
@@ -65,11 +72,6 @@ typedef long double giac_double;
 typedef double giac_double;
 #endif
 
-#ifdef VISUALC
-inline void swap_giac_double(double & a,double & b){ double c=a; a=b; b=c; }
-#else
-#define swap_giac_double(a,b) std::swap<giac_double>(a,b)
-#endif
 // sprintf replacement
 int my_sprintf(char * s, const char * format, ...);
 #ifdef GIAC_HAS_STO_38
@@ -88,7 +90,7 @@ int my_sprintf(char * s, const char * format, ...);
 #define alias_type size_t
 #endif
 
-#if defined(RTOS_THREADX) || defined(BESTA_OS) || defined(EMCC) || defined NSPIRE
+#if defined(RTOS_THREADX) || defined(BESTA_OS) || defined NSPIRE
 #define NO_TEMPLATE_MULTGCD
 #endif
 
@@ -211,6 +213,18 @@ typedef unsigned long long ulonglong;
 #endif
 
 #endif // __VISUALC__
+
+#ifdef VISUALC
+inline void swap_giac_double(double & a,double & b){ double c=a; a=b; b=c; }
+#else
+#define swap_giac_double(a,b) std::swap<giac_double>(a,b)
+#endif
+
+#if defined WIN32 && defined __x86_64__
+typedef longlong ref_count_t;
+#else
+typedef int ref_count_t;
+#endif
 
 
 #ifndef __x86_64__
@@ -402,13 +416,13 @@ inline float ffloor(float f1){
 #endif
 }
 inline float finv(float f1){ return 1/f1; }
-#ifdef __APPLE__
+#if defined __APPLE__ || defined EMCC
 inline float fgamma(float f1){ return tgammaf(f1); }
 #else
 #if defined(__MINGW_H) || defined(VISUALC) // FIXME gamma, not used
 inline float fgamma(float f1){ return f1; }
 #else
-inline float fgamma(float f1){ return tgammaf(f1); }
+inline float fgamma(float f1){ return gammaf(f1); } // or tgammaf(f1) on some versions of emscripten
 #endif
 #endif
 inline float atan2f(float f1,float f2,int rad){ if (rad) return atan2f(f1,f2); else return atan2f(f1,f2)*180/M_PI;}

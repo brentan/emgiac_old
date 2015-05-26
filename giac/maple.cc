@@ -54,6 +54,16 @@ using namespace std;
 #include <gsl/gsl_fft_complex.h>
 #include <gsl/gsl_fft_real.h>
 #endif
+#ifndef HAVE_PNG_H
+#undef HAVE_LIBPNG
+#endif
+#ifdef HAVE_LIBPNG
+#include <png.h>
+#endif
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
 
 #ifdef GIAC_HAS_STO_38
   u32 AspenGetNow();
@@ -326,7 +336,7 @@ namespace giac {
     double delta;
     int ntimes=1,i=0;
     int level=eval_level(contextptr);
-#ifdef NSPIRE
+#if defined NSPIRE || defined NSPIRE_NEWLIB
     unsigned NSPIRE_RTC_ADDR=0x90090000;
     unsigned t1= * (volatile unsigned *) NSPIRE_RTC_ADDR;
     // CERR << t1 << endl;
@@ -771,13 +781,20 @@ namespace giac {
     if (args.type==_VECT) {
       if (args.subtype==_SEQ__VECT && args._VECTptr->size()==2 && args._VECTptr->back().type==_INT_){
 #ifdef BCD
-      if (args._VECTptr->front().type==_FLOAT_)
-	return ftrunc(args._VECTptr->front()._FLOAT_val,args._VECTptr->back().val); 
+	if (args._VECTptr->front().type==_FLOAT_)
+	  return ftrunc(args._VECTptr->front()._FLOAT_val,args._VECTptr->back().val);
 #endif
+	gen b=args._VECTptr->back();
+	if (b.val<0){
+	  gen gf=_floor(log10(abs(args._VECTptr->front(),contextptr),contextptr),contextptr); 
+	  if (gf.type!=_INT_ && gf.type!=_FLOAT_)
+	    return gensizeerr(contextptr);
+	  b=-1-b-gf;
+	}
 #ifdef _SOFTMATH_H
-	double d=std::giac_gnuwince_pow(10.0,double(args._VECTptr->back().val));
+	double d=std::giac_gnuwince_pow(10.0,double(b.val));
 #else
-	double d=std::pow(10.0,double(args._VECTptr->back().val));
+	double d=std::pow(10.0,double(b.val));
 #endif
 	return _floor(d*args._VECTptr->front(),contextptr)/d;
       }
@@ -852,7 +869,7 @@ namespace giac {
   // open a file, returns a FD
   gen _open(const gen & g,GIAC_CONTEXT){
     if ( g.type==_STRNG && g.subtype==-1) return  g;
-#if defined(VISUALC) || defined(__MINGW_H) || defined (BESTA_OS) || defined(NSPIRE) || defined(__ANDROID__)
+#if defined(VISUALC) || defined(__MINGW_H) || defined (BESTA_OS) || defined(NSPIRE) || defined(__ANDROID__) || defined(NSPIRE_NEWLIB)
     return gensizeerr(gettext("not implemented"));
 #else
     gen tmp=check_secure();
@@ -1862,7 +1879,8 @@ namespace giac {
   define_unary_function_ptr5( at_odd ,alias_at_odd,&__odd,0,true);
 
 #ifdef HAVE_LIBPNG
-  int write_png(const char *file_name, png_bytep *rows, int w, int h, int colortype, int bitdepth){
+  int write_png(const char *file_name, void *rows_, int w, int h, int colortype, int bitdepth){
+    png_bytep * rows=(png_bytep *) rows_;
     png_structp png_ptr;
     png_infop info_ptr;
     FILE *fp = fopen(file_name, "wb");
@@ -1951,6 +1969,10 @@ namespace giac {
     return res+1;
   }
 #else // LIBPNG
+  int write_png(const char *file_name, void *rows, int w, int h, int colortype, int bitdepth){
+    return -1;
+  }
+
   static bool writergb(const string & s,const vecteur & w){
     return false;
   }
@@ -2289,8 +2311,8 @@ namespace giac {
 	    gen un1=(a*n+b)/(c*n+d);
 	    gen r=normal(inv(un1-r1,contextptr)-inv(n-r1,contextptr),contextptr);
 	    if (is_zero(derive(r,n,contextptr))){
-	      un1=r*n+var;
-	      return inv(un1,contextptr);
+	      un1=r*n+inv(var-r1,contextptr);
+	      return inv(un1,contextptr)+r1;
 	    }
 	  }
 	}
@@ -2321,10 +2343,13 @@ namespace giac {
 	}
 	// -> l(n)=l(0)*P(n)/P(0) -> product(l(n))
 	gen pn=r2e(P,v,contextptr)/r2e(Q,v,contextptr);
-	gen res=pow(subst(normal(l/pn,contextptr),n,0,false,contextptr),n,contextptr)*simplify(product(P,v,n,0,n-1,contextptr)/product(Q,v,n,0,n-1,contextptr),contextptr);
+	gen q0r0=r2e(q0,v,contextptr)/r2e(r0,v,contextptr);
+	gen res=pow(subst(normal(l/pn,contextptr),n,0,false,contextptr),n,contextptr)*simplify(product(P,v,n,0,n-1,contextptr)/product(Q,v,n,0,n-1,contextptr),contextptr)*pow(q0r0,n*(n-1)/2,contextptr);
 	// then we might search for a polynomial particular solution to e
 	if (is_zero(c))
 	  return u0/subst(res,n,0,false,contextptr)*res;
+	if (!is_one(q0r0))
+	  return gensizeerr("Unable to find particular solution, general solution is "+res.print(contextptr));
 	// u_{n+1}=l*u_{n}+c
 	gen tmp=l*x[0]+c,tmpnum,tmpden;
 	vecteur tmpv(1,n);

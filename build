@@ -4,7 +4,7 @@
 #make -f Makefile.llvm
 #llvm-ranlib libtommath_x86.a
 #cp libtommath.a ..
-echo "add emcctime: function(){ return Math.floor(Date.now());	    }, in src/library.js"
+#echo "add emcctime: function(){ return Math.floor(Date.now());	    }, in src/library.js"
 cd giac
 #rm -f *.o
 #make -f Makefile.llvm

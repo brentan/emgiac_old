@@ -2295,7 +2295,9 @@ namespace giac {
 	// first_try = subst(ratnormal(e),x,lim_point,false,contextptr);
       }
       else {
+	//bool b=assume_t_in_ab(x,direction==1?lim_point:lim_point-1,direction==-1?lim_point:lim_point+1,true,true,contextptr);
 	first_try = quotesubst(partfrac(e,false,contextptr),x,lim_point,contextptr);
+	// if (b) purgenoassume(x,contextptr);
 	// first_try = quotesubst(ratnormal(e),x,lim_point,contextptr);
       }
       bool absb=eval_abs(contextptr);
@@ -2335,7 +2337,7 @@ namespace giac {
     }
     gen e_copy;
     // Rewrite non rational ^ and tan 
-    e_copy=_pow2exp(tan2sincos(e,contextptr),contextptr);
+    e_copy=_pow2exp(tan2sincos(exact(e,contextptr),contextptr),contextptr);
     // FIXME: this translate exp(i*...) to sin/cos without bugging for
     // exp(exp(exp(x)/(1-1/x)))-exp(exp(exp(x)/(1-1/x-exp((-(ln(x)))*ln(ln(x))))))
     if (has_i(e_copy)) {
@@ -2779,7 +2781,7 @@ namespace giac {
     // sincosinf.clear();
     if (is_undef(lim_point))
       return lim_point;
-    gen l=in_limit(e,x,lim_point,direction,contextptr);
+    gen l=in_limit(exact(e,contextptr),x,exact(lim_point,contextptr),direction,contextptr);
     // inside_limit(save_inside_limit,contextptr);
     // vecteur sincosinfsub(sincosinf.size(),undef);
     // l=eval(subst(l,sincosinf,sincosinfsub));

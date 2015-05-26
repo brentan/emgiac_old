@@ -49,6 +49,7 @@ namespace giac {
   gen _degree(const gen & args,GIAC_CONTEXT);
   gen _lcoeff(const gen & args,GIAC_CONTEXT);
   extern const unary_function_ptr * const  at_lcoeff ;
+  extern const unary_function_ptr * const  at_set_language ;
 
   gen _tcoeff(const gen & args,GIAC_CONTEXT);
   gen _sqrfree(const gen & args,GIAC_CONTEXT);
@@ -234,6 +235,7 @@ namespace giac {
   gen conjugate_gradient(const matrice & A,const vecteur & b_orig,const vecteur & x0,double eps,GIAC_CONTEXT);
 
   bool has_undef_stringerr(const gen & g,std::string & err);
+
 
 #ifndef NO_NAMESPACE_GIAC
 } // namespace giac

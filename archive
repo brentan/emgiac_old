@@ -1,3 +1,4 @@
 #! /bin/bash
-cd ..
-tar cvfz emgiac.tgz emgiac/updategiac emgiac/giac/libmpfr.a emgiac/giac/libgmp.a emgiac/giac/config.h.* emgiac/giac/*.h emgiac/giac/*.H emgiac/giac/*.cc emgiac/giac/*.cpp emgiac/giac/Makefile* emgiac/giac/*.ll emgiac/giac/*.yy emgiac/giac/time.js emgiac/archive emgiac/build emgiac/giac/lzma emgiac/giac/webxcas.html emgiac/giac/webxcasfr.html emgiac/giac/zxcas.html emgiac/giac/zxcasfr.html emgiac/giac/ggb.html emgiac/libtommath/*.c emgiac/libtommath/*.h emgiac/libtommath/Makefile* 
+cd ~
+tar cvfz emgiac.tgz emgiac/README emgiac/updategiac emgiac/giac/libmpfi.a emgiac/giac/libmpfr.a emgiac/giac/libgmp.a emgiac/giac/config.h.* emgiac/giac/*.h emgiac/giac/*.H emgiac/giac/*.cc emgiac/giac/*.cpp emgiac/giac/freeglut_stroke_roman.c emgiac/giac/Makefile* emgiac/giac/*.ll emgiac/giac/*.yy emgiac/giac/time.js emgiac/giac/doc/fr/keywords emgiac/archive emgiac/build emgiac/giac/lzma emgiac/giac/webxcas.html emgiac/giac/webxcasfr.html emgiac/giac/zxcas.html emgiac/giac/zxcasfr.html emgiac/giac/ggb.html
+# emgiac/libtommath/*.c emgiac/libtommath/*.h emgiac/libtommath/Makefile* 
