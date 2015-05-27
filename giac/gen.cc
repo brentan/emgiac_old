@@ -24,9 +24,6 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-#ifdef SWIFT_CALCS_OPTIONS
-  #include "emscripten.h"
-#endif
 using namespace std;
 #ifndef NSPIRE
 #include <cstdlib>
@@ -14540,7 +14537,8 @@ namespace giac {
     }
     g=protecteval(g,1,&C);
 #endif
-#ifdef EMCC
+#ifndef SWIFT_CALCS_OPTIONS
+#ifdef EMCC 
     // compile with -s LEGACY_GL_EMULATION=1
     gen last=g;
     while (last.type==_VECT && !last._VECTptr->empty())
@@ -14617,6 +14615,7 @@ namespace giac {
 #endif // EMCC_GLUT
       
     }
+#endif
 #endif
     if (!lop(g,at_rootof).empty())
       g=evalf(g,1,&C);
