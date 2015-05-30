@@ -3150,20 +3150,37 @@ namespace giac {
   }
   static const char _integrate_s []="integrate";
   static string texprintasintegrate(const gen & g,const char * s_orig,GIAC_CONTEXT){
-    string s("\\int ");
-    if (g.type!=_VECT)
-      return s+gen2tex(g,contextptr);
-    vecteur v(*g._VECTptr);
-    int l(v.size());
-    if (!l)
+    #ifndef SWIFT_CALCS_OPTIONS
+      string s("\\int ");
+      if (g.type!=_VECT)
+        return s+gen2tex(g,contextptr);
+      vecteur v(*g._VECTptr);
+      int l(v.size());
+      if (!l)
+        return s;
+      if (l==1)
+        return s+gen2tex(v.front(),contextptr);
+      if (l==2)
+        return s+gen2tex(v.front(),contextptr)+"\\, d"+gen2tex(v.back(),contextptr);
+      if (l==4)
+        return s+"_{"+gen2tex(v[2],contextptr)+"}^{"+gen2tex(v[3],contextptr)+"}"+gen2tex(v.front(),contextptr)+"\\, d"+gen2tex(v[1],contextptr);
       return s;
-    if (l==1)
-      return s+gen2tex(v.front(),contextptr);
-    if (l==2)
-      return s+gen2tex(v.front(),contextptr)+"\\, d"+gen2tex(v.back(),contextptr);
-    if (l==4)
-      return s+"_{"+gen2tex(v[2],contextptr)+"}^{"+gen2tex(v[3],contextptr)+"}"+gen2tex(v.front(),contextptr)+"\\, d"+gen2tex(v[1],contextptr);
-    return s;
+    #else
+      string s("\\int");
+      if (g.type!=_VECT)
+        return s+" "+gen2tex(g,contextptr);
+      vecteur v(*g._VECTptr);
+      int l(v.size());
+      if (!l)
+        return s+" ";
+      if (l==1)
+        return s+" "+gen2tex(v.front(),contextptr);
+      if (l==2)
+        return s+"n_{" + gen2tex(v.back(),contextptr) + "}\\left({" + gen2tex(v.front(),contextptr) + "}\\right)";
+      if (l==4)
+        return s+"_{"+gen2tex(v[2],contextptr)+"}^{"+gen2tex(v[3],contextptr)+"}_{" + gen2tex(v[1],contextptr) + "}\\left({" + gen2tex(v.front(),contextptr) + "}\\right)";
+      return s+" ";
+    #endif
   }
   static define_unary_function_eval4_quoted (__integrate,&_integrate,_integrate_s,0,&texprintasintegrate);
   define_unary_function_ptr5( at_integrate ,alias_at_integrate,&__integrate,_QUOTE_ARGUMENTS,true);

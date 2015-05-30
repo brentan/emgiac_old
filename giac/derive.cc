@@ -683,7 +683,11 @@ namespace giac {
   static string texprintasderive(const gen & feuille,const char * sommetstr,GIAC_CONTEXT){
     if (feuille.type!=_VECT)
       return gen2tex(feuille,contextptr)+"'";
-    return "\\frac{\\partial \\left("+gen2tex(feuille._VECTptr->front(),contextptr)+"\\right)}{\\partial "+gen2tex(feuille._VECTptr->back(),contextptr)+"}";
+    #ifndef SWIFT_CALCS_OPTIONS
+      return "\\frac{\\partial \\left("+gen2tex(feuille._VECTptr->front(),contextptr)+"\\right)}{\\partial "+gen2tex(feuille._VECTptr->back(),contextptr)+"}";
+    #else
+      return "\\pderivative_{" + gen2tex(feuille._VECTptr->back(),contextptr) + "}\\left({" + gen2tex(feuille._VECTptr->front(),contextptr) + "}\\right)";
+    #endif
   }
   static define_unary_function_eval4_quoted (__derive,&step_derive,_derive_s,printasderive,texprintasderive);
   define_unary_function_ptr5( at_derive ,alias_at_derive,&__derive,_QUOTE_ARGUMENTS,true);
