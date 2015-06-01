@@ -609,14 +609,22 @@ namespace giac {
 	res=" "; // was res=indent(contextptr);
     }
     gen & feuille0=feuille._VECTptr->front();
+    #ifdef SWIFT_CALCS_OPTIONS
+      res += "function";
+    #endif
     if (feuille0.type==_VECT && feuille0.subtype==_SEQ__VECT && feuille0._VECTptr->size()==1)
       res +="("+feuille0._VECTptr->front().print(contextptr)+")";
     else
       res +="("+feuille0.print(contextptr)+")";
     if (xcas_mode(contextptr)==3)
       res +="\n";
-    else
-      res += "->";
+    else {
+      #ifdef SWIFT_CALCS_OPTIONS
+        res += " \\whitespace \\Longrightarrow \\whitespace ";
+      #else
+        res += "->";
+      #endif
+    }
     bool test;
     string locals,inits;
     gen proc_args=feuille._VECTptr->front();
@@ -665,7 +673,11 @@ namespace giac {
     if (test){
       if (xcas_mode(contextptr)==3)
 	return res+":Func "+feuille._VECTptr->back().print(contextptr)+"\n:EndFunc\n";
-      return res+feuille._VECTptr->back().print(contextptr);
+      #ifdef SWIFT_CALCS_OPTIONS
+        return res+gen2tex(feuille._VECTptr->back(),contextptr);
+      #else
+        return res+feuille._VECTptr->back().print(contextptr);
+      #endif
     }
     if (xcas_mode(contextptr)>0){
       if (xcas_mode(contextptr)==3)
@@ -723,6 +735,9 @@ namespace giac {
     if (latex_format(contextptr)==1){
       return printasprogram(feuille,sommetstr,contextptr);
     }
+    #ifdef SWIFT_CALCS_OPTIONS
+      return printasprogram(feuille,sommetstr,contextptr);
+    #endif
     string s("\\parbox{12cm}{\\tt ");
     s += translate_underscore(printasprogram(feuille,sommetstr,contextptr));
     s+=" }";
