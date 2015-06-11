@@ -45,6 +45,7 @@ using namespace std;
 #include "vector.h"
 #include <algorithm>
 #include <cmath>
+#include <emscripten.h>
 
 // C headers
 #include <stdio.h>
@@ -10497,37 +10498,46 @@ namespace giac {
 
   gen _archive(const gen & args,GIAC_CONTEXT){
     if ( args.type==_STRNG && args.subtype==-1) return  args;
-
+    emscripten_run_script("console.log('START ARCHIVE');");
     #ifndef EMCC //Emscripten allows us to 'store' archive in memory file system that is removed on refresh
       gen tmp=check_secure();
       if (is_undef(tmp)) return tmp;
     #endif
-
+    emscripten_run_script("console.log('0');");
     if (args.type==_STRNG){ // archive session state
       return archive_session(true,*args._STRNGptr,contextptr);
     }
+    emscripten_run_script("console.log('1');");
     int s;
     if ( args.type!=_VECT || (s=args._VECTptr->size())<2 )
       return gensizeerr(contextptr);
+    emscripten_run_script("console.log('2');");
     gen a=args._VECTptr->front();
     gen b=(*args._VECTptr)[1];
     if (a.type!=_STRNG)
       return gensizeerr(contextptr);
+    emscripten_run_script("console.log('3');");
     if (s==3){ // new binary archive format
+      emscripten_run_script("console.log('4');");
       FILE * f=fopen(a._STRNGptr->c_str(),"w");
       if (!f)
-	return gensizeerr(gettext("Unable to open file ")+a.print(contextptr));
+	      return gensizeerr(gettext("Unable to open file ")+a.print(contextptr));
+      emscripten_run_script("console.log('5');");
       fprintf(f,"%s","-1  "); // header: type would be -1
       if (!archive_save(f,b,contextptr))
-	return gensizeerr(gettext("Error writing ")+b.print(contextptr)+" in file "+a.print(contextptr));
+	      return gensizeerr(gettext("Error writing ")+b.print(contextptr)+" in file "+a.print(contextptr));
+      emscripten_run_script("console.log('6');");
       fclose(f);
       return b;
     }
+    emscripten_run_script("console.log('7');");
 #ifdef NSPIRE
     return 0;
 #else
+    emscripten_run_script("console.log('8');");
     ofstream os(a._STRNGptr->c_str());
     archive(os,b,contextptr);
+    emscripten_run_script("console.log('9');");
     return b;
 #endif
   }
