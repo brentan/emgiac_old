@@ -593,7 +593,7 @@ namespace giac {
   }
 
   static gen prod_expand(const const_iterateur it,const const_iterateur itend,GIAC_CONTEXT){
-    int s=itend-it;
+    int s=int(itend-it);
     if (s==0)
       return plus_one;
     if (s==1)
@@ -609,7 +609,7 @@ namespace giac {
   }
 
   static gen prod_expand_nosimp(const const_iterateur it,const const_iterateur itend,GIAC_CONTEXT){
-    int s=itend-it;
+    int s=int(itend-it);
     if (s==0)
       return plus_one;
     if (s==1)
@@ -679,7 +679,7 @@ namespace giac {
       }
       // (x1+...+xn)^k -> sum_{j1+...+jn=k} k!/(j1!j2!...jn!) x^j1 *... *x^jk
       vecteur & w=*v[0]._SYMBptr->feuille._VECTptr;
-      int n=w.size();
+      int n=int(w.size());
       if (!n)
 	return gensizeerr(contextptr);
       vecteur res;
@@ -760,7 +760,7 @@ namespace giac {
       return v.back();
     gen res=zero;
     const_iterateur it=v.begin(),itend=v.end();
-    int n=itend-it-1;
+    int n=int(itend-it)-1;
     for (;it!=itend;++it,--n)
       res = res + (*it)*pow(e,n);
     return res;

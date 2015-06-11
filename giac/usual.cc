@@ -99,7 +99,7 @@ namespace giac {
       // count neg
       gen f=g._SYMBptr->feuille;
       vecteur fv(gen2vecteur(f));
-      int count=0,fvs=fv.size();
+      int count=0,fvs=int(fv.size());
       for (int i=0;i<fvs;++i){
 	gen & fvi = fv[i];
 	fvi=frac_neg_out(fvi,contextptr);
@@ -726,7 +726,7 @@ namespace giac {
     return symbolic(at_exp,e);
   }
   static gen numeric_matrix_exp(const gen & e,double eps,GIAC_CONTEXT){
-    gen res=midn(e._VECTptr->size());
+    gen res=midn(int(e._VECTptr->size()));
     gen eee(e);
     for (double j=2;j<max_numexp && linfnorm(eee,contextptr)._DOUBLE_val>eps;++j){
       res = res + eee;
@@ -2766,7 +2766,7 @@ namespace giac {
   }
 
   bool check_vect_38(const string & s){
-    int ss=s.size();
+    int ss=int(s.size());
     if (ss!=2)
       return false;
     char s0=s[0],s1=s[1];
@@ -2780,7 +2780,7 @@ namespace giac {
   }
   // check value type for storing value in s using 38 compatibility mode
   bool check_sto_38(gen & value,const char * s){
-    int ss=strlen(s);
+    int ss=int(strlen(s));
     if (ss>2 || (ss==2 && s[1]>32 && isalpha(s[1])) ){
       if (s[0]=='G')
 	return true;
@@ -3076,7 +3076,7 @@ namespace giac {
 	bool calc_aa=false;
 	if (inter.type==_VECT){
 	  vecteur & interv=*inter._VECTptr;
-	  int inters=interv.size();
+	  int inters=int(interv.size());
 	  if (inters>=3){
 	    debut=interv[0];
 	    fin=interv[1];
@@ -3404,7 +3404,7 @@ namespace giac {
 	  return gendimerr();
 	if (a.type==_VECT && a._VECTptr->size()!=fin.val-deb.val+1)
 	  return gendimerr(contextptr);
-	int is=in_place?vptr->size():v.size();
+	int is=int(in_place?vptr->size():v.size());
 	for (;is<=fin.val;++is){
 	  vptr->push_back(zero);
 	}
@@ -3424,7 +3424,7 @@ namespace giac {
 	if (indice.type!=_INT_ || indice.val<0 )
 	  return gentypeerr(gettext("Bad index ")+indice.print(contextptr));
 	// check size
-	int is=vptr->size();
+	int is=int(vptr->size());
 	for (;is<=indice.val;++is){
 	  vptr->push_back(zero);
 	}
@@ -3449,8 +3449,8 @@ namespace giac {
 	  if (!ckmatrix(*vptr))
 	    return gendimerr(contextptr);
 	  gen add=zero*vptr->front();
-	  int is=vptr->size();
-	  int cols=vptr->front()._VECTptr->size();
+	  int is=int(vptr->size());
+	  int cols=int(vptr->front()._VECTptr->size());
 	  for (;is<=fin.val;++is){
 	    vptr->push_back(add);
 	  }
@@ -3815,6 +3815,10 @@ namespace giac {
       v_excluded.clear();
       const_iterateur it=old_v.begin(),itend=old_v.end();
       for (;it!=itend;++it){
+	if (direction%2==0 && a==*it){
+	  v_excluded.push_back(*it);
+	  continue;
+	}
 	bool a_greater_sup=ck_is_greater(a,*it,contextptr);
 	if (a_greater_sup && (direction<0) )
 	  continue;
@@ -3873,7 +3877,7 @@ namespace giac {
     }
     unary_function_ptr s(a._SYMBptr->sommet);
     vecteur v(*a._SYMBptr->feuille._VECTptr);
-    int l=v.size();
+    int l=int(v.size());
     if (!l)
       return gensizeerr(contextptr);
     gen arg0(v.front()),arg1(v.back()),hyp(undef);
@@ -4362,7 +4366,7 @@ namespace giac {
   gen _powmod(const gen & args,GIAC_CONTEXT){
     if ( args.type==_STRNG && args.subtype==-1) return  args;
     int s;
-    if ( args.type!=_VECT || (s=args._VECTptr->size())<3 )
+    if ( args.type!=_VECT || (s=int(args._VECTptr->size()))<3 )
       return symb_powmod(args);
     vecteur v = *args._VECTptr;
     gen a=v.front();
@@ -5666,7 +5670,7 @@ namespace giac {
       }
     }
     vecteur lnew(l);
-    int ls=l.size();
+    int ls=int(l.size());
     for (int i=0;i<ls;i++){
       if (l[i].type==_IDNT || lidnt(l[i]).empty()){
 	lnew[i]=evalf(l[i],1,contextptr);
@@ -5887,7 +5891,7 @@ namespace giac {
 #endif
     if (tmp.type==_VECT && !tmp._VECTptr->empty() && tmp._VECTptr->front()==gen("Unquoted",contextptr)){
       vecteur & v=*tmp._VECTptr;
-      int s=v.size();
+      int s=int(v.size());
       for (int i=1;i<s;++i)
 	*logptr(contextptr) << (v[i].type==_STRNG?(*v[i]._STRNGptr):unquote(v[i].print(contextptr)));
     }
@@ -6026,7 +6030,7 @@ namespace giac {
       gen ax=_e2r(makevecteur(a_orig,x),context0),bx=_e2r(makevecteur(b_orig,x),context0); // ok
       if (ax.type!=_VECT || bx.type!=_VECT )
 	return gensizeerr(gettext("ichinrem2 1"));
-      int as=ax._VECTptr->size(),bs=bx._VECTptr->size();
+      int as=int(ax._VECTptr->size()),bs=int(bx._VECTptr->size());
       if (!as || !bs)
 	return gensizeerr(gettext("Null polynomial"));
       while (as<bs){
@@ -6065,7 +6069,7 @@ namespace giac {
       if (ax.type!=_VECT || bx.type!=_VECT )
 	return gensizeerr(gettext("ichinrem2 2"));
       gen m=a._VECTptr->back(),n=b._VECTptr->back(),mn=lcm(m,n);
-      int as=ax._VECTptr->size(),bs=bx._VECTptr->size();
+      int as=int(ax._VECTptr->size()),bs=int(bx._VECTptr->size());
       const_iterateur it=ax._VECTptr->begin(),itend=ax._VECTptr->end(),jt=bx._VECTptr->begin();
       vecteur res;
       for (;as>bs;--as,++it){
@@ -6097,7 +6101,7 @@ namespace giac {
     if (args.type!=_VECT)
       return gentypeerr(gettext("[a % p, b % q,...]"));
     vecteur & v = *args._VECTptr;
-    int s=v.size();
+    int s=int(v.size());
     if (s<2)
       return gendimerr(contextptr);
     if (is_integer(v[0]) && is_integer(v[1]))
@@ -6456,7 +6460,7 @@ namespace giac {
     if (args.type!=_VECT)
       return gentypeerr(contextptr);
     vecteur & v = *args._VECTptr;
-    int s=v.size();
+    int s=int(v.size());
     if (s==2){
       gen e=v.back();
       if (e.type==_VECT){
@@ -6905,7 +6909,7 @@ namespace giac {
 	double d=std::floor(xd._DOUBLE_val);
 	if (d<GAMMA_LIMIT){
 	  xd=1;
-	  for (int i=d;i>0;--i){
+	  for (int i=int(d);i>0;--i){
 	    X-=1;
 	    xd=xd*X;
 	  }
@@ -7178,7 +7182,7 @@ namespace giac {
     if (args.type!=_VECT)
       return gensizeerr(contextptr);
     vecteur v=*args._VECTptr;
-    int s=v.size();
+    int s=int(v.size());
     if (s>=2 && (v[0].type==_DOUBLE_ || v[1].type==_DOUBLE_)){
       v[0]=evalf_double(v[0],1,contextptr);
       v[1]=evalf_double(v[1],1,contextptr);
@@ -9784,7 +9788,7 @@ namespace giac {
 
 
   string unquote(const string & s){
-    int l=s.size();
+    int l=int(s.size());
     if (l>2 && s[0]=='"' && s[l-1]=='"')
       return s.substr(1,l-2);
     else

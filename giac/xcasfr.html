@@ -1,4 +1,4 @@
-<html manifest="webxcas.appcache">
+<html manifest="xcas.appcache">
 <head>
   <meta charset="utf-8">
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
@@ -32,24 +32,17 @@ if (hist.innerHTML.length>9 && confirm('Voulez-vous executer les commandes de l\
   alert('L\'historique des commandes n'a pas ete execute.');
 } */
 ">
-<h1>Xcas dans votre navigateur!</h1>
-Pour vous aider &agrave; remplir la ligne de commande ci-dessous,
-vous pouvez cliquer sur le bouton clavier ci-dessous
-et d&eacute;placez la souris pr&egrave;s des touches,
-vous pouvez aussi vous inspirer des <a href="#exemples">exemples ci-dessous</a>
-ou consulter la
-<a
-href="http://www-fourier.ujf-grenoble.fr/~parisse/giac/doc/fr/cascmd_fr">documentation
-de Xcas</a>.
-<hr>
 
-Historique des commandes :
+<span id="history" style="display:none">
+Historique des commandes
 <button onclick="UI.exec(document.getElementById('mathoutput'))"
 title="Executer toutes les commandes de l'historique">Exec</button>
 <button onclick="Module.cwrap('_ZN4giac7casevalEPKc',  'string', ['string'])('restart')"
 title="Effacer le contenu de toutes les variables">Restart</button>
 <button onclick="document.getElementById('mathoutput').innerHTML=' '"
 title="Effacer l'historique">Clear</button>
+</span>
+
 <ul id="mathoutput"></ul>
 
   <form id="formulaire" onsubmit="setTimeout(function() {
@@ -58,7 +51,7 @@ UI.histcount++;
   caseval = Module.cwrap('_ZN4giac7casevalEPKc',  'string', ['string']);
   var out=caseval('set_language(1);'+entree.value);
   var s=caseval('mathml(quote('+out+'),1)');
-  var add=UI.addin(entree.value,out,s,UI.histcount);
+  var add='<li>'+UI.addin(entree.value,out,s,UI.histcount)+'</li>';
   //var s=caseval('mathml(quote('+entree.value+'),1)');
   //add += '&nbsp;&nbsp;'+s.substr(1,s.length-2);
   Module.print(entree.value+'  ->  '+out);
@@ -73,12 +66,14 @@ UI.histcount++;
   Commande : <input type="text" name="entree" id="entree" size=60
   title="Entrez une commande ici">
   <input type="submit" value="ok" title="Evaluer la ligne de commande">
+<input type="button" value="?"
+  onclick="if(document.getElementById('help').style.display=='none')
+  document.getElementById('help').style.display='block';
+  else document.getElementById('help').style.display='none';"
+title="Montrer ou cacher l'aide">
   <input type="button" value="clavier"
-  onclick="document.getElementById('keyboard').style.display='inline'"
-  title="Montrer le clavier scientifique">
-  <input type="button" value="x"
-      onclick="document.getElementById('keyboard').style.display='none'"
-      title="Enlever le clavier">  
+  onclick="if (document.getElementById('keyboard').style.display=='inline') document.getElementById('keyboard').style.display='none'; else document.getElementById('keyboard').style.display='inline';" 
+  title="Montrer ou cacher le clavier scientifique">
 <table border="0" align="left" summary="" id="keyboard" style="display:none">
   <tr>
     <td>  
@@ -263,46 +258,15 @@ UI.histcount++;
 </table>
   </form>
 
-
-<table border="0" align="left" summary="">
-<tr>
-<td>
-  <form onsubmit="setTimeout(function() {     
-		  caseval = Module.cwrap('_ZN4giac7casevalEPKc',  'string', ['string']);
-		  Module.print('  '+caseval('set_language(1);'+prog.value));prog.focus();}); 
-		  return false">
-  Programme/Figure: <textarea name="prog" id="prog" rows=14 cols=60>
-</textarea>
-    <input type="submit" value="ok">
-  </form>
-</td>
-<td> Graphe 2d/3d
-  <button onclick="UI.giac_renderer('-')">out</button>
-  <button onclick="UI.giac_renderer('+')">in</button>
-  <button onclick="UI.giac_renderer('l')"> ← </button>
-  <button onclick="UI.giac_renderer('r')"> → </button>
-  <button onclick="UI.giac_renderer('u')"> ↑ </button>
-  <button onclick="UI.giac_renderer('d')"> ↓ </button>
-
-  
-    <!--- <canvas class="emscripten" id="canvas"
-  oncontextmenu="event.preventDefault()"></canvas> --->
-<canvas id='canvas' width=400 height=250></canvas>
-</td>
-</tr>
-</table>
-
-<hr/>
-<div class="emscripten" id="status">Downloading...</div>
-<div class="emscripten">
-  <progress value="0" max="100" id="progress" hidden=1></progress>  
-</div>
-
-
-<textarea class="emscripten" id="output" rows="5"
-cols="100">Console</textarea>
-
-<hr>
+<span id="help" style="display:none">
+Pour vous aider &agrave; remplir la ligne de commande ci-dessus,
+vous pouvez cliquer sur le bouton clavier ci-dessus
+et d&eacute;placez la souris pr&egrave;s des touches,
+vous pouvez aussi vous inspirer des <a href="#exemples">exemples ci-dessous</a>
+ou consulter la
+<a
+href="http://www-fourier.ujf-grenoble.fr/~parisse/giac/doc/fr/cascmd_fr">documentation
+de Xcas</a>.
 <a name="exemples"><h2>Exemples de commandes</h2></a>
 <ul>
   <li> Alg&egrave;bre :
@@ -339,14 +303,81 @@ cols="100">Console</textarea>
   <tt>plot([sin(x),x-x^3/3!],x=-3..3,color=[red,blue])
   <br> plotfunc(x^2-y^2,[x=-2..2,y=-2..2]); plane(z=0,color=cyan+filled);
   </tt>
+  </li>
+  <li>
+  Programmes : vous pouvez taper un programme dans l'&eacute;diteur de
+  texte ci-dessous. Plusieurs syntaxes sont accept&eacute;es, pour
+  le moment la coloration syntaxique fonctionne avec la syntaxe Xcas
+  qui est tr&egrave;s proche de Javascript. Par exemple
+  <br>
+  <tt>function f(x){
+  <br>
+  &nbsp;&nbsp;var y;
+  <br>
+  &nbsp;&nbsp;if (x > 100) return "Nombre trop grand";
+  <br>
+  &nbsp;&nbsp;for (y:=0;y < x;y++){
+  <br>
+  &nbsp;&nbsp;&nbsp;&nbsp;print(y+"^2="+y^2);
+  <br>
+  &nbsp;&nbsp;}
+  <br>
+  }
+  </tt>
+  </li>
   </ul>
-<hr>
+</span>
 
-Webxcas est une interface de demo du
+<table border="0" align="left" summary="">
+  <tr>
+    <td>Programme/Figure:
+    <td>Graphe 2d/3d
+      <button onclick="UI.giac_renderer('-')">out</button>
+      <button onclick="UI.giac_renderer('+')">in</button>
+      <button onclick="UI.giac_renderer('l')"> ← </button>
+      <button onclick="UI.giac_renderer('r')"> → </button>
+      <button onclick="UI.giac_renderer('u')"> ↑ </button>
+      <button onclick="UI.giac_renderer('d')"> ↓ </button>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <form id="progform" onsubmit="setTimeout(function() {     
+      caseval = Module.cwrap('_ZN4giac7casevalEPKc',  'string', ['string']);
+      Module.print('  '+caseval('set_language(1);'+prog.value));prog.focus();});
+      return false">
+      <input type="submit" value="ok">
+     <textarea name="prog" id="prog" rows=10 cols=60>
+      </textarea>
+      </form>
+    </td>
+    <td> 
+      
+    <!--- <canvas class="emscripten" id="canvas"
+      oncontextmenu="event.preventDefault()"></canvas> --->
+      <canvas id='canvas' width=400 height=250></canvas>
+    </td>
+  </tr>
+</table>
+
+
+<div class="emscripten" id="status">Downloading...</div>
+<div class="emscripten">
+  <progress value="0" max="100" id="progress" hidden=1></progress>  
+</div>
+
+
+<textarea class="emscripten" id="output" rows="5"
+cols="100" title="Console"></textarea>
+
+<hr>
+<h1>Xcas dans votre navigateur</h1>
+Webxcas est une interface de d&eacute;monstration du
 système de calcul formel
 <a
 href="http://www-fourier.ujf-grenoble.fr/~parisse/giac/emgiac.tgz">Giac/Xcas</a>
-compil&eacute; en javascript par emscripten.
+compil&eacute; en javascript par emscripten (l'&eacute;diteur de
+programme de cette interface utilise CodeMirror).
 Il n'a pas besoin de serveur, il s'exécute localement
   (avec le moteur javascript de votre navigateur qui doit être récent,
 mettez-le &agrave; jour pour avoir de bonnes performances)
@@ -363,8 +394,16 @@ vaut mieux installer
 Giac/Xcas (c) B. Parisse, R. De Graeve, Institut Fourier, Université
 de Grenoble I, sous licence GPL3, pour une licence commerciale nous contacter.
 
-
-<script type='text/javascript'>
+  <script src="codemirror.js"></script>
+  <link rel="stylesheet" href="codemirror.css">
+  <script src="javascript.js"></script>
+  <script src="matchbrackets.js"></script>
+  <style type="text/css">
+  .CodeMirror {border: 1px solid black; }
+  dt {font-family: monospace; color: #666;}
+  </style>
+  
+  <script type='text/javascript'>
   var UI ={
   histcount:0,
   exec: function(field){
@@ -372,13 +411,13 @@ de Grenoble I, sous licence GPL3, pour une licence commerciale nous contacter.
    var s=field.innerHTML;
    var extracted="",pos1,pos2,add;
    for (;s.length>0;){
-     pos1=s.search("<tt>");
+     pos1=s.search("<textarea rows=1>");
      if (pos1<0 || pos1>=s.length)
        break;
-     pos2=s.search("</tt>");
+     pos2=s.search("</textarea>");
      if (pos2<pos1 || pos2>=s.length)
        break;
-     add=s.substr(pos1+4,pos2-pos1-4);
+     add=s.substr(pos1+17,pos2-pos1-17);
      if (add.length && add.charAt(add.length-1)!=';')
        add += ';';
      extracted += add;
@@ -388,17 +427,46 @@ de Grenoble I, sous licence GPL3, pour une licence commerciale nous contacter.
    var caseval = Module.cwrap('_ZN4giac7casevalEPKc',  'string', ['string']);
    caseval(extracted);
   },
+  eval: function(text){
+   var caseval = Module.cwrap('_ZN4giac7casevalEPKc',  'string', ['string']);
+   var out=caseval('set_language(1);'+text);
+   Module.print(text+' -> '+out);
+   var s=caseval('mathml(quote('+out+'),1)');
+   s=UI.addin(text,out,s,UI.histcount);
+   return s;
+  },
+  reeval: function(field){
+  field=field.previousSibling;
+  var s=field.value;
+  var par=field.parentNode;
+  s=UI.eval(s);
+  par.innerHTML=s;
+  },
+  before: function(field){
+  var s='';
+  while ((field=field.previousSibling)){
+    s += field.innerHTML;
+  }
+   return s;
+  },
+  after: function(field){
+  var s='';
+  while ((field=field.nextSibling)){
+    s += field.innerHTML;
+  }
+   return s;
+  },
 addin: function(textin,textout,mathmlout,count){
-var s="<li>";
+document.getElementById('history').style.display='block';
+var s="";
   s += '<button onclick=\'UI.erase(this)\' title="effacer ce niveau">x</button>&nbsp;&nbsp;';
   s += '<button onclick=\'UI.moveup(this)\' title="d&eacute;placer vers le haut">↑</button>';
   s += '<button onclick=\'UI.movedown(this)\' title="d&eacute;placer vers la bas">↓</button>';
-  s += '<button onclick=\'UI.insert(entree,"'+textin+'")\' title="copier la commande">cmd</button>';
-  s += '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<tt>'+textin+'</tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
-  s +=' = &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' +mathmlout.substr(1,mathmlout.length-2)+'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
+  s += '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<textarea rows=1 onblur="UI.updatelevel(this);">'+textin+'</textarea>';
+  s += '<button onclick=\'UI.reeval(this)\' title="reevaluer la commande">ok</button>';
+  s +='&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' +mathmlout.substr(1,mathmlout.length-2)+'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
   s += '<button onclick=\'UI.insert(entree,"'+textout+'")\' title="copier le r&eacute;sultat">val</button>';
-  s += '<button onclick=\'UI.insert(entree,"evalf('+textin+')")\' title="commande pour calculer une valeur approch&eacute;e">~</button>';
-  s += '</li>';
+  s += '<button onclick=\'UI.insert(entree,"evalf('+textin+')")\' title="calculer une valeur approch&eacute;e">~</button>';
   return s;
 },
 giac_renderer: function(text){
@@ -416,7 +484,10 @@ field.setSelectionRange(pos,pos);
   var par=field.parentNode;
   var list = par.parentNode;
   list.removeChild(par);
-  },
+},
+updatelevel: function(field){
+  field.innerHTML=field.value;
+},
   moveup: function(field){
   var par=field.parentNode;
   var prev=par.previousSibling;
@@ -458,6 +529,15 @@ var endPos = myField.selectionEnd;
 myField.setSelectionRange(pos,pos);
 }
   };
+  // remove existing codemirror field
+  if (prog.nextSibling){
+    prog.parentNode.removeChild(prog.nextSibling);
+  }
+  var myprog = CodeMirror.fromTextArea(prog,{
+lineNumbers: true,
+matchBrackets: true,
+});
+  myprog.setSize(400, 240);
   // connect to canvas  
  var Module = {
         preRun: [],

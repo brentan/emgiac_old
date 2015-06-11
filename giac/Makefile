@@ -11,22 +11,23 @@
 # lzma/lzma-native < file_to_compress > compressed_file
 # -s options are in emscripten src/settings.js
 PREC = -s PRECISE_I32_MUL=1 #-DGIAC_GGB 
-CXXFLAGS = $(PREC) -I. -I.. -DHAVE_CONFIG_H -DIN_GIAC -DGIAC_GENERIC_CONSTANTS -DNO_STDEXCEPT -fno-exceptions -Os -s ALLOW_MEMORY_GROWTH=1 -s GL_UNSAFE_OPTS=0 # --llvm-opts 2 -v
+CXXFLAGS = $(PREC) -fno-exceptions -I. -I.. -DHAVE_CONFIG_H -DIN_GIAC -DGIAC_GENERIC_CONSTANTS -DNO_STDEXCEPT -Os -s ALLOW_MEMORY_GROWTH=1 -s GL_UNSAFE_OPTS=0 # --bind -DEMCC_BIND --llvm-opts 2 -v
 CFLAGS =  $(PREC) -I. -I.. -v  # -pg
 CPPFLAGS = $(CXXFLAGS)
-LDJS2FLAGS = $(PREC) -O2 -v -s EXPORTED_FUNCTIONS="['__ZN4giac7casevalEPKc']" -s ALLOW_MEMORY_GROWTH=1 -s LEGACY_GL_EMULATION=1 -s GL_UNSAFE_OPTS=0 #--closure 1
-LDJSFLAGS = $(PREC) -O3 -v -s EXPORTED_FUNCTIONS="['__ZN4giac7casevalEPKc']" -s ALLOW_MEMORY_GROWTH=1 -s LEGACY_GL_EMULATION=1 -s GL_UNSAFE_OPTS=0 # -s USE_TYPED_ARRAYS=0 # -s TOTAL_MEMORY=24000000 
+LDJS2FLAGS = $(PREC) -O2 -v -s EXPORTED_FUNCTIONS="['__ZN4giac7casevalEPKc','__ZN4giac13giac_rendererEPKc']" -s ALLOW_MEMORY_GROWTH=1 -s LEGACY_GL_EMULATION=1 -s GL_UNSAFE_OPTS=0 --memory-init-file 0 #--closure 1
+LDJSFLAGS = $(PREC) -O3 -v -s EXPORTED_FUNCTIONS="['__ZN4giac7casevalEPKc','__ZN4giac13giac_rendererEPKc']" -s ALLOW_MEMORY_GROWTH=1 -s LEGACY_GL_EMULATION=1 -s GL_UNSAFE_OPTS=0 --memory-init-file 0 # --bind -DEMCC_BIND -s USE_TYPED_ARRAYS=0 # -s TOTAL_MEMORY=24000000 
 CXX=emcc
 CC=emcc
 GIACOBJS = sym2poly.o gausspol.o threaded.o maple.o ti89.o mathml.o moyal.o misc.o permu.o quater.o desolve.o input_parser.o symbolic.o index.o modpoly.o modfactor.o ezgcd.o derive.o solve.o intg.o intgab.o risch.o lin.o series.o subst.o vecteur.o sparse.o csturm.o tex.o global.o ifactor.o alg_ext.o gauss.o isom.o help.o plot.o plot3d.o rpn.o prog.o pari.o cocoa.o TmpLESystemSolver.o TmpFGLM.o unary.o usual.o identificateur.o gen.o input_lexer.o tinymt32.o opengl.o
 LIBS = libmpfi.a libmpfr.a libgmp.a --js-library time.js
 giac.js:	$(GIACOBJS) 
-	$(CXX) $(LDJSFLAGS) $(GIACOBJS) $(LIBS) -o giac.js --preload-file doc/fr/keywords #  --closure 1 >& log
+	$(CXX) $(LDJSFLAGS) $(GIACOBJS) $(LIBS) -o giac.js #--preload-file doc/fr/keywords #  --closure 1 >& log
 #	/bin/cp giacggb.js giac.js
 #	/bin/rm giac.js.lz
 #	lzma/lzma-native < giacggb.js > giacggb.js.compress
 #	cp giacggb.js /shared/ggbjs/giac.js
-	scp giac.js giac.js.mem giac.data malherbe.ujf-grenoble.fr:public_html/giac
+	scp giac.js malherbe.ujf-grenoble.fr:public_html/giac
+#	scp giac.js.mem malherbe.ujf-grenoble.fr:public_html/giac
 #	lzip giac.js
 #	scp giac.js.lz malherbe.ujf-grenoble.fr:public_html/giac
 #	lzip -d giac.js.lz

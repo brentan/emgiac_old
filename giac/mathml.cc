@@ -38,7 +38,7 @@ using namespace std;
 namespace giac {
 #endif // ndef NO_NAMESPACE_GIAC
 
-#if defined RTOS_THREADX || defined NSPIRE
+#if defined GIAC_HAS_STO_38 || defined NSPIRE
   gen _mathml_error(const gen & g,GIAC_CONTEXT){
     return gensizeerr(gettext("No mathml support"));
   }
@@ -1028,11 +1028,9 @@ namespace giac {
       if ( (mys.feuille._VECTptr->back()==minus_one_half ) || 
 	   (mys.feuille._VECTptr->back()==fraction(minus_one,plus_two) ) )
 	return "<mfrac><mn>1</mn><msqrt>"+gen2mathml(mys.feuille._VECTptr->front(),contextptr)+"</msqrt></mfrac>";
-      string s_bra="<msup><mfenced open=\"(\" close=\")\"><mrow>"+gen2mathml((*(mys.feuille._VECTptr))[0],contextptr)
-    +"</mrow></mfenced><mrow>"+gen2mathml((*(mys.feuille._VECTptr))[1],contextptr)
-	+"</mrow></msup>";
-      string s_no_bra= "<msup><mrow> "+gen2mathml((*(mys.feuille._VECTptr))[0],contextptr) 
-	+"</mrow><mrow>"+gen2mathml((*(mys.feuille._VECTptr))[1],contextptr)+"</mrow></msup>";
+      string s0=gen2mathml((*(mys.feuille._VECTptr))[0],contextptr),s1=gen2mathml((*(mys.feuille._VECTptr))[1],contextptr);
+      string s_bra="<msup><mfenced open=\"(\" close=\")\"><mrow>("+s0+")</mrow></mfenced><mrow>"+s1+"</mrow></msup>";
+      string s_no_bra= "<msup><mrow> "+s0+"</mrow><mrow>"+s1+"</mrow></msup>";
       if (mys.feuille._VECTptr->front().type==_SYMB){
 
 	symbolic mantisse(*mys.feuille._VECTptr->front()._SYMBptr);
@@ -1182,6 +1180,8 @@ namespace giac {
       of << gen2mathmlfull(g._VECTptr->front(),contextptr) << endl;
       return plus_one;
     }
+    if (g.type==_VECT && g._VECTptr->size()==2 && g._VECTptr->back().type==_INT_)
+      return string2gen(ingen2mathml(g._VECTptr->front(),g._VECTptr->back().val,contextptr),false);
     return string2gen(gen2mathmlfull(g,contextptr),false);
   }
   static const char _mathml_s []="mathml";

@@ -217,6 +217,8 @@ namespace giac {
 
   extern Opengl3d * openglptr;  
   void sdl_loop();
+  int giac_renderer(const char * ch);
+  int giac_gen_renderer(const gen & g,GIAC_CONTEXT);
 
 #ifndef NO_NAMESPACE_GIAC
 } // namespace giac
