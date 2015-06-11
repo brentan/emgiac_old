@@ -59,7 +59,7 @@ namespace giac {
 
   index_t index_gcd(const index_t & a,const index_t & b){
     index_t::const_iterator ita=a.begin(),itaend=a.end(),itb=b.begin();
-    unsigned s=itaend-ita;
+    unsigned s=unsigned(itaend-ita);
     index_t res(s);
     index_t::iterator itres=res.begin();  
 #ifdef DEBUG_SUPPORT
@@ -73,7 +73,7 @@ namespace giac {
 
   index_t index_lcm(const index_t & a,const index_t & b){
     index_t::const_iterator ita=a.begin(),itaend=a.end(),itb=b.begin();
-    unsigned s=itaend-ita;
+    unsigned s=unsigned(itaend-ita);
     index_t res(s);
     index_t::iterator itres=res.begin();  
 #ifdef DEBUG_SUPPORT
@@ -87,7 +87,7 @@ namespace giac {
 
   void index_lcm(const index_m & a,const index_m & b,index_t & res){
     index_t::const_iterator ita=a.begin(),itaend=a.end(),itb=b.begin();
-    unsigned s=itaend-ita;
+    unsigned s=unsigned(itaend-ita);
     res.resize(s);
     index_t::iterator itres=res.begin();  
     for (;ita!=itaend;++itb,++itres,++ita)
@@ -98,7 +98,7 @@ namespace giac {
 
   index_t operator + (const index_t & a, const index_t & b){
     index_t::const_iterator ita=a.begin(),itaend=a.end(),itb=b.begin();
-    unsigned s=itaend-ita;
+    unsigned s=unsigned(itaend-ita);
     index_t res(s);
     index_t::iterator itres=res.begin();  
 #ifdef DEBUG_SUPPORT
@@ -113,7 +113,7 @@ namespace giac {
   index_t operator - (const index_t & a, const index_t & b){
     index_t res;
     index_t::const_iterator ita=a.begin(),itaend=a.end(),itb=b.begin();
-    unsigned s=itaend-ita;
+    unsigned s=unsigned(itaend-ita);
 #ifdef DEBUG_SUPPORT
     if (s!=b.size())
       setsizeerr(gettext("index.cc operator -"));
@@ -127,7 +127,7 @@ namespace giac {
   index_t operator | (const index_t & a, const index_t & b){
     index_t res;
     index_t::const_iterator ita=a.begin(),itaend=a.end(),itb=b.begin();
-    unsigned s=itaend-ita;
+    unsigned s=unsigned(itaend-ita);
 #ifdef DEBUG_SUPPORT
     if (s!=b.size())
       setsizeerr(gettext("index.cc operator |"));
@@ -141,7 +141,7 @@ namespace giac {
   index_t operator - (const index_t & a){
     index_t res;
     index_t::const_iterator ita=a.begin(),itaend=a.end();
-    int s=itaend-ita;
+    int s=int(itaend-ita);
     res.reserve(s);
     for (;ita!=itaend;++ita)
       res.push_back(-(*ita));
@@ -305,7 +305,7 @@ namespace giac {
   // by convention 0 -> 0 for permutations beginning at index 1
   vector<int> inverse(const vector<int> & p){
     vector<int> inv(p);
-    int n=p.size();
+    int n=int(p.size());
     for (int i=0;i<n;i++){
       inv[p[i]]=i; // that's the definition of inv!!
     }
@@ -472,7 +472,7 @@ namespace giac {
     index_t::const_iterator ita=a.begin();
     index_t::const_iterator itaend=a.end();
     index_t::const_iterator itb=b.begin();
-    int s=itaend-ita;
+    int s=int(itaend-ita);
 #ifdef DEBUG_SUPPORT
     if (s!=signed(b.size()))
       setsizeerr(gettext("index.cc index_m operator +"));
@@ -488,7 +488,7 @@ namespace giac {
     index_t::const_iterator ita=a.begin();
     index_t::const_iterator itaend=a.end();
     index_t::const_iterator itb=b.begin();
-    int s=itaend-ita;
+    int s=int(itaend-ita);
 #ifdef DEBUG_SUPPORT
     if (s!=signed(b.size()))
       setsizeerr(gettext("index.cc index_m operator -"));

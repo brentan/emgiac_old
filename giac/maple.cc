@@ -85,13 +85,13 @@ namespace giac {
     if (g.type!=_VECT || g._VECTptr->size()<3)
       return symbolic(at_zip,g);
     vecteur & v=*g._VECTptr;
-    int s=v.size();
+    int s=int(v.size());
     gen & f=v[0];
     if (v[1].type!=_VECT || v[2].type!=_VECT)
       return f(gen(makevecteur(v[1],v[2]),_SEQ__VECT),contextptr);
     vecteur & w1=*v[1]._VECTptr;
     vecteur & w2=*v[2]._VECTptr;
-    int s1=w1.size(),s2=w2.size();
+    int s1=int(w1.size()),s2=int(w2.size());
     vecteur res;
     int ss=giacmin(s1,s2),i=0;
     res.reserve(ss);
@@ -120,7 +120,7 @@ namespace giac {
     vecteur & w=*v[0]._VECTptr;
     int tail=v[1].val;
     int head=v[2].val;
-    int s=w.size();
+    int s=int(w.size());
     if (tail<1 || head<1 || tail+head>s)
       return gensizeerr();
     gen tmp;
@@ -147,7 +147,7 @@ namespace giac {
     if (g.type!=_VECT || g._VECTptr->size()<2)
       return gensizeerr();
     vecteur & v=*g._VECTptr;
-    int s=v.size();
+    int s=int(v.size());
     if (s==2)
       return _quorem(g,contextptr);
     gen q("Quo",contextptr),r("Rem",contextptr),arg;
@@ -229,7 +229,7 @@ namespace giac {
     if (a_orig.type!=_VECT || a_orig._VECTptr->size()<2)
       return gensizeerr();
     vecteur v=*a_orig._VECTptr;
-    int s=v.size();
+    int s=int(v.size());
     for (int i=2;i<s;++i){
       v[i]=unmodunprod(v[i]);
     }
@@ -286,7 +286,7 @@ namespace giac {
     }
     if (a.type==_STRNG){
       string s=*a._STRNGptr;
-      int l=s.size();
+      int l=int(s.size());
       for (int i=0;i<l/2;++i){
 	char c=s[i];
 	s[i]=s[l-1-i];
@@ -475,7 +475,7 @@ namespace giac {
   gen _pivot(const gen & a_orig,GIAC_CONTEXT){
     if ( a_orig.type==_STRNG && a_orig.subtype==-1) return  a_orig;
     vecteur v(gen2vecteur(a_orig));
-    int s=v.size();
+    int s=int(v.size());
     if (s!=3 && s!=4)
       return gensizeerr();
     if (!ckmatrix(v.front()) || v[1].type!=_INT_ || v[2].type!=_INT_)
@@ -533,7 +533,7 @@ namespace giac {
       v=mtran(v);
     v=mrref(v,contextptr);
     vecteur newv;
-    int s=v.size();
+    int s=int(v.size());
     vecteur cmp(v.front()._VECTptr->size());
     for (int i=0;i<s;++i){
       if (v[i]!=cmp)
@@ -651,7 +651,7 @@ namespace giac {
 	return gensizeerr(contextptr);
       // count elements in list of integers
       vector<int> x=vecteur_2_vector_int(*args._VECTptr);
-      int m=giacmin(x),M=giacmax(x),s=x.size();
+      int m=giacmin(x),M=giacmax(x),s=int(x.size());
       if (M-m<3*s){
 	vector<int> eff(M-m+1);
 	effectif(x,eff,m);
@@ -913,7 +913,7 @@ namespace giac {
     if (g.type!=_VECT || g._VECTptr->size()<1)
       return gensizeerr(gettext("1st arg=open result, then other args"));
     vecteur & v=*g._VECTptr;
-    int s=v.size();
+    int s=int(v.size());
     FILE * f=0;
 #if !defined(BESTA_OS) && !defined(NSPIRE)
     if (v[0].type==_INT_ && v[0].subtype==_INT_FD)
@@ -973,7 +973,7 @@ namespace giac {
       return gensizeerr();
     int n=v[0].val,m=v[1].val;
     vecteur l=*v[2]._VECTptr;
-    int s=l.size();
+    int s=int(l.size());
     if (n<=0 || m<=0 || n*m!=s)
       return gendimerr();
     for (int k=0;k<s;++k){
@@ -991,7 +991,7 @@ namespace giac {
     for (int i=0;i<n;++i){
       // glue m matrices from l vertically, these matrices must have same #rows
       pos=i*m;
-      int nrows=l[pos]._VECTptr->size();
+      int nrows=int(l[pos]._VECTptr->size());
       for (int j=1;j<m;++j){
 	if (l[pos+j]._VECTptr->size()!=unsigned(nrows))
 	  return gendimerr();
@@ -1008,7 +1008,7 @@ namespace giac {
 	if (final && tmp.size()!=final)
 	  return gendimerr();
 	else
-	  final=tmp.size();
+	  final=unsigned(tmp.size());
 	res.push_back(tmp);
       }
     }
@@ -1038,7 +1038,7 @@ namespace giac {
     matrice m=*gm._VECTptr;
     if (!isrow)
       m=mtran(m);
-    s=m.size();
+    s=int(m.size());
     if (a>=s || b>=s || a<0 || b<0 || a>b)
       return gendimerr();
     m.erase(m.begin()+a,m.begin()+b+1);
@@ -1169,7 +1169,7 @@ namespace giac {
     vecteur l(1,x);
     lvar(f,l);
     lvar(N,l);
-    int ls=l.size();
+    int ls=int(l.size());
     gen ff(sym2r(f,l,contextptr));
     gen fn,fd;
     fxnd(ff,fn,fd);
@@ -1186,7 +1186,7 @@ namespace giac {
       Np=polynome2poly1(*Nn._POLYptr,1);
     else
       return gensizeerr();
-    n=Np.size()-1;
+    n=int(Np.size())-1;
     // Check that fp is a poly of degree less than n
     if (n<1 || p>n || signed(fp.size())>n)
       return gendimerr();
@@ -1249,7 +1249,7 @@ namespace giac {
   gen fft(const gen & g_orig,int direct,GIAC_CONTEXT){
     if (g_orig.type==_VECT && g_orig.subtype==_SEQ__VECT && g_orig._VECTptr->size()==3 && g_orig._VECTptr->front().type==_VECT){
       vecteur & v =*g_orig._VECTptr->front()._VECTptr;
-      int n=v.size();
+      int n=int(v.size());
       if (n<2)
 	return gendimerr();
       vecteur w(n),res;
@@ -1276,7 +1276,7 @@ namespace giac {
     if (g.type!=_VECT)
       return gensizeerr();
     vecteur v =*g._VECTptr;
-    int n=v.size();
+    int n=int(v.size());
     if (n<2)
       return gendimerr();
 #ifdef HAVE_LIBGSL
@@ -1482,20 +1482,20 @@ namespace giac {
     vecteur w=*g._VECTptr;
     if (w.size()==1)
       w.push_back(16);
-    int ws=w.size();
+    int ws=int(w.size());
     if (w[0].type!=_INT_ || w[1].type!=_INT_)
       return false;
     channels=w[0].val;
     if (channels<=0 || channels>int(v.size())){
-      channels=v.size();
+      channels=int(v.size());
       if (v.front().type!=_VECT || !is_integer_vecteur(*v.front()._VECTptr))
 	return false;
-      data_size=v.front()._VECTptr->size();
+      data_size=unsigned(v.front()._VECTptr->size());
       for (int i=1;i<channels;++i){
 	if (v[i].type!=_VECT || !is_integer_vecteur(*v[i]._VECTptr))
 	  return false;
 	if (data_size>v[i]._VECTptr->size())
-	  data_size=v[i]._VECTptr->size();
+	  data_size=unsigned(v[i]._VECTptr->size());
       }
       w=makevecteur(channels,16,44100); ws=3;
       g=w;
@@ -1520,7 +1520,7 @@ namespace giac {
       if (v[i].type!=_VECT || !is_integer_vecteur(*v[i]._VECTptr))
 	return false;
       if (data_size>v[i]._VECTptr->size())
-	data_size=v[i]._VECTptr->size();
+	data_size=unsigned(v[i]._VECTptr->size());
     }
     return true;
   }
@@ -1817,7 +1817,7 @@ namespace giac {
 
   static gen animate2d3d(const gen & g,bool dim3,GIAC_CONTEXT){
     int s=0,frames=10;
-    if (g.type!=_VECT || (s=g._VECTptr->size())<3)
+    if (g.type!=_VECT || (s=int(g._VECTptr->size()))<3)
       return gensizeerr();
     vecteur v = *g._VECTptr;
     gen t;
@@ -2017,7 +2017,7 @@ namespace giac {
     vecteur v(gen2vecteur(g));
     if (v.empty() || v[0].type!=_STRNG)
       return gensizeerr();
-    int s=v.size();
+    int s=int(v.size());
     gen res;
     bool ok= false;
     if (readrgb_ptr)
@@ -2118,7 +2118,7 @@ namespace giac {
   // vnext=[1,0], v=[1], vcst=[-1,0] -> n solution
   static bool rsolve_particular(const modpoly & vnext,const modpoly & v,const modpoly & vcst,modpoly & sol,GIAC_CONTEXT){
     // find majoration of degree for solution
-    int vnextdeg=vnext.size()-1,vdeg=v.size()-1,vcstdeg=vcst.size()-1,soldeg;
+    int vnextdeg=int(vnext.size())-1,vdeg=int(v.size())-1,vcstdeg=int(vcst.size())-1,soldeg;
     soldeg=vcstdeg-giacmax(vnextdeg,vdeg);
     if (vnextdeg==vdeg && is_zero(vnext.front()+v.front()))
       soldeg++;
@@ -2175,7 +2175,7 @@ namespace giac {
     gen P0n,P0d;
     fxnd(P0,P0n,P0d);
     if (P0n.type!=_POLY)
-      P=polynome(P0n,v.size());
+      P=polynome(P0n,int(v.size()));
     else
       P=*P0n._POLYptr;
     a=e2r(a,v1,contextptr);
@@ -2188,7 +2188,7 @@ namespace giac {
     // we have u(n+1)=a^(n+1)*Q(n+1)=l*a^n*Q(n)+a^n*P(n)
     // hence a*Q(n+1)-l*Q(n)=P(n)
     vecteur p=polynome2poly1(P,1);
-    int pdeg=p.size()-1;
+    int pdeg=int(p.size())-1;
     vecteur q(pdeg+1);
     reverse(p.begin(),p.end());
     for (int j=pdeg;j>=0;j--){
@@ -2228,7 +2228,7 @@ namespace giac {
     int dim=1,udim=1;
     if (args.type==_VECT){
       vecteur & v=*args._VECTptr;
-      int s=v.size();
+      int s=int(v.size());
       if (!s)
 	return gentoofewargs("");
       f=v[0];
@@ -2237,9 +2237,9 @@ namespace giac {
       if (s>2)
 	uzero=eval(v[2],eval_level(contextptr),contextptr);
       if (x.type==_VECT){
-	dim=x._VECTptr->size();
+	dim=int(x._VECTptr->size());
 	if (uzero.type==_VECT)
-	  udim=uzero._VECTptr->size();
+	  udim=int(uzero._VECTptr->size());
       }
     }
     else
@@ -2270,7 +2270,7 @@ namespace giac {
 	return gendimerr();
       n=gen(identificateur("rsolve_n"));
     }
-    int fs=fv.size();
+    int fs=int(fv.size());
     int add=dim-fs;
     if (f.type!=_VECT && !fv1){
       f=vecteur(x._VECTptr->end()-add,x._VECTptr->end());
@@ -2408,7 +2408,7 @@ namespace giac {
     // if (fs==1) uzero=_revlist(uzero);
     vecteur vzero=multmatvecteur(Pinv,*uzero._VECTptr);
     vecteur vcst=multmatvecteur(Pinv,cst);
-    int taille=m.size();
+    int taille=int(m.size());
     vecteur res(taille);
     for (int i=taille-1;i>=0;--i){
       // find cst coefficient
@@ -2466,7 +2466,7 @@ namespace giac {
 	return gendimerr();
     }
     vecteur uv(gen2vecteur(u));
-    int uvs=uv.size();
+    int uvs=int(uv.size());
     vecteur initcond;
     aplatir(*apply(initcond0,equal2diff)._VECTptr,initcond);
     gen f=apply(f0,equal2diff);
@@ -2507,7 +2507,7 @@ namespace giac {
       for (const_iterateur it=vofb.begin();it!=vofb.end();++it){
 	const gen & tmp = *it;
 	if (is_strictly_greater(tmp,bmax,contextptr)){
-	  nmax=it-vofb.begin();
+	  nmax=int(it-vofb.begin());
 	  bmax=tmp;
 	}
 	if (is_strictly_greater(bmin,tmp,contextptr))
@@ -2647,7 +2647,7 @@ namespace giac {
     vecteur varg=gen2vecteur(args);
     if (debug_infolevel>20)
       varg.dbgprint();
-    int s=varg.size();
+    int s=int(varg.size());
     if (!s)
       return gendimerr();
     gen f,u,n;
@@ -2721,7 +2721,7 @@ namespace giac {
       return is_strictly_greater(b,a,context0);
     vecteur & av =*a._VECTptr;
     vecteur & bv =*b._VECTptr;
-    int avs=av.size(),bvs=bv.size();
+    int avs=int(av.size()),bvs=int(bv.size());
     if (avs!=bvs)
       return avs<bvs;
     for (int i=0;i<avs;++i){
@@ -2745,7 +2745,7 @@ namespace giac {
 #else
     gen_map m(ptr_fun(islessthanf));
 #endif
-    int s=args.size();
+    int s=int(args.size());
     vector<int> indexbegin,indexsize;
     int nindexes=1;
     gen initv(vecteur(0));
@@ -2768,7 +2768,7 @@ namespace giac {
     }
     if (nindexes>>24)
       return gendimerr(gettext("Array too large")+print_INT_(nindexes));
-    int is=indexsize.size();
+    int is=int(indexsize.size());
     for (int i=0;i<nindexes;++i){
       // generate index by writing nindexes in bases indexsize
       vecteur curidx(is);

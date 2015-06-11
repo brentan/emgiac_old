@@ -248,8 +248,12 @@ namespace giac {
     // a.size()<=b.size()
     if (a.size()==b.size()){
       for (int i=0;i<a.size();++i){
-	if (a[i].type==_VECT && b[i].type==_VECT && a[i]._VECTptr->size()>b[i]._VECTptr->size())
-	  return ext_glue_matrices(b,a);
+	if (a[i].type==_VECT && b[i].type==_VECT){
+	  if (a[i]._VECTptr->size()<b[i]._VECTptr->size())
+	    break;
+	  if (a[i]._VECTptr->size()>b[i]._VECTptr->size())
+	    return ext_glue_matrices(b,a);
+	}
       }
     }
     if (b.empty() || a.empty() || (a==b))
@@ -305,7 +309,7 @@ namespace giac {
 	vecteur v,vt;
 	ext_mat.push_back(v);
 	vt=alg_lvar(algebraic_argument(*it));
-	int s=vt.size();
+	int s=int(vt.size());
 	if (s>1 || (s==1 && !vt.front()._VECTptr->empty()) )
 	  ext_mat=mergevecteur(ext_mat,vt);
 	m=ext_glue_matrices(ext_mat,m);
@@ -721,7 +725,7 @@ namespace giac {
       return false;
     }
     // now we choose the factor of lowest degree of the factorization
-    int lowest_degree=v.size(),deg;
+    int lowest_degree=int(v.size()),deg;
     factorization::const_iterator f_it,f_itend=f.end();
     // Rewrite num if it's an ext with i, because it is rewritten by factor
     if (num.type==_EXT && has_i(num)){
@@ -919,7 +923,7 @@ namespace giac {
     vector<int> embeddings_s;
     if (is_atomic(num)){
       const_iterateur it=l.begin(),itend=l.end();
-      embeddings=itend-it;
+      embeddings=int(itend-it);
       if (
 	  0 &&  // disable for expressions with mixed rootof/fracpow?
 	  embeddings==1 && it->type==_VECT && it->_VECTptr->empty())
@@ -934,7 +938,7 @@ namespace giac {
 #endif
 	    return false;
 	  }
-	  embeddings_s.push_back(it->_VECTptr->size());
+	  embeddings_s.push_back(int(it->_VECTptr->size()));
 	}
       }
     }
@@ -1142,7 +1146,7 @@ namespace giac {
       if (num.type!=_VECT || pmin_num.type!=_VECT)
 	return totally_converted;
       vecteur vnum=*num._VECTptr,vpmin=*pmin_num._VECTptr;
-      int s=l.size();
+      int s=int(l.size());
       for (;embeddings<s;){
 	bool exitmainloop=false;
 	iterateur it=vnum.begin(),itend=vnum.end();
@@ -1172,7 +1176,7 @@ namespace giac {
 #endif
 	  return false;
 	}
-	embeddings_s.push_back(l[embeddings]._VECTptr->size());
+	embeddings_s.push_back(int(l[embeddings]._VECTptr->size()));
 	++embeddings;
 	for (it=vnum.begin(),itend=vnum.end(),i=0;;++it){
 	  if (it==itend){
@@ -1289,9 +1293,9 @@ namespace giac {
       if ((!l.empty()) && (l.front().type==_VECT) ){
 	int i,j;
 	if (equalposmat(l,e,i,j)){
-	  num=monomial2gen(monomial<gen>(gen(1),j+1,l[i]._VECTptr->size()));
+	  num=monomial2gen(monomial<gen>(gen(1),j+1,int(l[i]._VECTptr->size())));
 	  for (int k=i-1;k>=0;--k)
-	    num=monomial2gen(monomial<gen>(num,l[k]._VECTptr->size()));
+	    num=monomial2gen(monomial<gen>(num,int(l[k]._VECTptr->size())));
 	  den=plus_one;
 	  return true;
 	}
@@ -1317,8 +1321,8 @@ namespace giac {
     case _POLY: case _EXT:
       if ((!l.empty()) && (l.front().type==_VECT) ){
 	num=e;
-	for (int k=l.size()-1;k>=0;--k) // was l_size
-	  num=monomial2gen(monomial<gen>(num,l[k]._VECTptr->size()));
+	for (int k=int(l.size())-1;k>=0;--k) // was l_size
+	  num=monomial2gen(monomial<gen>(num,int(l[k]._VECTptr->size())));
 	den=plus_one;
       }
       else {
@@ -1432,7 +1436,7 @@ namespace giac {
       if (minpoly._VECTptr->size()>unsigned(MAX_COMMON_ALG_EXT_ORDER_SIZE))
 	return vecteur(1,undef);
       // compute alg_extoutnum/den using newminpoly
-      int s=alg_extin.size();
+      int s=int(alg_extin.size());
       for (int i=0;i<s;++i){
 	if (alg_extoutnum[i].type!=_VECT)
 	  return vecteur(1,gensizeerr(contextptr));
@@ -1528,7 +1532,7 @@ namespace giac {
 	  ext=ext._FRACptr->num;
 	}
 	if (!is_zero(ext))
-	  extensions[emb.size()].push_back(ext);
+	  extensions[int(emb.size())].push_back(ext);
       }
     }
     // now rewrite each element of the list at each embedding level
@@ -1546,10 +1550,10 @@ namespace giac {
 	extract_ext(lvnum[i],ext,emb);
 	if (is_zero(ext))
 	  continue;
-	int n=equalposcomp(extensions[emb.size()],ext);
+	int n=equalposcomp(extensions[int(emb.size())],ext);
 	if (!n)
 	  return false; // setsizeerr();
-	gen tmp=newext[emb.size()],den=1;
+	gen tmp=newext[int(emb.size())],den=1;
 	if (tmp.type!=_VECT || int(tmp._VECTptr->size())<n)
 	  return false; // setsizeerr();
 	tmp=(*tmp._VECTptr)[n-1];
@@ -1712,8 +1716,8 @@ namespace giac {
     if ( (e.type==_POLY) || (e.type==_EXT)){
       if ((!l.empty()) && (l.front().type==_VECT) ){
 	num=e;
-	for (int k=l.size()-1;k>=0;--k) // was l.size()
-	  num=monomial2gen(monomial<gen>(num,l[k]._VECTptr->size()));
+	for (int k=int(l.size())-1;k>=0;--k) // was l.size()
+	  num=monomial2gen(monomial<gen>(num,int(l[k]._VECTptr->size())));
 	den=plus_one;
       }
       else {
@@ -1742,7 +1746,7 @@ namespace giac {
 	egcd(*(a._EXTptr->_VECTptr),*((a._EXTptr+1)->_VECTptr),0,u,v,d);
 	if (d.size()==1){
 	  gen aconj=algebraic_EXTension(u,*(a._EXTptr+1));
-	  aconj=polynome(aconj,den._POLYptr->coord.front().index.size());
+	  aconj=polynome(aconj,int(den._POLYptr->coord.front().index.size()));
 	  num=aconj*num;
 	  den=aconj*den;
 	}
@@ -1754,9 +1758,9 @@ namespace giac {
   fraction sym2r(const gen & e, const vecteur & l,GIAC_CONTEXT){
     int l_size;
     if (!l.empty() && l.front().type==_VECT)
-      l_size=l.front()._VECTptr->size();
+      l_size=int(l.front()._VECTptr->size());
     else
-      l_size=l.size();
+      l_size=int(l.size());
     gen num,den;
     sym2r(e,l,l_size,num,den,contextptr);
     if (is_positive(-den,contextptr)) 
@@ -1779,9 +1783,9 @@ namespace giac {
     bool totally_converted=true;
     int l_size;
     if (!l.empty() && l.front().type==_VECT)
-      l_size=l.front()._VECTptr->size();
+      l_size=int(l.front()._VECTptr->size());
     else
-      l_size=l.size();
+      l_size=int(l.size());
     gen num,den;
     vecteur lv,lvnum,lvden;
     lvar(e,lv);
@@ -1913,7 +1917,7 @@ namespace giac {
     if ( p.type!=_VECT || pmin.type!=_VECT)
       return gensizeerr(gettext("sym2poly.cc/ckdeg2_rootof"));
     vecteur & w = *pmin._VECTptr;
-    int s=w.size();
+    int s=int(w.size());
     if (s!=3)
       return symb_rootof(p,r2sym(pmin,lt,ltend,contextptr),contextptr);
     if (p._VECTptr->size()!=2)
@@ -1988,8 +1992,8 @@ namespace giac {
     }
     if (e_square._EXTptr->type!=_VECT)
       return 0; // setsizeerr(gettext("sym2poly.cc/is_root_of_deg2"));
-    int s=e._EXTptr->_VECTptr->size();      
-    int s2=e_square._EXTptr->_VECTptr->size();
+    int s=int(e._EXTptr->_VECTptr->size());      
+    int s2=int(e_square._EXTptr->_VECTptr->size());
     if (s!=s2)
       return 0;
     gen b=-e_square._EXTptr->_VECTptr->front();
@@ -2037,7 +2041,7 @@ namespace giac {
     gen f=*(pp._EXTptr+1);
     if (f.type!=_VECT)
       return undef;
-    int d=f._VECTptr->size();
+    int d=int(f._VECTptr->size());
     gen r=evalf_double(pp,1,contextptr);
     matrice m(d);
     m[0]=vecteur(d-1);
@@ -2072,7 +2076,7 @@ namespace giac {
 	  return gen(-mk,_POLY1__VECT);
 	return gen(mk,_POLY1__VECT);
       }
-      if ((d=mk.size())<=5 && d!=4){
+      if ((d=int(mk.size()))<=5 && d!=4){
 	identificateur x(" x");
 	vecteur w;
 	in_solve(symb_horner(mk,x),x,w,1,contextptr);
@@ -2151,7 +2155,7 @@ namespace giac {
 	   && f.type==_VECT && !has_rootof_value(f,fvalue,contextptr)){
 	// univariate case
 	// find minimal poly of the whole _EXT if extension degree is > 2
-	int d=f._VECTptr->size();
+	int d=int(f._VECTptr->size());
 	// FIXME remove d<=10, requires better handling of rref with Gauss integers
 	if (d>3 && d<=10){
 	  gen res=minimal_polynomial(pp,false,contextptr);
@@ -2224,7 +2228,7 @@ namespace giac {
 	      }
 	    }
 	    // tmp2 and tmp3 are identical or tmp0 is not real, retry
-	    vzero=vranm(vzero.size(),0,contextptr);
+	    vzero=vranm(int(vzero.size()),0,contextptr);
 	    check_assume(vzero,vassume,contextptr);
 	  }
 #ifndef NO_STDEXCEPT
@@ -2242,7 +2246,7 @@ namespace giac {
 	    }
 	    return w.front(); */
       }
-      int s=f._VECTptr->size();
+      int s=int(f._VECTptr->size());
       v=vecteur(s,zero);
       v.front()=plus_one;
       v.back()=f._VECTptr->back();
@@ -2333,7 +2337,7 @@ namespace giac {
 	}
 	return w.front();
       }
-      int s=f._VECTptr->size();
+      int s=int(f._VECTptr->size());
       v=vecteur(s,zero);
       v.front()=plus_one;
       v.back()=f._VECTptr->back();
@@ -2844,9 +2848,9 @@ namespace giac {
       vecteur l=lvar(it->_SYMBptr->feuille._VECTptr->back());
       int l_size;
       if (!l.empty() && l.front().type==_VECT)
-	l_size=l.front()._VECTptr->size();
+	l_size=int(l.front()._VECTptr->size());
       else
-	l_size=l.size();
+	l_size=int(l.size());
       gen f,f_num,f_den;
       f=e2r(it->_SYMBptr->feuille._VECTptr->back(),l,contextptr);
       fxnd(f,f_num,f_den);
@@ -3010,9 +3014,9 @@ namespace giac {
 
   static gen factor_multivar(const polynome & p,const vecteur &l,bool fixed_order,bool with_sqrt,gen divide_an_by,gen & extra_div,GIAC_CONTEXT){
     polynome pp(p);
-    int nvars=l.size();
+    int nvars=int(l.size());
     if (l.front().type==_VECT)
-      nvars=l.front()._VECTptr->size();
+      nvars=int(l.front()._VECTptr->size());
     vector<int> deg(nvars);
     int mindeg=pp.lexsorted_degree();
     int posmin=0;
@@ -3249,7 +3253,7 @@ namespace giac {
   gen factor(const gen & ee,const gen & f,bool with_sqrt,GIAC_CONTEXT){
     if (ee.type==_VECT){
       vecteur & v=*ee._VECTptr;
-      int s=v.size();
+      int s=int(v.size());
       vecteur res(s);
       for (int i=0;i<s;++i)
 	res[i]=factor(v[i],f,with_sqrt,contextptr);
@@ -3287,7 +3291,7 @@ namespace giac {
       }
       return factor(v.front(),v.back(),with_sqrt,contextptr);
     }
-    int s=v.size();
+    int s=int(v.size());
     vecteur res(s);
     for (int i=0;i<s;++i)
       res[i]=factor(v[i],with_sqrt,contextptr);
@@ -3309,11 +3313,11 @@ namespace giac {
     int l_size;
     gen xvar;
     if (!l.empty() && l.front().type==_VECT){
-      l_size=l.front()._VECTptr->size();
+      l_size=int(l.front()._VECTptr->size());
       xvar=l.front();
     }
     else {
-      l_size=l.size();
+      l_size=int(l.size());
       xvar=l;
     }
     if (!l_size)
@@ -3413,6 +3417,9 @@ namespace giac {
     gen res;
     gen tmp2(polynome2poly1(temp,1));
     res=l.empty()?tmp2:r2e(tmp2,l,contextptr); // (tmp2.type==_FRAC?gen(fraction(r2e(tmp2._FRACptr->num,l,contextptr),r2e(tmp2._FRACptr->den,l,contextptr))):r2e(tmp2,l,contextptr));
+    if (res.type==_FRAC && res._FRACptr->num.type==_VECT && res._FRACptr->den.type<_POLY){
+      res=inv(res._FRACptr->den,contextptr)*res._FRACptr->num;
+    }
     if (res.type==_VECT && calc_mode(contextptr)!=1)
       res.subtype=_POLY1__VECT;
     return res;
@@ -3422,7 +3429,7 @@ namespace giac {
     if (args.type!=_VECT)
       return _e2r(makesequence(args,vx_var),contextptr);
     vecteur & v=*args._VECTptr;
-    int s=v.size();
+    int s=int(v.size());
     if (s<2)
       return gendimerr(contextptr);
     gen res=v.front();
@@ -3447,7 +3454,7 @@ namespace giac {
     if (args.type!=_VECT || args.subtype!=_SEQ__VECT)
       return _r2e(gen(makevecteur(args,vx_var),_SEQ__VECT),contextptr);
     vecteur & v=*args._VECTptr;
-    int s=v.size();
+    int s=int(v.size());
     if (s<2)
       return _r2e(gen(makevecteur(args,vx_var),_SEQ__VECT),contextptr);
     gen res=v[0];
@@ -3553,7 +3560,7 @@ namespace giac {
     if (args.type!=_VECT)
       return gentypeerr(contextptr);
     vecteur v =*args._VECTptr;
-    int s=v.size();
+    int s=int(v.size());
     if (s<2)
       toofewargs(_resultant_s);
     if (s==2) v.push_back(vx_var);
@@ -3581,9 +3588,9 @@ namespace giac {
     alg_lvar(p2,l);
     int l_size;
     if (!l.empty() && l.front().type==_VECT)
-      l_size=l.front()._VECTptr->size();
+      l_size=int(l.front()._VECTptr->size());
     else
-      l_size=l.size();
+      l_size=int(l.size());
     gen f1,f1_num,f1_den,f2,f2_num,f2_den;
     f1=e2r(makevecteur(p1,p2),l,contextptr);
     f2=f1[1];

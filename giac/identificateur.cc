@@ -586,7 +586,7 @@ namespace giac {
 #else
     string tmp=string(" "+print_INT_(std_rand()));
 #endif
-    int l=tmp.size();
+    int l=int(tmp.size());
     char * c = new char[l+1];
     strcpy(c,tmp.c_str());
     ptr->s=c;
