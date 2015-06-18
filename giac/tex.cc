@@ -305,16 +305,13 @@ namespace giac {
 
   static string _VECT2tex(const vecteur & v,int subtype,GIAC_CONTEXT){
     string s(begin_VECT_string(subtype,true,contextptr));
-    #ifdef SWIFT_CALCS_OPTIONS
-      string m(mid_VECT_string(subtype,true,contextptr));
-    #endif
     vecteur::const_iterator it=v.begin(),itend=v.end();
     for (;it!=itend;){
       s += gen2tex(*it,contextptr);
       ++it;
       if (it!=itend)
         #ifdef SWIFT_CALCS_OPTIONS
-          s += m;
+          s += mid_VECT_string(subtype,true,contextptr);
         #else
           s += ',';
         #endif

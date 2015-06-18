@@ -11294,6 +11294,10 @@ namespace giac {
 	s += ' ';
     }
   }
+  #ifdef SWIFT_CALCS_OPTIONS
+    int matrix_depth = 0;
+    bool ignore_next_mid = false;
+  #endif
 
   string begin_VECT_string(int subtype,bool tex,GIAC_CONTEXT){
     string s;
@@ -11374,8 +11378,13 @@ namespace giac {
       break;
     default:
       #ifdef SWIFT_CALCS_OPTIONS
-        if(tex)
-          s="\\begin{bmatrix}";
+        if(tex) {
+          if(giac::matrix_depth == 0)
+            s="\\begin{bmatrix}";
+          else 
+            s=" ";
+          giac::matrix_depth++;
+        }
         else
           s=calc_mode(contextptr)==1?"{":"[";
       #else
@@ -11388,6 +11397,19 @@ namespace giac {
   string end_VECT_string(int subtype,bool tex,GIAC_CONTEXT){
     string s;
     switch (subtype){
+
+    case _GROUP__VECT:
+    #ifdef HAVE_LIBMPFI
+      case _INTERVAL__VECT:
+    #endif
+    case _LINE__VECT:
+    case _PNT__VECT:
+    case _POLY1__VECT:
+    case _ASSUME__VECT:
+    case _FOLDER__VECT:
+    case _POLYEDRE__VECT:
+    case _RGBA__VECT:
+      return "]";
     case _SEQ__VECT:
       return s;
     case _SET__VECT:
@@ -11421,8 +11443,16 @@ namespace giac {
     case _MATRIX__VECT:
       return calc_mode(contextptr)==1?"}":"]";
     default:
-      if(tex)
-        return "\\end{bmatrix}";
+      if(tex) {
+        giac::matrix_depth--;
+        if(giac::matrix_depth == 0) {
+          giac::ignore_next_mid = false;
+          return "\\end{bmatrix}";
+        } else {
+          giac::ignore_next_mid = true;
+          return " ";
+        }
+      }
       else
         return calc_mode(contextptr)==1?"}":"]";
   #else
@@ -11438,11 +11468,36 @@ namespace giac {
     string mid_VECT_string(int subtype,bool tex,GIAC_CONTEXT){
       string s;
       switch (subtype){
-      case _SEQ__VECT: case _SET__VECT: case _RPN_STACK__VECT: case _RPN_FUNC__VECT: case _LIST__VECT: case _GGB__VECT: case _POINT__VECT: case _VECTOR__VECT: case _GGBVECT: case _MATRIX__VECT:
+      case _SEQ__VECT: 
+      case _SET__VECT: 
+      case _RPN_STACK__VECT: 
+      case _RPN_FUNC__VECT: 
+      case _LIST__VECT: 
+      case _GGB__VECT: 
+      case _POINT__VECT: 
+      case _VECTOR__VECT: 
+      case _MATRIX__VECT:
+      case _GROUP__VECT:
+      #ifdef HAVE_LIBMPFI
+        case _INTERVAL__VECT:
+      #endif
+      case _LINE__VECT:
+      case _PNT__VECT:
+      case _POLY1__VECT:
+      case _ASSUME__VECT:
+      case _FOLDER__VECT:
+      case _POLYEDRE__VECT:
+      case _RGBA__VECT:
+      case _GGBVECT:
         return ",";
       default:
-        if(tex)
-          return " & ";
+        if(tex) {
+          if(giac::ignore_next_mid) {
+            giac::ignore_next_mid = false;
+            return " \\\\ ";
+          } else 
+            return " & ";
+        }
         else
           return ",";
       }    
