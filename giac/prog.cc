@@ -609,26 +609,14 @@ namespace giac {
 	res=" "; // was res=indent(contextptr);
     }
     gen & feuille0=feuille._VECTptr->front();
-    #ifdef SWIFT_CALCS_OPTIONS
-      res += "function";
-      if (feuille0.type==_VECT && feuille0.subtype==_SEQ__VECT && feuille0._VECTptr->size()==1)
-        res +="("+gen2tex(feuille0._VECTptr->front(),contextptr)+")";
-      else
-        res +="("+gen2tex(feuille0,contextptr)+")";
-    #else
-      if (feuille0.type==_VECT && feuille0.subtype==_SEQ__VECT && feuille0._VECTptr->size()==1)
-        res +="("+feuille0._VECTptr->front().print(contextptr)+")";
-      else
-        res +="("+feuille0.print(contextptr)+")";
-    #endif
+    if (feuille0.type==_VECT && feuille0.subtype==_SEQ__VECT && feuille0._VECTptr->size()==1)
+      res +="("+feuille0._VECTptr->front().print(contextptr)+")";
+    else
+      res +="("+feuille0.print(contextptr)+")";
     if (xcas_mode(contextptr)==3)
       res +="\n";
     else {
-      #ifdef SWIFT_CALCS_OPTIONS
-        res += " \\whitespace \\Longrightarrow \\whitespace ";
-      #else
         res += "->";
-      #endif
     }
     bool test;
     string locals,inits;
@@ -678,11 +666,7 @@ namespace giac {
     if (test){
       if (xcas_mode(contextptr)==3)
 	return res+":Func "+feuille._VECTptr->back().print(contextptr)+"\n:EndFunc\n";
-      #ifdef SWIFT_CALCS_OPTIONS
-        return res+gen2tex(feuille._VECTptr->back(),contextptr);
-      #else
         return res+feuille._VECTptr->back().print(contextptr);
-      #endif
     }
     if (xcas_mode(contextptr)>0){
       if (xcas_mode(contextptr)==3)
@@ -701,9 +685,6 @@ namespace giac {
       else
 	res += "{";
     }
-    #ifdef SWIFT_CALCS_OPTIONS
-      res += gen2tex(vect, contextptr);
-    #else
       const_iterateur it=vect.begin(),itend=vect.end();
       debug_ptr(contextptr)->indent_spaces +=2;
       for (;;){
@@ -736,7 +717,6 @@ namespace giac {
   	  res +="; ";
         }
       }
-    #endif
     return res;
   }
 
