@@ -304,20 +304,53 @@ namespace giac {
   }
 
   static string _VECT2tex(const vecteur & v,int subtype,GIAC_CONTEXT){
-    string s(begin_VECT_string(subtype,true,contextptr));
+    string s;
     vecteur::const_iterator it=v.begin(),itend=v.end();
-    for (;it!=itend;){
-      s += gen2tex(*it,contextptr);
-      ++it;
-      if (it!=itend)
-        #ifdef SWIFT_CALCS_OPTIONS
-          s += mid_VECT_string(subtype,true,contextptr);
-        #else
+    #ifdef SWIFT_CALCS_OPTIONS
+      switch (subtype) {
+      case _POLY1__VECT: {
+          // Lets turn this back into a polynomial...assume 'x' as variable
+          int count = v.size()-1;
+          char str[8];
+          for (;it!=itend;){
+            s += gen2tex(*it,contextptr);
+            if(count > 1) {
+              sprintf(str, "%d", count);
+              s += " \\cdot x^{";
+              s += str;
+              s += "}";
+            } else if(count == 1)
+              s += " \\codt x";
+            count--;
+            ++it;
+            if (it!=itend)
+              s += " + ";
+          }
+          return s;
+        }
+      default: {
+          s += begin_VECT_string(subtype,true,contextptr);
+          for (;it!=itend;){
+            s += gen2tex(*it,contextptr);
+            ++it;
+            if (it!=itend)
+              s += mid_VECT_string(subtype,true,contextptr);
+          }
+          s += end_VECT_string(subtype,true,contextptr);
+          return s;
+        }
+      }
+    #else
+      s += begin_VECT_string(subtype,true,contextptr);
+      for (;it!=itend;){
+        s += gen2tex(*it,contextptr);
+        ++it;
+        if (it!=itend)
           s += ',';
-        #endif
-    }
-    s += end_VECT_string(subtype,true,contextptr);
-    return s;
+      }
+      s += end_VECT_string(subtype,true,contextptr);
+      return s;
+    #endif
   }
 
   static string prod_vect2tex(const vecteur & v,GIAC_CONTEXT){
