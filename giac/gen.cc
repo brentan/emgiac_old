@@ -11294,6 +11294,7 @@ namespace giac {
 	s += ' ';
     }
   }
+
   #ifdef SWIFT_CALCS_OPTIONS
     int matrix_depth = 0;
     bool ignore_next_mid = false;
@@ -11447,7 +11448,7 @@ namespace giac {
         giac::matrix_depth--;
         if(giac::matrix_depth == 0) {
           giac::ignore_next_mid = false;
-          return "\\end{bmatrix}";
+          return "\\end{bmatrix} ";
         } else {
           giac::ignore_next_mid = true;
           return " ";

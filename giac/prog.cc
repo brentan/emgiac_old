@@ -611,11 +611,16 @@ namespace giac {
     gen & feuille0=feuille._VECTptr->front();
     #ifdef SWIFT_CALCS_OPTIONS
       res += "function";
+      if (feuille0.type==_VECT && feuille0.subtype==_SEQ__VECT && feuille0._VECTptr->size()==1)
+        res +="("+gen2tex(feuille0._VECTptr->front(),contextptr)+")";
+      else
+        res +="("+gen2tex(feuille0,contextptr)+")";
+    #else
+      if (feuille0.type==_VECT && feuille0.subtype==_SEQ__VECT && feuille0._VECTptr->size()==1)
+        res +="("+feuille0._VECTptr->front().print(contextptr)+")";
+      else
+        res +="("+feuille0.print(contextptr)+")";
     #endif
-    if (feuille0.type==_VECT && feuille0.subtype==_SEQ__VECT && feuille0._VECTptr->size()==1)
-      res +="("+feuille0._VECTptr->front().print(contextptr)+")";
-    else
-      res +="("+feuille0.print(contextptr)+")";
     if (xcas_mode(contextptr)==3)
       res +="\n";
     else {
@@ -696,38 +701,42 @@ namespace giac {
       else
 	res += "{";
     }
-    const_iterateur it=vect.begin(),itend=vect.end();
-    debug_ptr(contextptr)->indent_spaces +=2;
-    for (;;){
-      if (xcas_mode(contextptr)==3)
-	res += indent(contextptr)+it->print(contextptr);
-      else
-	res += indent(contextptr)+it->print(contextptr);
-      ++it;
-      if (it==itend){
-	debug_ptr(contextptr)->indent_spaces -=2;
-	if (xcas_mode(contextptr)!=3)
-	  res += "; "+indent(contextptr);
-	switch (xcas_mode(contextptr)){
-	case 0:
-	  res += calc38?"END;":"}";
-	  break;
-	case 1: case 1+_DECALAGE:
-	  res+=indent(contextptr)+"end;";
-	  break;
-	case 2:
-	  return res+=indent(contextptr)+"end_proc;";
-	  break;
-	case 3:
-	  return res+=indent(contextptr)+"EndFunc\n";
-	}
-	break;
+    #ifdef SWIFT_CALCS_OPTIONS
+      res += gen2tex(vect, contextptr);
+    #else
+      const_iterateur it=vect.begin(),itend=vect.end();
+      debug_ptr(contextptr)->indent_spaces +=2;
+      for (;;){
+        if (xcas_mode(contextptr)==3)
+  	res += indent(contextptr)+it->print(contextptr);
+        else 
+           res += indent(contextptr)+it->print(contextptr);
+        ++it;
+        if (it==itend){
+  	debug_ptr(contextptr)->indent_spaces -=2;
+  	if (xcas_mode(contextptr)!=3)
+  	  res += "; "+indent(contextptr);
+  	switch (xcas_mode(contextptr)){
+  	case 0:
+  	  res += calc38?"END;":"}";
+  	  break;
+  	case 1: case 1+_DECALAGE:
+  	  res+=indent(contextptr)+"end;";
+  	  break;
+  	case 2:
+  	  return res+=indent(contextptr)+"end_proc;";
+  	  break;
+  	case 3:
+  	  return res+=indent(contextptr)+"EndFunc\n";
+  	}
+  	break;
+        }
+        else {
+  	if (xcas_mode(contextptr)!=3)
+  	  res +="; ";
+        }
       }
-      else {
-	if (xcas_mode(contextptr)!=3)
-	  res +="; ";
-      }
-    }
+    #endif
     return res;
   }
 
@@ -736,12 +745,35 @@ namespace giac {
       return printasprogram(feuille,sommetstr,contextptr);
     }
     #ifdef SWIFT_CALCS_OPTIONS
-      return printasprogram(feuille,sommetstr,contextptr);
+      if ( (feuille.type!=_VECT) || (feuille._VECTptr->size()!=3) )
+        return string(sommetstr)+('('+gen2tex(feuille,contextptr)+')');
+      string res;
+      gen & feuille0=feuille._VECTptr->front();
+      res += "function";
+      if (feuille0.type==_VECT && feuille0.subtype==_SEQ__VECT && feuille0._VECTptr->size()==1)
+        res +="("+gen2tex(feuille0._VECTptr->front(),contextptr)+")";
+      else
+        res +="("+gen2tex(feuille0,contextptr)+")";
+      res += " \\whitespace \\Longrightarrow \\whitespace ";
+
+      bool test;
+      string locals,inits;
+      gen proc_args=feuille._VECTptr->front();
+      vecteur vect,non_init_vars,initialisation_seq;
+
+      test=(feuille._VECTptr->back().type!=_VECT ||feuille._VECTptr->back().subtype );
+      if (!test)
+        vect=*feuille._VECTptr->back()._VECTptr;
+      if (test) 
+        return res+gen2tex(feuille._VECTptr->back(),contextptr);
+      res += gen2tex(vect, contextptr);
+      return res;
+    #else
+      string s("\\parbox{12cm}{\\tt ");
+      s += translate_underscore(printasprogram(feuille,sommetstr,contextptr));
+      s+=" }";
+      return s;
     #endif
-    string s("\\parbox{12cm}{\\tt ");
-    s += translate_underscore(printasprogram(feuille,sommetstr,contextptr));
-    s+=" }";
-    return s;
   }
 
   // utility for default argument handling

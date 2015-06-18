@@ -79,6 +79,11 @@ namespace giac {
 #undef HAVE_LIBMPFR
 #endif
 
+  #ifdef SWIFT_CALCS_OPTIONS
+    extern int matrix_depth;
+    extern bool ignore_next_mid;
+  #endif
+
   void my_mpz_gcd(mpz_t &z,const mpz_t & A,const mpz_t & B);
 
   class gen ; 

@@ -272,13 +272,21 @@ namespace giac {
     int l=int(m.size());
     if (!l)
       #ifdef SWIFT_CALCS_OPTIONS
-        return string("\\begin{bmatrix}\\end{bmatrix}");
+        if(giac::matrix_depth == 0)
+          return string("\\begin{bmatrix}\\end{bmatrix}");
+        else
+          return string(" ");
       #else
         return string("()");
       #endif
     int c=int(m.front()._VECTptr->size());
     #ifdef SWIFT_CALCS_OPTIONS
-      string s("\\begin{bmatrix}");
+      string s;
+      if(giac::matrix_depth == 0)
+        s+="\\begin{bmatrix}";
+      else 
+        s+=" ";
+      giac::matrix_depth++;
     #else
       string s("\\left(\\begin{array}{");
       for (int j=0;j<c;++j)
@@ -287,16 +295,32 @@ namespace giac {
     #endif
     for (int i=0;i<l;++i){
       for (int j=0;j<c;++j){
-	  s += gen2tex(m[i][j],contextptr) ;
-	  if (j!=c-1)
-	    s += " & ";
+    	  s += gen2tex(m[i][j],contextptr) ;
+    	  if (j!=c-1) {
+          #ifdef SWIFT_CALCS_OPTIONS
+            if(giac::ignore_next_mid) {
+              giac::ignore_next_mid = false;
+              s += " \\\\ ";
+            } else 
+              s += " & ";
+          #else
+    	      s += " & ";
+          #endif
+        }
       }
       if (i!=l-1)
-	s += " \\\\";
+	      s += " \\\\";
       s+='\n';
     }
     #ifdef SWIFT_CALCS_OPTIONS
-      s += "\\end{bmatrix} ";
+      giac::matrix_depth--;
+      if(giac::matrix_depth == 0) {
+        giac::ignore_next_mid = false;
+        s += "\\end{bmatrix} ";
+      } else {
+        giac::ignore_next_mid = true;
+        s += " ";
+      }
     #else
       s += "\\end{array}\\right) ";
     #endif
