@@ -11297,7 +11297,6 @@ namespace giac {
 
   #ifdef SWIFT_CALCS_OPTIONS
     int matrix_depth = 0;
-    bool ignore_next_mid = false;
   #endif
 
   string begin_VECT_string(int subtype,bool tex,GIAC_CONTEXT){
@@ -11380,10 +11379,11 @@ namespace giac {
     default:
       #ifdef SWIFT_CALCS_OPTIONS
         if(tex) {
-          if(giac::matrix_depth == 0)
-            s="\\begin{bmatrix}";
-          else 
-            s=" ";
+          char str[256];
+          sprintf(str, "%d", giac::matrix_depth);
+          s = "\\begin{bmatrix";
+          s += str;
+          s += "}";
           giac::matrix_depth++;
         }
         else
@@ -11446,13 +11446,12 @@ namespace giac {
     default:
       if(tex) {
         giac::matrix_depth--;
-        if(giac::matrix_depth == 0) {
-          giac::ignore_next_mid = false;
-          return "\\end{bmatrix} ";
-        } else {
-          giac::ignore_next_mid = true;
-          return " ";
-        }
+        char str[256];
+        sprintf(str, "%d", giac::matrix_depth);
+        s = "\\end{bmatrix";
+        s += str;
+        s += "} ";
+        return s; 
       }
       else
         return calc_mode(contextptr)==1?"}":"]";
@@ -11492,13 +11491,8 @@ namespace giac {
       case _GGBVECT:
         return ",";
       default:
-        if(tex) {
-          if(giac::ignore_next_mid) {
-            giac::ignore_next_mid = false;
-            return " \\\\ ";
-          } else 
-            return " & ";
-        }
+        if(tex) 
+          return " & ";
         else
           return ",";
       }    

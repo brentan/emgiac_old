@@ -10,7 +10,7 @@
 # --compression lzma/lzma-native,lzma/lzma-decoder.js,LZMA.decompress
 # lzma/lzma-native < file_to_compress > compressed_file
 # -s options are in emscripten src/settings.js
-VERSION = 1_22
+VERSION = 1_23
 PREC = -s PRECISE_I32_MUL=1 #-DGIAC_GGB 
 CXXFLAGS = $(PREC) -fno-exceptions -I. -I.. -DHAVE_CONFIG_H -DIN_GIAC -DGIAC_GENERIC_CONSTANTS -DNO_STDEXCEPT -O0 -s ALLOW_MEMORY_GROWTH=1 # -s GL_UNSAFE_OPTS=0 # --llvm-opts 2 -v
 CFLAGS =  $(PREC) -I. -I.. -v  # -pg
@@ -27,6 +27,7 @@ giac.js:	$(GIACOBJS)
 #	/bin/rm giac.js.lz
 #	lzma/lzma-native < giacggb.js > giacggb.js.compress
 #	cp giacggb.js /shared/ggbjs/giac.js
+	rm -rf ../../swift_calcs/public/giac*.js
 	cp giac$(VERSION).js ../../swift_calcs/public
 	#cp giac$(VERSION).js.mem ../../swift_calcs/public
 	#cp giac$(VERSION).data ../../swift_calcs/public

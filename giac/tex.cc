@@ -270,22 +270,30 @@ namespace giac {
 
   static string matrix2tex(const matrice & m,GIAC_CONTEXT){
     int l=int(m.size());
-    if (!l)
+    #ifdef SWIFT_CALCS_OPTIONS
+      string s;
+    #endif
+    if (!l) {
       #ifdef SWIFT_CALCS_OPTIONS
-        if(giac::matrix_depth == 0)
-          return string("\\begin{bmatrix}\\end{bmatrix}");
-        else
-          return string(" ");
+        char str1[256];
+        sprintf(str1, "%d", giac::matrix_depth);
+        s += "\\begin{bmatrix";
+        s += str1;
+        s += "}\\end{bmatrix";
+        s += str1;
+        s += "}";
+        return s;
       #else
         return string("()");
       #endif
+    }
     int c=int(m.front()._VECTptr->size());
     #ifdef SWIFT_CALCS_OPTIONS
-      string s;
-      if(giac::matrix_depth == 0)
-        s+="\\begin{bmatrix}";
-      else 
-        s+=" ";
+      char str2[256];
+      sprintf(str2, "%d", giac::matrix_depth);
+      s += "\\begin{bmatrix";
+      s += str2;
+      s += "}";
       giac::matrix_depth++;
     #else
       string s("\\left(\\begin{array}{");
@@ -296,17 +304,8 @@ namespace giac {
     for (int i=0;i<l;++i){
       for (int j=0;j<c;++j){
     	  s += gen2tex(m[i][j],contextptr) ;
-    	  if (j!=c-1) {
-          #ifdef SWIFT_CALCS_OPTIONS
-            if(giac::ignore_next_mid) {
-              giac::ignore_next_mid = false;
-              s += " \\\\ ";
-            } else 
-              s += " & ";
-          #else
-    	      s += " & ";
-          #endif
-        }
+    	  if (j!=c-1) 
+          s += " & ";
       }
       if (i!=l-1)
 	      s += " \\\\";
@@ -314,13 +313,11 @@ namespace giac {
     }
     #ifdef SWIFT_CALCS_OPTIONS
       giac::matrix_depth--;
-      if(giac::matrix_depth == 0) {
-        giac::ignore_next_mid = false;
-        s += "\\end{bmatrix} ";
-      } else {
-        giac::ignore_next_mid = true;
-        s += " ";
-      }
+      char str3[256];
+      sprintf(str3, "%d", giac::matrix_depth);
+      s += "\\end{bmatrix";
+      s += str3;
+      s += "} ";
     #else
       s += "\\end{array}\\right) ";
     #endif
