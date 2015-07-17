@@ -1,6 +1,5 @@
 /* -*- mode:C++ ; compile-command: "g++ -I.. -I../include -I.. -g -c -fno-strict-aliasing -DGIAC_GENERIC_CONSTANTS -DHAVE_CONFIG_H -DIN_GIAC -Wall cocoa.cc" -*- */
 #include "giacPCH.h"
-
 #ifndef WIN32
 #define COCOA9950
 #endif

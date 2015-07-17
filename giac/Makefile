@@ -27,10 +27,10 @@ giac.js:	$(GIACOBJS)
 #	/bin/rm giac.js.lz
 #	lzma/lzma-native < giacggb.js > giacggb.js.compress
 #	cp giacggb.js /shared/ggbjs/giac.js
-	rm -rf ../../swift_calcs/public/giac*.js
-	cp giac$(VERSION).js ../../swift_calcs/public
-	#cp giac$(VERSION).js.mem ../../swift_calcs/public
-	#cp giac$(VERSION).data ../../swift_calcs/public
+	rm -rf ../../swift_calcs/public/libraries/giac*.js
+	cp giac$(VERSION).js ../../swift_calcs/public/libraries
+	#cp giac$(VERSION).js.mem ../../swift_calcs/public/libraries
+	#cp giac$(VERSION).data ../../swift_calcs/public/libraries
 	cp giac$(VERSION).js ../../../giac
 	#cp giac$(VERSION).js.mem ../../../giac
 	#cp giac$(VERSION).data ../../../giac

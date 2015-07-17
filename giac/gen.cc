@@ -454,10 +454,18 @@ namespace giac {
   }
 
   gen gensizeerr(GIAC_CONTEXT){
+    #ifdef SWIFT_CALCS_OPTIONS
+      if(interrupted)
+        emscripten_run_script("throw('Timeout');");
+    #endif
     return undeferr(last_evaled_function(contextptr)+gettext("Error: Bad Argument Value"));
   }
 
   void gensizeerr(gen & g,GIAC_CONTEXT){
+    #ifdef SWIFT_CALCS_OPTIONS
+      if(interrupted)
+        emscripten_run_script("throw('Timeout');");
+    #endif
     g=undeferr(last_evaled_function(contextptr)+gettext("Error: Bad Argument Value"));
   }
 
@@ -478,10 +486,18 @@ namespace giac {
   }
 
   gen gensizeerr(const string & s){
+    #ifdef SWIFT_CALCS_OPTIONS
+      if(interrupted)
+        emscripten_run_script("throw('Timeout');");
+    #endif
     return undeferr(s+gettext(" Error: Bad Argument Value"));
   }
 
   void gensizeerr(const char * ch,gen & g){
+    #ifdef SWIFT_CALCS_OPTIONS
+      if(interrupted)
+        emscripten_run_script("throw('Timeout');");
+    #endif
     g=undeferr(string(gettext(ch))+gettext(" Error: Bad Argument Value"));
   }
 
