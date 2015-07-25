@@ -11796,10 +11796,17 @@ namespace giac {
 	  return "FALSE";
       }
       else {
-	if (val)
-	  return "true";
-	else
-	  return "false";
+  #ifdef SWIFT_CALCS_OPTIONS
+  	if (val)
+  	  return "\\true ";
+  	else
+  	  return "\\false ";
+  #else
+    if (val)
+      return "true";
+    else
+      return "false";
+  #endif
       }
     }
     if (subtype==_INT_COLOR){
