@@ -561,6 +561,14 @@ namespace giac {
     step_rrefpivot=22,
     step_rrefpivot0=23,
     step_rrefend=24,
+    step_extrema1=25,
+    step_extrema2=26,
+    step_extrema3=27,
+    step_extrema4=28,
+    step_extrema5=29,
+    step_extrema6=30,
+    step_extrema7=31,
+    step_extrema8=32,
   };
 
 #ifndef NO_NAMESPACE_GIAC

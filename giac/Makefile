@@ -56,6 +56,10 @@ test.html:	libgiac.a test.cc
 	$(CXX) $(PREC) $(GIACOBJS) $(LIBS) test.cc -o test.html
 clean:
 	rm -f $(GIACOBJS) test.o icas.o
+input_lexer.o: input_lexer.cc
+	$(CXX) $(CXXFLAGSNOASM) -c input_lexer.cc
+input_parser.o: input_parser.cc
+	$(CXX) $(CXXFLAGSNOASM) -c input_parser.cc
 .cc.o:
 	$(CXX) $(CXXFLAGS) -c $<
 .cpp.o:

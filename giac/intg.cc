@@ -1457,10 +1457,12 @@ namespace giac {
     if (x.type!=_IDNT) return gensizeerr(contextptr); // see limit
     if (has_num_coeff(e)){
       gen ee=exact(e,contextptr);
-      ee=integrate_rational(ee,x,remains_to_integrate,xvar,intmode,contextptr);
-      ee=evalf(ee,1,contextptr);
-      remains_to_integrate=evalf(remains_to_integrate,1,contextptr);
-      return ee;
+      if (!has_num_coeff(ee)){
+	ee=integrate_rational(ee,x,remains_to_integrate,xvar,intmode,contextptr);
+	ee=evalf(ee,1,contextptr);
+	remains_to_integrate=evalf(remains_to_integrate,1,contextptr);
+	return ee;
+      }
     }
     const vecteur & varx=lvarx(e,x);
     int varxs=int(varx.size());
@@ -2521,9 +2523,12 @@ namespace giac {
     // detection of denominator=independent of x
     v=lvarxwithinv(e,gen_x,contextptr);
     // search for nop (for nop[inv])
-    if (!has_nop_var(v))
-      return integrate_linearizable(e,gen_x,remains_to_integrate,intmode,contextptr);
-
+    if (!has_nop_var(v)){
+      // additional check for non integer powers
+      v=lop(lvar(e),at_pow);
+      if (lvarx(v,gen_x,contextptr).empty())
+	return integrate_linearizable(e,gen_x,remains_to_integrate,intmode,contextptr);
+    }
     // trigonometric fraction (or exp _FRAC), rewrite all elemnts of rvar as
     // tan of the common half angle, i.e. tan([coeff_trig*x+b]/2)
     int trig_fraction=-1; 
@@ -4566,8 +4571,10 @@ namespace giac {
 	gen tmp=quotesubst(v[0],v[1],-v[1],contextptr);
 	return _sum(gen(makevecteur(tmp,v[1],-v[3],(numeval?evalf_double(-v[2],1,contextptr):-v[2])),args.subtype),contextptr);
       }
-      if (v[2].type==_INT_ && v[3].type==_INT_ && absint(v[3].val-v[2].val)<max_sum_add(contextptr))
-	return numeval?evalf(seqprod(v,2,contextptr),1,contextptr):ratnormal(seqprod(v,2,contextptr));
+      if (v[2].type==_INT_ && v[3].type==_INT_ && absint(v[3].val-v[2].val)<max_sum_add(contextptr)){
+	gen res=seqprod(v,2,contextptr);
+	return (numeval || has_num_coeff(res))?evalf(res,1,contextptr):ratnormal(res);
+      }
     } // end if s==4
     const_iterateur it=v.begin(),itend=v.end();
     gen f=*it;

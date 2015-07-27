@@ -755,12 +755,21 @@ namespace giac {
 
   gen _VARS(const gen & args,const context * contextptr) {
     if ( args.type==_STRNG && args.subtype==-1) return  args;
+    bool val=is_one(args);
     vecteur res;
     if (contextptr){
       if (contextptr->globalcontextptr && contextptr->globalcontextptr->tabptr){
 	sym_tab::const_iterator it=contextptr->globalcontextptr->tabptr->begin(),itend=contextptr->globalcontextptr->tabptr->end();
-	for (;it!=itend;++it)
-	  res.push_back(identificateur(it->first));
+	vecteur * keywordsptr=keywords_vecteur_ptr();
+	for (;it!=itend;++it){
+	  gen g=identificateur(it->first);
+	  if (!equalposcomp(*keywordsptr,g)){
+	    if (val){
+	      g=symb_sto(it->second,g);
+	    }
+	    res.push_back(g);
+	  }
+	}
       }
       return res;
     }

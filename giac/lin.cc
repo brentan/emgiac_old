@@ -742,8 +742,12 @@ namespace giac {
       return -ln_expand0(e._SYMBptr->feuille,contextptr);
     if (e._SYMBptr->sommet==at_pow){
       gen & tmp=e._SYMBptr->feuille;
-      if (tmp.type==_VECT && tmp._VECTptr->size()==2)
-	return tmp._VECTptr->back()*ln_expand0(tmp._VECTptr->front(),contextptr);
+      if (tmp.type==_VECT && tmp._VECTptr->size()==2){
+	gen base=tmp._VECTptr->front(),expo=tmp._VECTptr->back();
+	if (!complex_mode(contextptr) && expo.type==_INT_ && expo.val%2==0)
+	  base=abs(base,contextptr);
+	return expo*ln_expand0(base,contextptr);
+      }
     }
     return ln(e,contextptr);
   }

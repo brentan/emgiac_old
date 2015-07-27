@@ -31,7 +31,7 @@
 #if defined VISUALC || defined BESTA_OS 
 typedef long pid_t;
 #else // VISUALC
-#if !defined(__MINGW_H) && !defined(BESTA_OS) && !defined(NSPIRE) && !defined(__ANDROID__) && !defined(NSPIRE_NEWLIB)
+#if !defined(__MINGW_H) && !defined(BESTA_OS) && !defined(NSPIRE) && !defined(__ANDROID__) && !defined(NSPIRE_NEWLIB) && !defined(OSX)
 #include "wince_replacements.h"
 #endif
 #ifdef __MINGW_H
@@ -251,6 +251,7 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
   extern int MAX_RECURSION_LEVEL;
   extern int GBASIS_DETERMINISTIC;
   extern int PROOT_FACTOR_MAXDEG;
+  extern int ABS_NBITS_EVALF;
   extern volatile bool ctrl_c,interrupted;
   void ctrl_c_signal_handler(int signum);
 #ifdef TIMEOUT
@@ -328,8 +329,8 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
     std_matrix<T> transpose() const {
       if (std::vector< dbgprint_vector<T> >::empty())
 	return *this;
-      int n=std::vector< dbgprint_vector<T> >::size();
-      int m=std::vector< dbgprint_vector<T> >::front().dbgprint_vector<T>::size();
+      int n=int(std::vector< dbgprint_vector<T> >::size());
+      int m=int(std::vector< dbgprint_vector<T> >::front().dbgprint_vector<T>::size());
       std_matrix<T> res(m,n);
       typename std_matrix<T>::const_iterator it=std::vector< dbgprint_vector<T> >::begin();
       for (int i=0;i<n;++i,++it){
@@ -365,6 +366,8 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
   // vecteurs and dense 1-d polynomilas
 
   typedef dbgprint_vector<gen> vecteur; // debugging support
+
+  vecteur * keywords_vecteur_ptr(); // idnt assigned to a commandname for localization, like mediatrice for perpen_bissector
 
   class context;
   

@@ -4198,7 +4198,7 @@ namespace giac {
   // return [f(1),f(omega),...,f(omega^[n-1]) [it's indeed n, not m]
   // WARNING f is given in ascending power
   void fft(const modpoly & f,const modpoly & w ,modpoly & res,environment * env){
-    unsigned long n=long(f.size());
+    unsigned long n=long(f.size()); // unsigned long does not parse with gcc
     if (n==1){
       res = f;
       return ;

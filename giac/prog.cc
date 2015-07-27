@@ -95,6 +95,19 @@ namespace giac {
   modules_tab giac_modules_tab;
 #endif
 
+  gen equaltosto(const gen & g){
+    if (is_equal(g)){
+      vecteur v=*g._SYMBptr->feuille._VECTptr;
+      gen a;
+      if (v.size()==2)
+	a=v.back();
+      else
+	a=gen(vecteur(v.begin()+1,v.end()),g.subtype);
+      return symb_sto(a,v.front());
+    }
+    return g;
+  }
+
   static int prog_eval_level(GIAC_CONTEXT){
     if (int i=prog_eval_level_val(contextptr))
       return i;
@@ -1110,6 +1123,7 @@ namespace giac {
 #endif
       if (prog.type!=_VECT || prog.subtype){
 	++debug_ptr(newcontextptr)->current_instruction;
+	prog=equaltosto(prog);
 	if (debug_ptr(newcontextptr)->debug_mode){
 	  debug_loop(res,newcontextptr);
 	  if (!is_undef(res)){
@@ -1139,12 +1153,12 @@ namespace giac {
 	  }
 	  if (!findlabel){
 	    if (it->is_symb_of_sommet(at_return)){
-	      if (!it->_SYMBptr->feuille.in_eval(prog_eval_level(newcontextptr),newres,newcontextptr))
+	      if (!equaltosto(it->_SYMBptr->feuille).in_eval(prog_eval_level(newcontextptr),newres,newcontextptr))
 		newres=it->_SYMBptr->feuille;
 	      is_return(newres,res);
 	      break;
 	    }
-	    if (!it->in_eval(prog_eval_level(newcontextptr),res,newcontextptr))
+	    if (!equaltosto(*it).in_eval(prog_eval_level(newcontextptr),res,newcontextptr))
 	      res=*it;
 	  }
 	  else
@@ -1429,8 +1443,8 @@ namespace giac {
       }
     }
     bool rt;
-    gen clause_vraie=(*(args._VECTptr))[1];
-    gen clause_fausse=args._VECTptr->back();
+    gen clause_vraie=equaltosto((*(args._VECTptr))[1]);
+    gen clause_fausse=equaltosto(args._VECTptr->back());
     // *logptr(contextptr) << "Ifte " << debug_ptr(contextptr)->current_instruction << endl ;
     if (is_zero(test)){ // test false, do the else part
       if (isifte){
@@ -1845,7 +1859,7 @@ namespace giac {
     vecteur forprog=prog.type==_VECT?*prog._VECTptr:vecteur(1,prog);
     iterateur it,itbeg=forprog.begin(),itend=forprog.end();
     for (it=itbeg;it!=itend;++it){
-      *it=to_increment(*it);
+      *it=to_increment(equaltosto(*it));
     }
     gen res,oldres;
     // loop
@@ -1878,7 +1892,7 @@ namespace giac {
 	}
 	index_name=test._SYMBptr->feuille._VECTptr->front();
       }
-      for (initialisation.eval(eval_lev,newcontextptr);
+      for (equaltosto(initialisation).eval(eval_lev,newcontextptr);
 	   for_in?set_for_in(counter,for_in,for_in_v,for_in_s,index_name,newcontextptr):ck_is_one(test.eval(eval_lev,newcontextptr).evalf(1,newcontextptr));
 	   ++counter,(test.val?increment.eval(eval_lev,newcontextptr):0)){
 	if (interrupted)
@@ -2255,6 +2269,7 @@ namespace giac {
     gen prog=args._VECTptr->back(),res,newres;
     if (protect!=-RAND_MAX){
       if (prog.type!=_VECT){
+	prog=equaltosto(prog);
 	++debug_ptr(newcontextptr)->current_instruction;
 	if (debug_ptr(newcontextptr)->debug_mode){
 	  debug_loop(res,newcontextptr);
@@ -2282,7 +2297,7 @@ namespace giac {
 	    debug_loop(res,newcontextptr);
 	    if (!is_undef(res)){
 	      if (!findlabel){
-		if (!it->in_eval(eval_level(newcontextptr),res,newcontextptr))
+		if (!equaltosto(*it).in_eval(eval_level(newcontextptr),res,newcontextptr))
 		  res=*it;
 	      }
 	      else
@@ -2291,7 +2306,7 @@ namespace giac {
 	  }
 	  else {
 	    if (!findlabel){
-	      if (!it->in_eval(eval_level(newcontextptr),res,newcontextptr))
+	      if (!equaltosto(*it).in_eval(eval_level(newcontextptr),res,newcontextptr))
 		res=*it;
 	    }
 	    else
@@ -5210,7 +5225,7 @@ namespace giac {
 	    gen n= f._VECTptr->back()._FRACptr->num;
 	    if (d.val<0){ n=-n; d=-d;}
 	    gen zn=pow(z,n,contextptr),a,b;
-	    bool pos; // pos should be true after next call since zn is > 0
+	    bool pos,done; // pos should be true after next call since zn is > 0
 	    zint2simpldoublpos(zn,a,b,pos,d.val,contextptr);
 	    if (pos){
 	      if (0 && n==1)
@@ -5222,7 +5237,7 @@ namespace giac {
 	  }
 	}
 	// check added for [] and () otherwise xcas_mode index shift is not taken in account
-	if (wi._SYMBptr->sommet==at_at || wi._SYMBptr->sommet==at_of)
+	if (wi._SYMBptr->sommet==at_at || wi._SYMBptr->sommet==at_of || wi._SYMBptr->sommet==at_Ans)
 	  wi=symbolic(wi._SYMBptr->sommet,simplifier(f,contextptr));
 	else
 	  wi=wi._SYMBptr->sommet(simplifier(f,contextptr),contextptr);
@@ -6056,18 +6071,45 @@ namespace giac {
       args=g._VECTptr->front();
       lang=absint(g._VECTptr->back().val);
     }
+#ifdef HAVE_LIBPARI
     if (args.type==_FUNC && string(args._FUNCptr->ptr()->s)=="pari")
       return string2gen(pari_help(0),false);
     if (args.type==_SYMB && string(args._SYMBptr->sommet.ptr()->s)=="pari")
       return string2gen(pari_help(args._SYMBptr->feuille),false);
+#endif
+    if (args.type==_IDNT)
+      args=eval(args,1,contextptr);
+    if (args.type==_SYMB && args._SYMBptr->sommet==at_of && args._SYMBptr->feuille.type==_VECT && args._SYMBptr->feuille._VECTptr->size()==2){
+      args=args._SYMBptr->feuille._VECTptr->front();
+      args=eval(args,1,contextptr);
+    }
+    if (args.type==_SYMB && args._SYMBptr->sommet!=at_of)
+      args=args._SYMBptr->sommet;
     string argss=args.print(contextptr);
     // remove space at the end if required
     while (!argss.empty() && argss[argss.size()-1]==' ')
       argss=argss.substr(0,argss.size()-1);
+#ifdef HAVE_LIBPARI
     if (argss.size()>5 && argss.substr(0,5)=="pari_")
       return string2gen(pari_help(string2gen(argss.substr(5,argss.size()-5),false)),false);      
+#endif
     const char * howto, * syntax, * related, *examples;
     if (has_static_help(argss.c_str(),lang,howto,syntax,examples,related)){
+#ifdef EMCC
+      if (argss.size()>2 && argss[0]=='\'' && argss[argss.size()-1]=='\'')
+	argss=argss.substr(1,argss.size()-2);
+      // should split related at commas, and display buttons
+      // should split examples at semis, and display buttons
+      string res="<b>"+argss+"</b> : "+string(howto)+"<br>";
+      if (strlen(syntax))
+	res = res+argss+'('+string(syntax)+")<br>";
+      else
+	res = res+"<br>";
+      res = res+string(related)+"<br>";
+      if (strlen(examples))
+	res = res +string(examples);
+      return string2gen(res,false);
+#endif
 #ifdef NSPIRE
       if (argss.size()>2 && argss[0]=='\'' && argss[argss.size()-1]=='\'')
 	argss=argss.substr(1,argss.size()-2);

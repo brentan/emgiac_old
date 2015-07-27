@@ -4442,7 +4442,7 @@ namespace giac {
 	n = n + v.back();
       }
     }
-    if (is_zero(n),contextptr)
+    if (is_zero(n,contextptr))
       return gensizeerr(gettext("Sum of coeff is 0"));
     if (sum.type==_VECT)
       sum=inv(n,contextptr)*sum;
@@ -8361,6 +8361,23 @@ namespace giac {
     if (find_curve_parametrization(curve,m,vf[1],T,tmin,tmax,false,contextptr)){
       vf[0]=m;
     }
+    if (vf.size()>5){
+      // use parametric equation for circle or line
+      gen carteq=vf[5];
+      gen intervart("intervart",contextptr);
+      if (find_curve_parametrization(circle,m,intervart,T,tmin,tmax,false,contextptr)){
+	gen circlex,circley;
+	reim(m,circlex,circley,contextptr);
+	carteq=subst(carteq,makevecteur(x__IDNT_e,y__IDNT_e),makevecteur(circlex,circley),false,contextptr);
+	gen s=solve(carteq,intervart,0,contextptr);
+	if (s.type==_VECT){
+	  vecteur res;
+	  for (int i=0;i<int(s._VECTptr->size());++i)
+	    res.push_back(subst(m,intervart,s[i],false,contextptr));
+	  return remove_not_in_arc(res,circle,contextptr);
+	}
+      }
+    }
     gen eq;
 #ifndef NO_STDEXCEPT
     try {
@@ -11118,7 +11135,8 @@ namespace giac {
 	// set iorig,jorig
 	iorig=int((xcurrent-xmin)/xstep); // FIXME? +.5
 	jorig=int((ycurrent-ymin)/ystep); // 
-	pathfound=true;
+	if (xcurrent>=xmin && ycurrent>=ymin && xcurrent<=xmax && ycurrent<=ymax)
+	  pathfound=true;
       }
       else {
 	was_not_singular=true;
@@ -11176,6 +11194,8 @@ namespace giac {
 	// Annulation found, let's add a path
 	jorig=int((ycurrent-ymin)/ystep);
 	iorig=int((xcurrent-xmin)/xstep);
+	if (xcurrent<xmin || ycurrent<ymin || xcurrent>xmax || ycurrent>ymax)
+	  continue;
 	if (visited[iorig][jorig] || (
 				      ( (jorig?visited[iorig][jorig-1]:false) || visited[iorig][jorig+1])  && 
 				      ( (iorig?visited[iorig-1][jorig]:false) ||visited[iorig+1][jorig] ) 
@@ -13385,6 +13405,20 @@ namespace giac {
   static const char _dessine_tortue_s []="dessine_tortue";
   static define_unary_function_eval2 (__dessine_tortue,&_dessine_tortue,_dessine_tortue_s,&printastifunction);
   define_unary_function_ptr5( at_dessine_tortue ,alias_at_dessine_tortue,&__dessine_tortue,0,T_LOGO);
+
+  gen _turtle_stack(const gen & g,GIAC_CONTEXT){
+    if ( g.type==_STRNG && g.subtype==-1) return  g;
+    if (g==at_remove) turtle_stack(contextptr).clear();
+    std::vector<logo_turtle> v=turtle_stack(contextptr);
+    vecteur res;
+    for (int i=0;i<int(v.size());++i){
+      res.push_back(turtle2gen(v[i]));
+    }
+    return res;
+  }
+  static const char _turtle_stack_s []="turtle_stack";
+  static define_unary_function_eval2 (__turtle_stack,&_turtle_stack,_turtle_stack_s,&printastifunction);
+  define_unary_function_ptr5( at_turtle_stack ,alias_at_turtle_stack,&__turtle_stack,0,T_LOGO);
 
 #endif
 

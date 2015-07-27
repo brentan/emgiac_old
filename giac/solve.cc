@@ -2392,12 +2392,20 @@ namespace giac {
 	  vecteur w=mergevecteur(lop(lv,at_pow),lop(lv,at_exp));
 	  if (w.size()>1){
 	    arg1=ln(simplify(a1,contextptr),contextptr)-ln(simplify(a2,contextptr),contextptr);
-	    if (lvarx(arg1,v.back()).size()>1)
+	    if (lvarx(arg1,v.back()).size()>1){
 	      arg1=lnexpand(arg1,contextptr);
+	      if (!lop(arg1,at_pow).empty()) 
+		arg1=a1-a2;
+	    }
 	  }
 	  w=lop(lv,at_exp);
-	  if (w.size()>1)
+	  if (w.size()>1){
 	    arg1=lnexpand(ln(simplify(a1,contextptr),contextptr)-ln(simplify(a2,contextptr),contextptr),contextptr);
+	    // check if ln trick worked, for example it does not for:
+	    // f(x):=exp(x);g(x):=2*exp(x/2)-1; solve(f(x)=g(x))
+	    if (!lop(arg1,at_exp).empty()) 
+	      arg1=a1-a2;
+	  }
 	}
       }
 #endif
@@ -2543,9 +2551,11 @@ namespace giac {
 	  break;
 	if (onlyone)
 	  return vecteur(1,a);
-	res.push_back(a);
+	if (is_exactly_zero(a))
+	  res.push_back(a);
 	a +=decal;
       }
+      fb=fa;
       for (;is_strictly_greater(b,a,contextptr);){
 	fb=subst(equation,var,b,false,contextptr);
 	fb=eval(fb,1,contextptr);
@@ -2553,7 +2563,8 @@ namespace giac {
 	  break;
 	if (onlyone)
 	  return vecteur(1,b);
-	res.push_back(b);
+	if (is_exactly_zero(b))
+	  res.push_back(b);
 	b -=decal;
       }
 #ifndef NO_STDEXCEPT
@@ -2564,7 +2575,7 @@ namespace giac {
 #endif
     int ntries=40;
     gen ab=(b-a)/ntries;
-    if (fb.type!=_DOUBLE_){      
+    if (fb.type!=_DOUBLE_ || is_undef(fb)){      
       for (int i=0;i<ntries;++i){
 	b -= ab;
 	fb=subst(equation,var,b,false,contextptr);
@@ -5505,7 +5516,8 @@ namespace giac {
       // reduce(res,env);
       if (!rur){
 	sort_vectpoly(res.begin(),res.end());
-	reverse(res.begin(),res.end());
+	if (increasing_power(contextptr))
+	  reverse(res.begin(),res.end());
       }
       return true;
     }

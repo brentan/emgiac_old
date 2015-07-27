@@ -379,6 +379,8 @@ AN	[0-9a-zA-Z_~ ?\200-\355\357-\376]
 "â¦" index_status(yyextra)=1; return T_VECT_END;
 "<"                     index_status(yyextra)=0; (*yylval)=gen(at_inferieur_strict,2);  return T_TEST_EQUAL;
 ">"                     index_status(yyextra)=0; (*yylval)=gen(at_superieur_strict,2); return T_TEST_EQUAL;
+"&lt;"                     index_status(yyextra)=0; (*yylval)=gen(at_inferieur_strict,2);  return T_TEST_EQUAL;
+"&gt;"                     index_status(yyextra)=0; (*yylval)=gen(at_superieur_strict,2); return T_TEST_EQUAL;
 ","                     index_status(yyextra)=0; return T_VIRGULE;
 ",,"                     index_status(yyextra)=0; return T_VIRGULE;
 "("                     index_status(yyextra)=0; *yylval = 0; return T_BEGIN_PAR;
@@ -1058,6 +1060,10 @@ AN	[0-9a-zA-Z_~ ?\200-\355\357-\376]
 	 l--; */
       string ss;
       for (int i=0;i<l;++i){
+	if (s[i]=='\\' && s[i+1]=='\n'){
+	  ++i;
+	  continue;
+	}
 	if (i && (unsigned char)s[i]==0xc2 && (unsigned char)s[i+1]!=0xb0)
 	  ss += ' ';
 	if ( (unsigned char)s[i]==0xef && i<l-3 ){
