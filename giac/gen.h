@@ -144,7 +144,7 @@ namespace giac {
     volatile ref_count_t ref_count;
     mpz_t z;
     ref_mpz_t():ref_count(1) {mpz_init(z);}
-    ref_mpz_t(size_t nbits):ref_count(1) {mpz_init2(z,nbits);}
+    ref_mpz_t(size_t nbits):ref_count(1) {mpz_init2(z,int(nbits));}
     ref_mpz_t(const mpz_t & Z): ref_count(1) { mpz_init_set(z,Z); }
     ~ref_mpz_t() { mpz_clear(z); }
   };
@@ -563,7 +563,7 @@ namespace giac {
 	setsizeerr(gettext("Pointer out of range"));
 #endif
       * ((ulonglong *) this) = __POINTERptr << 16;
-      subtype=subt;
+      subtype=(signed char)subt;
       type=_POINTER_;
     };
 #else
@@ -584,6 +584,7 @@ namespace giac {
       control_c();
 #endif
     };
+    gen(long i);
     gen(longlong i);
 #ifdef INT128
     gen(int128_t i);

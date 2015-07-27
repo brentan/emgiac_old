@@ -50,7 +50,7 @@
 #define hash_map unordered_map
 #else // UNORDERED_MAP
 
-#if (defined(VISUALC) || defined(BESTA_OS) || defined(__ANDROID__) )
+#if (defined(VISUALC) || defined(BESTA_OS) || defined(__ANDROID__) || defined(OSX))
 #undef HASH_MAP
 #undef EXT_HASH_MAP
 #endif
@@ -292,7 +292,7 @@ namespace giac {
     index_t::iterator end() { return riptr->i.end(); }
     index_t::const_iterator begin() const { return riptr->i.begin(); }
     index_t::const_iterator end() const { return riptr->i.end(); }
-#ifndef NSPIRE
+#if !defined(NSPIRE) && !defined(OSX)
     index_t::reverse_iterator rbegin() { return riptr->i.rbegin(); }
     index_t::reverse_iterator rend() { return riptr->i.rend(); }
     index_t::const_reverse_iterator rbegin() const { return riptr->i.rbegin(); }

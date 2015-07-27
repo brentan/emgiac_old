@@ -1216,10 +1216,20 @@ namespace giac {
     gen gm=subst(g0,x,b,false,contextptr)+subst(g0,x,a,false,contextptr);
     if (!has_evalf(gm,gabd,1,contextptr) || is_zero(gabd))
       gm=simplify(gm,contextptr);
+    if (is_constant_wrt(g,x,contextptr)){
+      res=g*(b-a);
+      return true;
+    }
     int eo=0;
     if (is_zero(gab) || is_zero(gm) ){
       gm=subst(g,x,x+(a+b)/2,false,contextptr);
       eo=is_even_odd(gm,x,contextptr);
+    }
+    if (eo==1){
+      if (!intgab(g0,x,a,(a+b)/2,res,contextptr))
+	return false;
+      res=2*res;
+      return true;
     }
     if (eo==2){
 #if 0 // set to 1 if you want to check for singularities before returning 0

@@ -70,7 +70,7 @@ using namespace std;
 #endif
 
 #if defined(EMCC) && !defined(PNACL)
-extern "C" double emcctime(); 
+extern "C" double emcctime();
 // definition of emcctime should be added in emscripten directory src/library.js
 // search for _time definition, and return only Date.now() for _emcctime
 // otherwise time() will not work
@@ -865,7 +865,7 @@ namespace giac {
   // open a file, returns a FD
   gen _open(const gen & g,GIAC_CONTEXT){
     if ( g.type==_STRNG && g.subtype==-1) return  g;
-#if defined(VISUALC) || defined(__MINGW_H) || defined (BESTA_OS) || defined(NSPIRE) || defined(__ANDROID__) || defined(NSPIRE_NEWLIB)
+#if defined(VISUALC) || defined(__MINGW_H) || defined (BESTA_OS) || defined(NSPIRE) || defined(__ANDROID__) || defined(NSPIRE_NEWLIB) || defined(OSX)
     return gensizeerr(gettext("not implemented"));
 #else
     gen tmp=check_secure();
@@ -1584,9 +1584,84 @@ namespace giac {
   static define_unary_function_eval (__playsnd,&_playsnd,_playsnd_s);
   define_unary_function_ptr5( at_playsnd ,alias_at_playsnd,&__playsnd,0,true);
 #else
+#if 1 && defined EMCC // must have EM_ASM code javascript inlined (emscripten 1.30.4 at least?)
+#include <emscripten.h>
+  gen _playsnd(const gen & args,GIAC_CONTEXT){
+    if (args.type==_STRNG){
+      if (args.subtype==-1) return  args;
+      return _playsnd(_readwav(args,contextptr),contextptr);
+    }
+	   
+    int nbits = 16;
+    int nchannels = 2;
+    int nrate = 44100;
+    unsigned int data_size=0;
+    vecteur v;
+    if (args.type==_VECT && !args._VECTptr->empty()){
+      // set format
+      v=*args._VECTptr;
+      if (!read_audio(v,nchannels,nrate,nbits,data_size))
+	return gensizeerr(gettext("Invalid sound data"));
+    }
+    if (data_size){
+      *logptr(contextptr) << gettext("Using sound parameters: channels, rate, bits, records ") << nchannels << "," << nrate << "," << data_size << endl;
+      unsigned nDataBytes=data_size*nchannels*sizeof(float);
+      // copy data from v into buffer and play it
+      unsigned b=nbits/8;
+      float * ptr = (float *) malloc(nDataBytes);
+      for (unsigned j=0;j<nchannels;++j){
+	vecteur & w=(*v[j+1]._VECTptr);
+	COUT << "channel " << j << endl;
+	for (unsigned i=0;i<data_size;++i){
+	  unsigned u=w[i].val;
+	  double ud=0;
+	  if (b==1)
+	    ud=u/128.0-1;
+	  if (b==2)
+	    ud=u/32768.0-1;
+	  if (b==4)
+	    ud=u/2147483648.0-1;
+	  ptr[j*data_size+i]=ud;
+	}
+      }
+      COUT << "playing" << endl;
+      EM_ASM_ARGS({
+	  var nchannels;
+	  var nDataBytes;
+	  var nrate;
+	  var ptr;
+	  var data_size;
+	  nchannels=$0;nDataBytes=$1;nrate=$2;ptr=$3;
+	  data_size=nDataBytes/4/nchannels;
+	  var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+	  var SoundArrayBuffer = audioCtx.createBuffer(nchannels, nDataBytes, audioCtx.sampleRate);
+	  var dataHeap = new Uint8Array(Module.HEAPU8.buffer, ptr, nDataBytes);
+	  var result = new Float32Array(dataHeap.buffer, dataHeap.byteOffset, nDataBytes/4);
+	  var j;
+	  var i;
+	  for (j=0;j<nchannels;j++){
+	    var v=SoundArrayBuffer.getChannelData(j);
+	    for (i=0;i<data_size;++i)
+	      v[i]=result[j*data_size+i];
+	  }
+	  var source = audioCtx.createBufferSource();
+	  // set the buffer in the AudioBufferSourceNode
+	  source.buffer = SoundArrayBuffer;
+	  // connect the AudioBufferSourceNode to the
+	  // destination so we can hear the sound
+	  source.connect(audioCtx.destination);
+	  // start the source playing
+	  source.start();
+	},nchannels,nDataBytes,nrate,ptr);
+      free(ptr);
+    }
+    return 1;
+  }
+#else
   gen _playsnd(const gen & args,GIAC_CONTEXT){
     return gensizeerr("Sorry! libao is not present on system");
   }
+#endif
   static const char _playsnd_s []="playsnd";
   static define_unary_function_eval (__playsnd,&_playsnd,_playsnd_s);
   define_unary_function_ptr5( at_playsnd ,alias_at_playsnd,&__playsnd,0,true);

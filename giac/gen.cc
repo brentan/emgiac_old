@@ -554,6 +554,38 @@ namespace giac {
     return (int *)(g._CPLXptr)-1;
   }
 
+  gen::gen(long i) { 
+#ifdef COMPILE_FOR_STABILITY
+    control_c();
+#endif
+    val=(int)i;
+    //    longlong temp=val;
+    if (val==i && val!=1<<31){
+      type=_INT_;
+      subtype=0;
+    }
+    else {
+#ifdef SMARTPTR64
+      * ((longlong * ) this) = longlong(new ref_mpz_t(64)) << 16;
+#else
+      __ZINTptr = new ref_mpz_t(64);
+#endif
+      type =_ZINT;
+      subtype=0;
+      // convert longlong to mpz_t
+      bool signe=(i<0);
+      if (signe)
+	i=-i;
+      unsigned int i1=i>>32;
+      unsigned int i2=(unsigned int)i;
+      mpz_set_ui(*_ZINTptr,i1);
+      mpz_mul_2exp(*_ZINTptr,*_ZINTptr,32);
+      mpz_add_ui(*_ZINTptr,*_ZINTptr,i2);
+      if (signe)
+	mpz_neg(*_ZINTptr,*_ZINTptr);
+    }
+  }
+
   gen::gen(longlong i) { 
 #ifdef COMPILE_FOR_STABILITY
     control_c();
@@ -2066,7 +2098,7 @@ namespace giac {
     gen G=g;
     if (tmp.type==_DOUBLE_ && tmp._DOUBLE_val!=0)
       round2(G,int(nbits-std::log(std::abs(tmp._DOUBLE_val))/std::log(2.0)));
-    return G;
+    return evalf_double(G,1,context0);
 #endif
   }
 
@@ -2874,6 +2906,18 @@ namespace giac {
 	gen a;
 	if (has_evalf(*this,a,1,contextptr) && is_zero(a.im(contextptr),contextptr))
 	  return *this;
+	if (_SYMBptr->feuille.type==_VECT && _SYMBptr->feuille._VECTptr->size()==2){
+	  vecteur tmp=*_SYMBptr->feuille._VECTptr;
+	  if (lidnt(tmp[1]).empty()){
+	    vecteur w=*tmp[1]._VECTptr;
+	    gen P;
+	    if (conj_in_nf(w,P,contextptr)){
+	      // P is a rootof such that conj(rootof(w))=P
+	      gen c=horner(tmp[0].conj(contextptr),P);
+	      return c;
+	    }
+	  }
+	}
       }
       if (equalposcomp(plot_sommets,_SYMBptr->sommet) || equalposcomp(analytic_sommets,_SYMBptr->sommet) || _SYMBptr->sommet==at_surd)
 	return new_ref_symbolic(symbolic(_SYMBptr->sommet,_SYMBptr->feuille.conj(contextptr)));
@@ -3088,6 +3132,17 @@ namespace giac {
 	  vecteur w=*tmp[1]._VECTptr;
 	  gen pol(symb_horner(w,vx_var));
 	  nrealposroot=sturmab(pol,vx_var,0,plus_inf,contextptr);
+	  if (nrealposroot==0 && is_zero(im(tmp[1],contextptr))){
+	    // complex, perhaps the conjugate is in the same nf
+	    gen P;
+	    if (conj_in_nf(w,P,contextptr)){
+	      // P is a rootof such that conj(rootof(w))=P
+	      gen c=horner(conj(tmp[0],contextptr),P);
+	      r=normal((s+c)/2,contextptr);
+	      i=normal((s-c)/2/cst_i,contextptr);
+	      return;
+	    }
+	  }
 	}
 	if (nrealposroot>0){
 	  reim(tmp[0],r,i,contextptr);
@@ -3554,8 +3609,18 @@ namespace giac {
 	return -s;
       if (has_num_coeff(s))
 	return 0.0;
-      else
+      else {
+#ifdef HAVE_LIBMPFR
+	tmp=accurate_evalf(s,ABS_NBITS_EVALF+10)*pow(2,ABS_NBITS_EVALF,contextptr);
+	if (!is_greater(1,abs(tmp,contextptr),contextptr)){
+	  if (is_positive(tmp,contextptr))
+	    return s;
+	  return -s;
+	}
+#else
 	return 0;
+#endif
+      }	
     }
     if (tmp.type==_FLOAT_){
       if (tmp._FLOAT_val>epsilon(contextptr))
@@ -6395,6 +6460,10 @@ namespace giac {
     }
     if (b.is_symb_of_sommet(at_neg))
       return -operator_times(a,b._SYMBptr->feuille,contextptr);
+    if (a.type<=_CPLX && b.is_symb_of_sommet(at_inv)&& b._SYMBptr->feuille.type<=_CPLX)
+      return fraction(a,b._SYMBptr->feuille).normal();
+    if (b.type<=_CPLX && a.is_symb_of_sommet(at_inv)&& a._SYMBptr->feuille.type<=_CPLX)
+      return fraction(b,a._SYMBptr->feuille).normal();
     if ((a.type<=_REAL || a.type==_FLOAT_) && is_strictly_positive(-a,contextptr))
       return -sym_mult(-a,b,contextptr);
     if ((b.type<=_REAL || b.type==_FLOAT_) && is_strictly_positive(-b,contextptr))
@@ -14423,6 +14492,7 @@ namespace giac {
     int cres=pthread_create(&pth,&attr,thread_caseval,(void *)&cp);
     if (cres){
       g=gen(s,&C);
+      g=equaltosto(g);
       g=protecteval(g,1,&C);
     }
     else {
@@ -14468,6 +14538,7 @@ namespace giac {
     }
 #else
     gen g(s,&C);
+    g=equaltosto(g);
     if (g.type==_VECT && !g._VECTptr->empty() && g._VECTptr->front().is_symb_of_sommet(at_set_language)){
       vecteur v=*g._VECTptr;
       protecteval(v.front(),1,&C);
@@ -14494,9 +14565,41 @@ namespace giac {
     while (last.type==_VECT && !last._VECTptr->empty())
       last=last._VECTptr->back();
     if (calc_mode(&C)!=1 && last.is_symb_of_sommet(at_pnt)){
-      //giac_renderer(last.print(&C).c_str());
-      giac_gen_renderer(g,&C);
-      return "Done";
+      if (is3d(last)){
+	//giac_renderer(last.print(&C).c_str());
+	giac_gen_renderer(g,&C);
+	return "Done";
+      }
+      bool fullview=true;
+      vector<double> vx,vy,vz;
+      double window_xmin,window_xmax,window_ymin,window_ymax,window_zmin,window_zmax;
+      bool ortho=autoscaleg(g,vx,vy,vz,&C);
+      autoscaleminmax(vx,window_xmin,window_xmax,fullview);
+      autoscaleminmax(vy,window_ymin,window_ymax,fullview);
+      double xscale=window_xmax-window_xmin,yscale=window_ymax-window_ymin;
+      double ratio=yscale/xscale;
+      double gratio=0.6,gwidth=9;
+      if (ratio<gratio/2 || ratio>2*gratio) ortho=false;
+      if (ortho){
+	if (ratio>gratio){ // yscale>gratio*xscale, use yscale for x
+	  double xc=(window_xmax+window_xmin)/2;
+	  window_xmin=xc-yscale/(2*gratio);
+	  window_xmax=xc+yscale/(2*gratio);
+	}
+	else { // xscale>yscale/gratio
+	  double yc=(window_ymax+window_ymin)/2;
+	  window_ymin=yc-gratio*xscale/2;
+	  window_ymax=yc+gratio*xscale/2;
+	}
+	ortho=false;
+      }
+      overwrite_viewbox(g,window_xmin,window_xmax,window_ymin,window_ymax,window_zmin,window_zmax);
+      //COUT << window_xmin << " " << window_xmax << " " << window_ymin << " " << window_ymax << endl;
+      //g=_symetrie(makesequence(_droite(makesequence(0,1),&C),g),&C);
+      //S='"'+svg_preamble(7,7,gnuplot_xmin,gnuplot_xmax,gnuplot_ymin,gnuplot_ymax,ortho,false)+gen2svg(g,&C)+svg_grid(gnuplot_xmin,gnuplot_xmax,gnuplot_ymin,gnuplot_ymax)+"</svg>\"";
+      S='"'+svg_preamble(gwidth,gwidth*gratio,window_xmin,window_xmax,window_ymin,window_ymax,ortho,false);
+      S= S+(gen2svg(g,window_xmin,window_xmax,window_ymin,window_ymax,&C)+svg_grid(window_xmin,window_xmax,window_ymin,window_ymax)+"</svg>\"");
+      return S.c_str();
     }
 #endif
     if (!lop(g,at_rootof).empty())

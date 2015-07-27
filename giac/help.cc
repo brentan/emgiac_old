@@ -83,6 +83,17 @@ namespace giac {
     }
   };
 
+  inline int mon_max(int a,int b){
+    if (a>b)
+      return a;
+    else
+      return b;
+  }
+
+  bool seconddec (const pair<int,int> & a,const pair<int,int> & b){
+    return a.second>b.second;
+  }
+
   // NB: cmd_name may be localized but related is not localized
   bool has_static_help(const char * cmd_name,int lang,const char * & howto,const char * & syntax,const char * & related,const char * & examples){
 #ifdef GIAC_HAS_STO_38
@@ -115,7 +126,49 @@ namespace giac {
 	examples=nullstring;
       return true;
     }
+#ifdef EMCC
+    // Find closest string
+    syntax=nullstring;
+    related=nullstring;
+    static string res;
+    res="";
+    int best_score=0,cur_score;
+    vector< pair<int,int> > best_j;
+    for (int j=0;j<static_help_size;++j){
+      cur_score=score(s,static_help[j].cmd_name);
+      if (cur_score>best_score){
+	best_score=cur_score;
+	vector< pair<int,int> > tmp;
+	for (unsigned k=0;k<best_j.size();++k){
+	  if (best_j[k].second>=best_score-6)
+	    tmp.push_back(best_j[k]);
+	}
+	best_j=tmp;
+	best_j.push_back(pair<int,int>(j,cur_score));
+	continue;
+      }
+      if (cur_score>=mon_max(best_score-6,0)){
+	best_j.push_back(pair<int,int>(j,cur_score));
+      }
+    }
+    if (best_score>0){
+      sort(best_j.begin(),best_j.end(),seconddec);
+      vector< pair<int,int> >::iterator it=best_j.begin(),itend=best_j.end();
+      for (int k=1;(k<10) && (it!=itend);++k,++it){
+	res = res+static_help[it->first].cmd_name;
+	res = res+",";
+      }
+      if (!res.empty())
+	res=res.substr(0,res.size()-1);
+    }
+    static string syn;
+    syn = gettext("Best match has score ") + printint(best_score) + "\n";
+    howto = syn.c_str();
+    examples = res.c_str();
+    return true;
+#else
     return false;
+#endif
   }
 
   static std::string output_quote(const string s){
@@ -291,13 +344,6 @@ namespace giac {
 #else
     return s;
 #endif
-  }
-
-  inline int mon_max(int a,int b){
-    if (a>b)
-      return a;
-    else
-      return b;
   }
 
   inline int max(int a,int b,int c){
@@ -542,10 +588,6 @@ namespace giac {
 	*it=res.cmd_name+'('+*it+')';
     }
     return res;
-  }
-
-  bool seconddec (const pair<int,int> & a,const pair<int,int> & b){
-    return a.second>b.second;
   }
 
   aide helpon(const string & demande,const vector<aide> & v,int language,int count,bool with_op){

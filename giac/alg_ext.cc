@@ -75,6 +75,12 @@ namespace giac {
     static rootmap * ans= new rootmap;
     return *ans;
   }
+
+  static rootmap & galoisconj_list(){
+    static rootmap * ans= new rootmap;
+    return *ans;
+  }
+
 #ifdef HAVE_LIBPTHREAD
   static pthread_mutex_t rootof_mutex = PTHREAD_MUTEX_INITIALIZER;
   static int rootof_trylock(){
@@ -88,6 +94,87 @@ namespace giac {
   static void rootof_unlock(){ } 
 
 #endif
+  // get Galois conjugates in the same number field from cache
+  bool galoisconj_cached(const vecteur & v,vecteur & res){
+    if (rootof_trylock())
+      return false;
+    res.clear();
+    rootmap::iterator ritend=galoisconj_list().end(),rit=galoisconj_list().find(v);
+    if (rit!=ritend && rit->second.type==_VECT)
+      res=*rit->second._VECTptr;
+    rootof_unlock();
+    return !res.empty();
+  }
+
+  // cache list of Galois conjugates
+  bool galoisconj_cache(const vecteur & v,const vecteur & res){
+    if (rootof_trylock())
+      return false;
+    rootmap::iterator ritend=galoisconj_list().end(),rit=galoisconj_list().find(v);
+    if (rit==ritend)
+      galoisconj_list()[v]=res;
+    rootof_unlock();
+    return true;
+  }
+
+  vecteur galoisconj(const vecteur & v,GIAC_CONTEXT){
+    vecteur res;
+    if (galoisconj_cached(v,res))
+      return res;
+    gen g=symb_horner(v,vx_var);
+    if (pari_galoisconj(g,res,contextptr))
+      return res;
+    if (int(v.size())>MAX_COMMON_ALG_EXT_ORDER_SIZE) return res;
+    // factor v over rootof(v) if degree is small
+    g=_factors(makesequence(g,rootof(g,contextptr)),contextptr);
+    if (g.type!=_VECT) return res;
+    vecteur w=*g._VECTptr;
+    for (int i=0;i<int(w.size())-1;i+=2){
+      gen a,b;
+      if (is_linear_wrt(w[i],vx_var,a,b,contextptr) && !is_zero(a)){
+	res.push_back(-b/a);
+      }
+    }
+    galoisconj_cache(v,res);
+    return res;
+  }
+
+  gen _galoisconj(const gen & args,GIAC_CONTEXT){
+    gen g=args;
+    if (g.type==_SYMB)
+      g=_symb2poly(args,contextptr);
+    if (g.type!=_VECT) return gensizeerr(contextptr);
+    return galoisconj(*g._VECTptr,contextptr);
+  }
+  static const char _galoisconj_s []="galoisconj";
+  static define_unary_function_eval (__galoisconj,&giac::_galoisconj,_galoisconj_s);
+  define_unary_function_ptr5( at_galoisconj ,alias_at_galoisconj,&__galoisconj,0,true);
+
+  // if true, g is a rootof such that conj(rootof(w))=g
+  bool conj_in_nf(const vecteur & w,gen & g,GIAC_CONTEXT){
+    gen r1=rootof(w,contextptr);
+    vecteur c=galoisconj(w,contextptr);
+    gen pow10=pow(10,14,contextptr);
+    int maxdigits=1000;
+    if (c.size()<w.size()-1)
+      maxdigits=50;
+    gen borne=100;
+    for (int ndigits=14;ndigits<1000;ndigits*=2){
+      gen R1=conj(_evalf(makesequence(r1,ndigits),contextptr),contextptr);
+      for (int i=0;i<int(c.size());++i){
+	gen r2=c[i];
+	gen R2=_evalf(makesequence(r2,ndigits),contextptr);
+	if (is_greater(borne*abs(R1,contextptr),abs(R1-R2,contextptr)*pow10,contextptr)){
+	  g=r2;
+	  return true;
+	}
+      }
+      pow10=pow10*pow10;
+      borne=borne*borne;
+    }
+    return false;
+  }
+
   bool proot_cached(const vecteur & v,double eps,vecteur & res){
     if (rootof_trylock())
       return false;
@@ -629,6 +716,10 @@ namespace giac {
   gen common_EXT(gen & a,gen & b,const vecteur * l,GIAC_CONTEXT){
     if (a==b)
       return a;
+    if (a.type==_FRAC)
+      return common_EXT(a._FRACptr->num,b,l,contextptr);
+    if (b.type==_FRAC)
+      return common_EXT(a,b._FRACptr->num,l,contextptr);
     // extract minimal polynomials
     gen a_orig(a),b_orig(b);
     gen a__VECT,b__VECT;

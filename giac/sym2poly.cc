@@ -2879,9 +2879,18 @@ namespace giac {
     if (l!=l_subst) 
       e_copy=subst(e_copy,l,l_subst,false,contextptr);
     // return global_eval(normal(e_copy),100);
+    bool b=calc_mode(contextptr)==1 || abs_calc_mode(contextptr)==38;
+    int ca=calc_mode(contextptr);
+    calc_mode(0,contextptr);
+    calc_mode(0,context0);
+    int z=MPZ_MAXLOG2;
+    MPZ_MAXLOG2=int(8e7);
     gen res=normal(e_copy,distribute_div,contextptr);
-    if ( (calc_mode(contextptr)==1 || abs_calc_mode(contextptr)==38) && !lop(res,at_rootof).empty())
-      return simplifier(ratnormal(normalize_sqrt(e_copy,contextptr)),contextptr);
+    MPZ_MAXLOG2=z;
+    calc_mode(ca,context0);
+    calc_mode(ca,contextptr);
+    if ( b && !lop(res,at_rootof).empty())
+      res=simplifier(ratnormal(normalize_sqrt(e_copy,contextptr)),contextptr);
     return res;
     // removed eval since it eats neg(x-y)
     // eval(normal(e_copy,distribute_div),contextptr);
@@ -3188,8 +3197,13 @@ namespace giac {
     if (divide_an_by.type>=_IDNT){
       gen divide=e2r(divide_an_by,l,contextptr);
       fxnd(divide,dnum,dden);
-      if (dnum.type==_POLY)
-	dnum=dnum._POLYptr->coord.front().value;
+      if (dnum.type==_POLY){
+	if (!Tis_constant(*dnum._POLYptr)){
+	  simplify3(f_num,dnum);
+	}
+	if (dnum.type==_POLY)
+	  dnum=dnum._POLYptr->coord.front().value;
+      }
       if (dden.type==_POLY)
 	dden=dden._POLYptr->coord.front().value;
     }
@@ -3355,7 +3369,9 @@ namespace giac {
     for (;it!=itend;++it){
       const pf<gen> & current=*it;
       gen reste(r2e(gen(current.num),l,contextptr)),deno(r2e(gen(current.fact),l,contextptr));
-      gen cur_deno(normal(r2e(it->den,l,contextptr)/r2e(it->mult==1?it->fact:pow(it->fact,it->mult),l,contextptr),contextptr));
+      polynome p=it->mult==1?it->fact:pow(it->fact,it->mult),quo,rem;
+      it->den.TDivRem(p,quo,rem,true);
+      gen cur_deno(r2e(quo,l,contextptr));
       if (current.mult==1)
 	res += reste/cur_deno/deno;
       else {

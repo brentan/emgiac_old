@@ -1504,6 +1504,7 @@ extern "C" void Sleep(unsigned int miliSecond);
   int MAX_PRINTABLE_ZINT=10000;
   int MAX_RECURSION_LEVEL=9;
   int GBASIS_DETERMINISTIC=20;
+
   const int BUFFER_SIZE=512;
 #else
   int CALL_LAPACK=1111;
@@ -1551,6 +1552,7 @@ extern "C" void Sleep(unsigned int miliSecond);
 #else
   int PROOT_FACTOR_MAXDEG=30;
 #endif
+  int ABS_NBITS_EVALF=1000;
 
   // used by WIN32 for the path to the xcas directory
   string & xcasroot(){
@@ -2527,7 +2529,7 @@ extern "C" void Sleep(unsigned int miliSecond);
   }
 
   bool check_file_path(const string & s){
-    int ss=s.size(),i;
+    int ss=int(s.size()),i;
     for (i=0;i<ss;++i){
       if (s[i]==' ')
 	break;
@@ -2537,7 +2539,7 @@ extern "C" void Sleep(unsigned int miliSecond);
     if (!ch || name[0]=='/')
       return is_file_available(name.c_str());
     string path;
-    int l=strlen(ch);
+    int l=int(strlen(ch));
     for (i=0;i<l;++i){
       if (ch[i]==':'){
 	if (!path.empty()){
@@ -2609,7 +2611,7 @@ extern "C" void Sleep(unsigned int miliSecond);
       if (with_firefox)
 	s2=s1;
       else {
-	int t=s1.size();
+	int t=int(s1.size());
 	for (int i=0;i<t;++i){
 	  if (s1[i]=='/')
 	    s2+="\\";
@@ -2623,7 +2625,7 @@ extern "C" void Sleep(unsigned int miliSecond);
       // s = s.substr(0,5)+"C:\\\\xcas\\\\"+s2;
     }
     // Remove # trailing part of URL
-    int ss=s.size();
+    int ss=int(s.size());
     for (--ss;ss>0;--ss){
       if (s[ss]=='#' || s[ss]=='.' || s[ss]=='/' )
 	break;
@@ -2698,7 +2700,7 @@ extern "C" void Sleep(unsigned int miliSecond);
       if (res[0]!='/')
 	res=giac_aide_dir()+res;
       // Remove # trailing part of URL
-      int ss=res.size();
+      int ss=int(res.size());
       for (--ss;ss>0;--ss){
 	if (res[ss]=='#' || res[ss]=='.' || res[ss]=='/' )
 	  break;
@@ -2762,7 +2764,7 @@ extern "C" void Sleep(unsigned int miliSecond);
     vector<int>::const_iterator it=v.begin(),itend=v.end();
     for (;it!=itend;++it)
       if (*it==i)
-	return it-v.begin()+1;
+	return int(it-v.begin())+1;
     return 0;
   }
 
@@ -2770,7 +2772,7 @@ extern "C" void Sleep(unsigned int miliSecond);
     vector<short int>::const_iterator it=v.begin(),itend=v.end();
     for (;it!=itend;++it)
       if (*it==i)
-	return it-v.begin()+1;
+	return int(it-v.begin())+1;
     return 0;
   }
 
@@ -2861,7 +2863,7 @@ extern "C" void Sleep(unsigned int miliSecond);
   void update_completions(){
     if (vector_completions_ptr()){
       vector_completions_ptr()->clear();
-      int n=vector_aide_ptr()->size();
+      int n=int(vector_aide_ptr()->size());
       for (int k=0;k<n;++k){
 	vector_completions_ptr()->push_back((*vector_aide_ptr())[k].cmd_name);
       }
@@ -2891,7 +2893,7 @@ extern "C" void Sleep(unsigned int miliSecond);
 	    }
 	  }
 	}
-	int s = vector_aide_ptr()->size();
+	int s = int(vector_aide_ptr()->size());
 	for (int j=0;j<s;++j){
 	  aide a=(*vector_aide_ptr())[j];
 	  it=back_lexer_localization_map().find(a.cmd_name);
@@ -2918,7 +2920,7 @@ extern "C" void Sleep(unsigned int miliSecond);
     if (int pos=equalposcomp(lexer_localization_vector(),i)){
       if (vector_aide_ptr()){
 	vector<aide> nv;
-	int s=vector_aide_ptr()->size();
+	int s=int(vector_aide_ptr()->size());
 	for (int j=0;j<s;++j){
 	  if ((*vector_aide_ptr())[j].language!=i)
 	    nv.push_back((*vector_aide_ptr())[j]);
@@ -3086,7 +3088,7 @@ extern "C" void Sleep(unsigned int miliSecond);
   string add_extension(const string & s,const string & ext,const string & def){
     if (s.empty())
       return def+"."+ext;
-    int i=s.size();
+    int i=int(s.size());
     for (--i;i>0;--i){
       if (s[i]=='.')
 	break;
@@ -3249,7 +3251,7 @@ extern "C" void Sleep(unsigned int miliSecond);
 #ifdef HAVE_LIBPTHREAD
       pthread_mutex_lock(&context_list_mutex);
 #endif
-      int s=context_list().size();
+      int s=int(context_list().size());
       for (int i=s-1;i>0;--i){
 	if (context_list()[i]==this){
 	  context_list().erase(context_list().begin()+i);
@@ -3290,7 +3292,7 @@ extern "C" void Sleep(unsigned int miliSecond);
 #endif /// HAVE_NO_SYS_TIMES_H
 
   string remove_filename(const string & s){
-    int l=s.size();
+    int l=int(s.size());
     for (;l;--l){
       if (s[l-1]=='/')
 	break;
@@ -3442,7 +3444,8 @@ extern "C" void Sleep(unsigned int miliSecond);
     return ans;
   }
 
-  giac::gen thread_eval(const giac::gen & g,int level,context * contextptr,void (* wait_0001)(context *) ){
+  giac::gen thread_eval(const giac::gen & g_,int level,context * contextptr,void (* wait_0001)(context *) ){
+    gen g=equaltosto(g_);
     /* launch a new thread for evaluation only,
        no more readqueue, readqueue is done by the "parent" thread
        Ctrl-C will kill the "child" thread
@@ -3926,7 +3929,7 @@ unsigned int ConvertUTF16toUTF8 (
     target += bytesToWrite;
     }
 
-    unsigned int length = target - targetStart;
+    unsigned int length = int(target - targetStart);
     return length;
 }
 
@@ -4060,7 +4063,7 @@ unsigned int ConvertUTF8toUTF16 (
     }
     }
 
-    unsigned int length = target - targetStart;
+    unsigned int length = unsigned(target - targetStart);
     return length;
 }
 
@@ -4140,7 +4143,7 @@ unsigned int ConvertUTF8toUTF16 (
   wchar_t * utf82unicode(const char * idname){
     if (!idname)
       return 0;
-    int l=strlen(idname);
+    int l=int(strlen(idname));
     wchar_t * wname=new wchar_t[l+1];
     utf82unicode(idname,wname,l);
     return wname;
@@ -4158,7 +4161,7 @@ unsigned int ConvertUTF8toUTF16 (
   char * unicode2utf8(const wchar_t * idname){
     if (!idname)
       return 0;
-    int l=wcslen(idname);
+    int l=int(wcslen(idname));
     char * name=new char[4*l+1];
     unicode2utf8(idname,name,l);
     return name;
@@ -4336,7 +4339,7 @@ unsigned int ConvertUTF8toUTF16 (
     charptr_gen_unary const * f = (charptr_gen_unary const *)bsearch(s, builtin_lexer_functions, n, sizeof(builtin_lexer_functions[0]), lexerCompare);
     if (f != NULL) {
       g = 0;
-      int pos = f - builtin_lexer_functions;
+      int pos = int(f - builtin_lexer_functions);
       size_t val = builtin_lexer_functions_[pos];
       unary_function_ptr * at_val = (unary_function_ptr *)val;
       g = at_val;
@@ -4414,8 +4417,9 @@ unsigned int ConvertUTF8toUTF16 (
 	return undef;
       if (index>0){
 	const unary_function_ptr * aptr=archive_function_tab();
-	if (index<archive_function_tab_length)
+	if (index<archive_function_tab_length){
 	  g=symbolic(aptr[index-1],fe);
+	}
 	else
 	  g=fe; // ERROR
       }
@@ -4583,7 +4587,7 @@ unsigned int ConvertUTF8toUTF16 (
 
   bool unarchive_session(const gen & g,int level,const gen & replace,GIAC_CONTEXT,bool with_history){
     int l;
-    if (g.type!=_VECT || (l=g._VECTptr->size())<4)
+    if (g.type!=_VECT || (l=int(g._VECTptr->size()))<4)
       return false;
     vecteur v=*g._VECTptr;
     if (v[2].type!=_VECT || v[3].type!=_VECT || (v[2]._VECTptr->size()!=v[3]._VECTptr->size() && v[2]._VECTptr->size()!=v[3]._VECTptr->size()+1))
@@ -4737,7 +4741,7 @@ unsigned int ConvertUTF8toUTF16 (
     string s;
     int pos=0;
     for (unsigned i=0;i<v.size();++i){
-      int p=format.find("%gen",pos);
+      int p=int(format.find("%gen",pos));
       if (p<0 || p>=int(format.size()))
 	break;
       s += format.substr(pos,p-pos);
@@ -4758,6 +4762,11 @@ unsigned int ConvertUTF8toUTF16 (
 #ifdef USTL    
   // void update_lexer_localization(const std::vector<int> & v,ustl::map<std::string,std::string> &lexer_map,ustl::multimap<std::string,giac::localized_string> &back_lexer_map){}
 #else
+  vecteur * keywords_vecteur_ptr(){
+    static vecteur v;
+    return &v;
+  }
+
   static void in_update_lexer_localization(istream & f,int lang,const std::vector<int> & v,std::map<std::string,std::string> &lexer_map,std::multimap<std::string,giac::localized_string> &back_lexer_map,GIAC_CONTEXT){
     char * line = (char *)malloc(1024);
     std::string giac_kw,local_kw;
@@ -4781,11 +4790,14 @@ unsigned int ConvertUTF8toUTF16 (
 	}
 	// read corresponding local keywords
 	local_kw="";
+	vecteur * keywordsptr=keywords_vecteur_ptr();
 	for (++j;j<l;++j){
 	  if (line[j]==' '){
 	    if (!local_kw.empty()){
 #ifdef EMCC
-	      sto(gen(giac_kw,contextptr),gen(local_kw,contextptr),contextptr);
+	      gen localgen(gen(local_kw,contextptr));
+	      keywordsptr->push_back(localgen);
+	      sto(gen(giac_kw,contextptr),localgen,contextptr);
 #else
 	      lexer_map[local_kw]=giac_kw;
 	      back_lexer_map.insert(pair<string,localized_string>(giac_kw,localized_string(lang,local_kw)));
@@ -4798,7 +4810,9 @@ unsigned int ConvertUTF8toUTF16 (
 	}
 	if (!local_kw.empty()){
 #ifdef EMCC
-	  sto(gen(giac_kw,contextptr),gen(local_kw,contextptr),contextptr);
+	  gen localgen(gen(local_kw,contextptr));
+	  keywordsptr->push_back(localgen);
+	  sto(gen(giac_kw,contextptr),localgen,contextptr);
 #else
 	  lexer_map[local_kw]=giac_kw;
 	  back_lexer_map.insert(pair<string,localized_string>(giac_kw,localized_string(lang,local_kw)));
@@ -4812,7 +4826,7 @@ unsigned int ConvertUTF8toUTF16 (
   void update_lexer_localization(const std::vector<int> & v,std::map<std::string,std::string> &lexer_map,std::multimap<std::string,giac::localized_string> &back_lexer_map,GIAC_CONTEXT){
     lexer_map.clear();
     back_lexer_map.clear();
-    int s=v.size();
+    int s=int(v.size());
     for (int i=0;i<s;++i){
       int lang=v[i];
       if (lang>=1 && lang<=4){
@@ -4896,7 +4910,7 @@ unsigned int ConvertUTF8toUTF16 (
 	  lexer_functions()[s].subtype=parser_token-256;
       }
       // If s is a library function name (with ::), update the library
-      int ss=strlen(s),j=0;
+      int ss=int(strlen(s)),j=0;
       for (;j<ss-1;++j){
 	if (s[j]==':' && s[j+1]==':')
 	  break;
@@ -5004,7 +5018,7 @@ unsigned int ConvertUTF8toUTF16 (
 #else
 #ifndef NSPIRE_NEWLIB
 	  res=0;
-	  int pos=p.first-builtin_lexer_functions_begin();
+	  int pos=int(p.first-builtin_lexer_functions_begin());
 	  size_t val=builtin_lexer_functions_[pos];
 	  unary_function_ptr * at_val=(unary_function_ptr *)val;
 	  res=at_val;
@@ -5224,7 +5238,7 @@ unsigned int ConvertUTF8toUTF16 (
       if (!ans){
 	ans = new charptr_gen[builtin_lexer_functions_number];
 	for (unsigned i=0;i<builtin_lexer_functions_number;i++){
-	  charptr_gen tmp={builtin_lexer_functions[i].s,builtin_lexer_functions[i]._FUNC_};
+	  charptr_gen tmp; tmp.first=builtin_lexer_functions[i].s; tmp.second=builtin_lexer_functions[i]._FUNC_;
 	  tmp.second.subtype=builtin_lexer_functions[i].subtype;
 	  ans[i]=tmp;
 	}

@@ -341,7 +341,7 @@ namespace std {
     }
     void insert(_Tp * b, unsigned k,const _Tp& x ){
       if (_taille<=0){
-	int pos=b-((_Tp *) _tab);
+	int pos=int(b-((_Tp *) _tab));
 	_realloc(k+IMMEDIATE_VECTOR);
 	b=_begin_immediate_vect+pos;
       }
@@ -386,12 +386,12 @@ namespace std {
       return (1 << 30) -1;
     }
     static _Tp &OutOfBoundsDefault() { static _Tp value; value = _Tp(); return value; }
-    _Tp & at(unsigned n){
+    _Tp & at(size_t n){
       if (n>_abs(_taille))
 	return OutOfBoundsDefault();
       return *(begin()+n);
     }
-    const _Tp at(unsigned n) const {
+    const _Tp at(size_t n) const {
       if (n>_abs(_taille))
 	return OutOfBoundsDefault();
       return *(begin()+n);
@@ -607,12 +607,12 @@ namespace std {
     unsigned max_size() const {
       return 1 << 30;
     }
-    _Tp & at(unsigned n){
+    _Tp & at(size_t n){
       if (n>_end-_begin)
 	return _Tp(); // should be defined somewhere else
       return *(_begin+n);
     }
-    const _Tp at(unsigned n) const {
+    const _Tp at(size_t n) const {
       if (n>_end-_begin)
 	return _Tp(); // should be defined somewhere else
       return *(_begin+n);

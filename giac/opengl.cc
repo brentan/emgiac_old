@@ -4120,6 +4120,8 @@ void freeglutStrokeCharacter( int character )
   int init_screen(int & w,int & h){
     int fs;
     emscripten_get_canvas_size(&w, &h, &fs);
+    if (w==0) w=400;
+    if (h==0) h=250;
     if ( SDL_Init(SDL_INIT_VIDEO) != 0 ) {
       printf("Unable to initialize SDL: %s\n", SDL_GetError());
       return 1; // "unable to init SDL";
@@ -4218,7 +4220,7 @@ void freeglutStrokeCharacter( int character )
     while (last.type==_VECT && !last._VECTptr->empty())
       last=last._VECTptr->back();
     if (calc_mode(contextptr)!=1 && last.is_symb_of_sommet(at_pnt)){
-      int w=600,h=300,fs;
+      int w=0,h=0,fs;
       // emscripten_set_canvas_size(640, 480);
       fs=init_screen(w,h);
       if (fs)

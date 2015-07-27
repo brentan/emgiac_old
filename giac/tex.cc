@@ -1034,6 +1034,44 @@ namespace giac {
     return false;
   }
 
+  void overwrite_viewbox(const gen & g,double & window_xmin,double & window_xmax,double & window_ymin,double & window_ymax,double &window_zmin,double & window_zmax){
+    if (g.type==_VECT){
+      vecteur v =*g._VECTptr;
+      for (int i=0;i<int(v.size());++i){
+	overwrite_viewbox(v[i],window_xmin,window_xmax,window_ymin,window_ymax,window_zmin,window_zmax);
+      }
+    }
+    if (g.is_symb_of_sommet(at_equal)){
+      gen f=g._SYMBptr->feuille;
+      if (f.type==_VECT && f._VECTptr->size()==2){
+	gen optname= f._VECTptr->front(),optvalue=f._VECTptr->back();
+	if (optvalue.is_symb_of_sommet(at_interval) && optname.type==_INT_ && optname.subtype==_INT_PLOT && optname.val>=_GL_X && optname.val<=_GL_Z){
+	  gen optvf=evalf_double(optvalue._SYMBptr->feuille,1,context0);
+	  if (optvf.type==_VECT && optvf._VECTptr->size()==2){
+	    gen a=optvf._VECTptr->front();
+	    gen b=optvf._VECTptr->back();
+	    if (a.type==_DOUBLE_ && b.type==_DOUBLE_){
+	      switch (optname.val){
+	      case _GL_X:
+		window_xmin=a._DOUBLE_val;
+		window_xmax=b._DOUBLE_val;
+		break;
+	      case _GL_Y:
+		window_ymin=a._DOUBLE_val;
+		window_ymax=b._DOUBLE_val;
+		break;
+	      case _GL_Z:
+		window_zmin=a._DOUBLE_val;
+		window_zmax=b._DOUBLE_val;
+		break;
+	      }
+	    } 
+	  }
+	}
+      }
+    }
+  }
+
   static void zoom(double &m,double & M,double d){
     double x_center=(M+m)/2;
     double dx=(M-m);
