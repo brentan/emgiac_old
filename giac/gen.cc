@@ -4410,18 +4410,22 @@ namespace giac {
 	if (is_undef(tmp)) return tmp;
 	return new_ref_symbolic(symbolic(at_unit,makenewvecteur(va[0]+g*vb[0],va[1])));
       }
-      gen g=mksa_reduce(a,contextptr);
-      gen tmp=chk_not_unit(g);
-      if (is_undef(tmp)) return tmp;
-      return g+b;
+      if (lidnt(b).empty()){
+	gen g=mksa_reduce(a,contextptr);
+	gen tmp=chk_not_unit(g);
+	if (is_undef(tmp)) return tmp;
+	return g+b;
+      }
     }
     if (b.is_symb_of_sommet(at_unit)){
       if (is_zero(a))
 	return b;
-      gen g=mksa_reduce(b,contextptr);
-      gen tmp=chk_not_unit(g);
-      if (is_undef(tmp)) return tmp;
-      return a+g;
+      if (lidnt(a).empty()){
+	gen g=mksa_reduce(b,contextptr);
+	gen tmp=chk_not_unit(g);
+	if (is_undef(tmp)) return tmp;
+	return a+g;
+      }
     }
     if (a.is_approx()){
       gen b1;
@@ -6289,10 +6293,12 @@ namespace giac {
 	  return va[0]*v[0];
 	return new_ref_symbolic(symbolic(at_unit,makenewvecteur(va[0]*v[0],res)));
       }
-      else
-	return new_ref_symbolic(symbolic(at_unit,makenewvecteur(va[0]*b,va[1])));
+      else {
+	if (lidnt(b).empty())
+	  return new_ref_symbolic(symbolic(at_unit,makenewvecteur(va[0]*b,va[1])));
+      }
     }
-    if (b.is_symb_of_sommet(at_unit)){
+    if (b.is_symb_of_sommet(at_unit) && lidnt(a).empty()){
       vecteur & v=*b._SYMBptr->feuille._VECTptr;
       return new_ref_symbolic(symbolic(at_unit,makenewvecteur(a*v[0],v[1])));
     }

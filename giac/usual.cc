@@ -7677,7 +7677,7 @@ namespace giac {
       if (s%2==0)
 	return (1-pow(2,1-s,contextptr))*Zeta(s,contextptr);
     }
-    if (s.type==_DOUBLE_ || s.type==_REAL || (s.type==_CPLX && s.subtype==_DOUBLE_)){
+    if (s.type==_DOUBLE_ || s.type==_REAL || (s.type==_CPLX )){
       gen rx=re(s,contextptr).evalf_double(1,contextptr);
       if (rx._DOUBLE_val<0.5){
 	if (ndiff){

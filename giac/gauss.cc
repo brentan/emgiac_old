@@ -414,6 +414,9 @@ namespace giac {
     if (is_undef(M))
       return undef;
     gen Mx,My,x(x__IDNT_e),y(y__IDNT_e),t(t__IDNT_e);
+    ck_parameter_x(contextptr);
+    ck_parameter_y(contextptr);
+    ck_parameter_t(contextptr);
     reim(M,Mx,My,contextptr);
     gen eqM=_quo(makesequence(subst(eq,makevecteur(x,y),makevecteur(Mx+x,My+t*x),false,contextptr),x),contextptr);
     vecteur res=solve(eqM,x,0,contextptr); // x in terms of t

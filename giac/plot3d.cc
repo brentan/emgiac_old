@@ -594,9 +594,13 @@ namespace giac {
     if ( args.type==_STRNG && args.subtype==-1) return  args;
     if (args.type!=_VECT)
       return gensizeerr(contextptr);
-    vecteur & v(*args._VECTptr);
+    vecteur v(*args._VECTptr);
     vecteur attributs(1,default_color(contextptr));
     int s=read_attributs(v,attributs,contextptr);
+    if (s==3){
+      v.insert(v.begin(),makevecteur(0,0,0));
+      ++s;
+    }
     if (s!=4)
       return gendimerr(contextptr);
     gen A=remove_at_pnt(v[0]);

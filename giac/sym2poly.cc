@@ -757,7 +757,7 @@ namespace giac {
 	num=rdiv(-v.back(),v.front(),contextptr);
 	// cerr << "xroot" << num << endl;
 	gen numlv=r2sym(num,lv,contextptr);
-	if (!lvar(numlv).empty())
+	if (!lvar(evalf(numlv,1,contextptr)).empty())
 	  *logptr(contextptr) << gettext("Warning, checking for positivity of a root depending of parameters might return wrong sign: ")<< numlv << endl;
 	if (is_positive(numlv,contextptr))
 	  break;

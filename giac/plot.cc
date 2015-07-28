@@ -3661,6 +3661,27 @@ namespace giac {
     vecteur v(*args._VECTptr);
     vecteur attributs(1,default_color(contextptr));
     int s=read_attributs(v,attributs,contextptr);
+    if (s==2){
+      gen e=remove_at_pnt(eval(v[0],contextptr)),f=remove_at_pnt(eval(v[1],contextptr));
+      v.clear();
+      if (e.type==_VECT && e.subtype==_VECTOR__VECT && e._VECTptr->size()==2){
+	v.push_back(e._VECTptr->front());
+	v.push_back(e._VECTptr->back());
+      }
+      else
+	v.push_back(e);
+      if (f.type==_VECT && f.subtype==_VECTOR__VECT && f._VECTptr->size()==2){
+	if (v.size()==1){
+	  v.insert(v.begin(),f._VECTptr->front());
+	  v.push_back(f._VECTptr->back());
+	}
+	else
+	  v.push_back(v.back()+f._VECTptr->back()-f._VECTptr->front());
+      }
+      else
+	v.push_back(f);
+      s=v.size();
+    }
     if (s<3)
       return gendimerr(contextptr);
     gen e=remove_at_pnt(eval(v[0],contextptr)),f=remove_at_pnt(eval(v[1],contextptr)),d=remove_at_pnt(eval(v[2],contextptr));
@@ -8356,11 +8377,6 @@ namespace giac {
     vecteur vf=*f._VECTptr->front()._VECTptr;
     gen m,tmin,tmax;
     double T=1e300;
-    if (vf.size()<2 || vf[1].type!=_IDNT)
-      return vecteur(1,gensizeerr(contextptr));
-    if (find_curve_parametrization(curve,m,vf[1],T,tmin,tmax,false,contextptr)){
-      vf[0]=m;
-    }
     if (vf.size()>5){
       // use parametric equation for circle or line
       gen carteq=vf[5];
@@ -8377,6 +8393,11 @@ namespace giac {
 	  return remove_not_in_arc(res,circle,contextptr);
 	}
       }
+    }
+    if (vf.size()<2 || vf[1].type!=_IDNT)
+      return vecteur(1,gensizeerr(contextptr));
+    if (find_curve_parametrization(curve,m,vf[1],T,tmin,tmax,false,contextptr)){
+      vf[0]=m;
     }
     gen eq;
 #ifndef NO_STDEXCEPT

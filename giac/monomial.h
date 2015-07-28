@@ -314,6 +314,21 @@ namespace giac {
     return(i_11var_is_strictly_greater(m1.index,m2.index));
   }
 
+  template <class T>
+  bool m_16var_is_strictly_greater(const monomial<T> & m1, const monomial<T> & m2){
+    return(i_16var_is_strictly_greater(m1.index,m2.index));
+  }
+
+  template <class T>
+  bool m_32var_is_strictly_greater(const monomial<T> & m1, const monomial<T> & m2){
+    return(i_32var_is_strictly_greater(m1.index,m2.index));
+  }
+
+  template <class T>
+  bool m_64var_is_strictly_greater(const monomial<T> & m1, const monomial<T> & m2){
+    return(i_64var_is_strictly_greater(m1.index,m2.index));
+  }
+
   template<class T> class sort_helper {
   public:
     std::pointer_to_binary_function < const monomial<T> &, const monomial<T> &, bool> strictly_greater ;

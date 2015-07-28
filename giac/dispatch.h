@@ -413,6 +413,9 @@ namespace giac {
     _7VAR_ORDER=7, // GROEBNER_VARS==15 : double revlex 7 params at end, 7 variables
     _11VAR_ORDER=11, // GROEBNER_VARS==15 : 3 params at end, 11 variables
     // use negative values for RUR
+    _16VAR_ORDER=16, // 16 variables to eliminate
+    _32VAR_ORDER=32, // 32 variables to eliminate
+    _64VAR_ORDER=64, // 64 variables to eliminate
     _RUR_REVLEX=-4,
     _RUR_3VAR=-3,
     _RUR_7VAR=-7,
