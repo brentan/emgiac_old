@@ -592,9 +592,17 @@ namespace giac {
   bool i_total_revlex_is_strictly_greater(const index_m & v1, const index_m & v2);
   bool i_total_lex_is_greater(const index_m & v1, const index_m & v2);
   bool i_total_lex_is_strictly_greater(const index_m & v1, const index_m & v2);
+  bool i_16var_is_greater(const index_m & v1, const index_m & v2);
+  bool i_32var_is_greater(const index_m & v1, const index_m & v2);
+  bool i_64var_is_greater(const index_m & v1, const index_m & v2);
   bool i_11var_is_greater(const index_m & v1, const index_m & v2);
   bool i_7var_is_greater(const index_m & v1, const index_m & v2);
   bool i_3var_is_greater(const index_m & v1, const index_m & v2);
+  bool i_nvar_is_greater(const index_m & v1, const index_m & v2,int n,bool sametdeg);
+  int nvar_total_degree(const index_m & v1,int n);
+  inline bool i_16var_is_strictly_greater(const index_m & v1, const index_m & v2){ return !i_16var_is_greater(v2,v1); }
+  inline bool i_32var_is_strictly_greater(const index_m & v1, const index_m & v2){ return !i_32var_is_greater(v2,v1); }
+  inline bool i_64var_is_strictly_greater(const index_m & v1, const index_m & v2){ return !i_64var_is_greater(v2,v1); }
   inline bool i_11var_is_strictly_greater(const index_m & v1, const index_m & v2){ return !i_11var_is_greater(v2,v1); }
   inline bool i_7var_is_strictly_greater(const index_m & v1, const index_m & v2){ return !i_7var_is_greater(v2,v1); }
   inline bool i_3var_is_strictly_greater(const index_m & v1, const index_m & v2){ return !i_3var_is_greater(v2,v1); }

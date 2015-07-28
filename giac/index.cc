@@ -560,6 +560,12 @@ namespace giac {
     return(i);
   }
 
+  int sum_degree_from(const index_m & v1,int start){
+    int i=0;
+    for (index_t::const_iterator it=v1.begin()+start;it!=v1.end();++it)
+      i=i+(*it);
+    return(i);
+  }
 
   bool i_lex_is_greater(const index_m & v1, const index_m & v2){
     index_t::const_iterator it1=v1.begin();
@@ -677,8 +683,8 @@ namespace giac {
     if (*(it1+1)!=*(it2+1))
       return *(it1+1)<=*(it2+1);
     if (*it1!=*it2) v1.dbgprint(); // instantiate
-    d1=sum_degree(v1); 
-    d2=sum_degree(v2);
+    d1=sum_degree_from(v1,3); 
+    d2=sum_degree_from(v2,3);
     if (d1!=d2)
       return d1>=d2;
     index_t::const_iterator it1end=it1+2;
@@ -711,8 +717,8 @@ namespace giac {
       return *(it1+2)<=*(it2+2);
     if (*(it1+1)!=*(it2+1))
       return *(it1+1)<=*(it2+1);
-    d1=sum_degree(v1); 
-    d2=sum_degree(v2);
+    d1=sum_degree_from(v1,7); 
+    d2=sum_degree_from(v2,7);
     if (d1!=d2)
       return d1>=d2;
     index_t::const_iterator it1end=it1+6;
@@ -757,8 +763,8 @@ namespace giac {
       return *(it1+2)<=*(it2+2);
     if (*(it1+1)!=*(it2+1))
       return *(it1+1)<=*(it2+1);
-    d1=sum_degree(v1); 
-    d2=sum_degree(v2);
+    d1=sum_degree_from(v1,11); 
+    d2=sum_degree_from(v2,11);
     if (d1!=d2)
       return d1>=d2;
     index_t::const_iterator it1end=it1+10;
@@ -769,6 +775,67 @@ namespace giac {
 	return *it1<=*it2;
     }
     return true;
+  }
+
+  int nvar_total_degree(const index_m & v1,int n){
+    index_t::const_iterator it1=v1.begin(),it1l=it1+n;
+    int d1,d2;
+    for (d1=0;it1<it1l;++it1){
+      d1 += *it1;
+    }
+    return d1;
+  }
+
+  // revlex on 1st n vars, then revlex on remaining vars
+  bool i_nvar_is_greater(const index_m & v1, const index_m & v2,int n,bool sametdeg){
+    int d1,d2;
+    index_t::const_iterator it1=v1.begin(),it1l=it1+n;
+    index_t::const_iterator it2=v2.begin(),it2l=it2+n;
+    if (sametdeg){
+      it1=it1l; it2=it2l;
+    }
+    else {
+      for (d1=0;it1<it1l;++it1){
+	d1 += *it1;
+      }
+      for (d2=0;it2<it2l;++it2){
+	d2 += *it2;
+      }
+      if (d1!=d2)
+	return d1>=d2;
+    }
+    index_t::const_iterator it1end=v1.begin();
+    for (--it2,--it1;it1!=it1end;--it2,--it1){
+      if (*it1!=*it2)
+	return *it1<=*it2;
+    }
+    d1=sum_degree_from(v1,n); 
+    d2=sum_degree_from(v2,n);
+    if (d1!=d2)
+      return d1>=d2;
+    it1end=v1.begin()+n-1;
+    it1 = v1.end()-1;
+    it2 = v2.end()-1;
+    for (;it1!=it1end;--it2,--it1){
+      if (*it1!=*it2)
+	return *it1<=*it2;
+    }
+    return true;
+  }
+
+  // revlex on 1st 16 vars, then revlex on remaining vars
+  bool i_16var_is_greater(const index_m & v1, const index_m & v2){
+    return i_nvar_is_greater(v1,v2,16,false);
+  }
+
+  // revlex on 1st 32 vars, then revlex on remaining vars
+  bool i_32var_is_greater(const index_m & v1, const index_m & v2){
+    return i_nvar_is_greater(v1,v2,32,false);
+  }
+
+  // revlex on 1st 64 vars, then revlex on remaining vars
+  bool i_64var_is_greater(const index_m & v1, const index_m & v2){
+    return i_nvar_is_greater(v1,v2,64,false);
   }
 
   bool i_total_revlex_is_strictly_greater(const index_m & v1, const index_m & v2){ 

@@ -8351,6 +8351,8 @@ namespace giac {
     return symbolic(at_pow,gen(makevecteur(g,exponent),_SEQ__VECT));
   }
   gen mksa_reduce(const gen & g,GIAC_CONTEXT){
+    if (g.type==_VECT)
+      return apply(g,mksa_reduce,contextptr);
     vecteur v(mksa_convert(g,contextptr));
     if (is_undef(v)) return v;
     gen res1=v[0];

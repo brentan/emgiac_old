@@ -420,6 +420,7 @@ namespace giac {
 
 #define GIAC_SHORTSHIFTTYPE 16
 
+
   void swap_indices(short * tab){
     swap(tab[1],tab[3]);
     swap(tab[4],tab[7]);
@@ -433,8 +434,78 @@ namespace giac {
   }
 
   struct tdeg_t {
+    // data
+#ifdef GIAC_64VARS
+    union {
+      short tab[GROEBNER_VARS+1];
+      struct {
+	short tdeg; // actually it's twice the total degree+1
+	short tdeg2;
+	int order_;
+	size_t ui;
+      };
+    };
+    index_m * i() const { return (index_m *) &ui;}
+    tdeg_t(const tdeg_t & a){
+      if (a.tab[0]%2){
+	tdeg=a.tdeg;
+	tdeg2=a.tdeg2;
+	order_=a.order_;
+	ui=a.ui;
+	++i()->riptr->ref_count;
+      }
+      else {
+	longlong * ptr = (longlong *) tab;
+	longlong * aptr = (longlong *) a.tab;
+	ptr[0]=aptr[0];
+	ptr[1]=aptr[1];
+	ptr[2]=aptr[2];
+	ptr[3]=aptr[3];
+      }
+    }
+    ~tdeg_t(){
+      if (tab[0]%2){
+	index_m * ptr=i();
+	--ptr->riptr->ref_count;
+	if (ptr->riptr->ref_count==0)
+	  delete ptr->riptr;
+      }
+    }
+    tdeg_t & operator = (const tdeg_t & a){
+      if (tab[0] % 2){
+	index_m * ptr=i();
+	--ptr->riptr->ref_count;
+	if (ptr->riptr->ref_count==0)
+	  delete ptr->riptr;
+	if (a.tab[0] % 2){
+	  tdeg=a.tdeg;
+	  tdeg2=a.tdeg2;
+	  order_=a.order_;
+	  ui=a.ui;
+	  ++i()->riptr->ref_count;
+	  return *this;
+	}
+      }
+      else {
+	if (a.tab[0]%2)
+	  ++a.i()->riptr->ref_count;
+      }
+      longlong * ptr = (longlong *) tab;
+      longlong * aptr = (longlong *) a.tab;
+      ptr[0]=aptr[0];
+      ptr[1]=aptr[1];
+      ptr[2]=aptr[2];
+      ptr[3]=aptr[3];
+      return *this;
+    }
+#else
     short tab[GROEBNER_VARS+1];
+#endif
+    // methods
     unsigned total_degree(short order) const {
+#ifdef GIAC_64VARS
+      return tab[0]/2;
+#endif
       // works only for revlex and tdeg
 #if 0
       if (order==_REVLEX_ORDER || order==_TDEG_ORDER)
@@ -464,13 +535,36 @@ namespace giac {
 #endif
     }
     void get_tab(short * ptr) const {
+#ifdef GIAC_64VARS
+      if (tab[0]%2){ // copy only 16 first
+	short * ptr_=&i()->front();
+	for (unsigned i=0;i<=GROEBNER_VARS;++i)
+	  ptr[i]=ptr_[i];
+	return;
+      }
+#endif
       for (unsigned i=0;i<=GROEBNER_VARS;++i)
 	ptr[i]=tab[i];
+#ifdef GIAC_64VARS
+      ptr[0]/=2;
+#endif
 #ifdef GBASIS_SWAP
       swap_indices(ptr);
 #endif
     }
     tdeg_t(const index_m & lm,short order){ 
+#ifdef GIAC_64VARS
+      if (lm.size()>GROEBNER_VARS){
+	++lm.riptr->ref_count;
+	ui=*(size_t*)&lm;
+	// FIXME use order to find tdeg2
+	tdeg=nvar_total_degree(lm,order);
+	tdeg=2*tdeg+1;
+	tdeg2=0; 
+	order_=order;
+	return;
+      }
+#endif
       longlong * ptr_ = (longlong *) tab;
       ptr_[2]=ptr_[1]=ptr_[0]=0;
       short * ptr=tab;
@@ -480,7 +574,11 @@ namespace giac {
       // tab[GROEBNER_VARS]=order;
 #if GROEBNER_VARS==15
       if (order==_3VAR_ORDER){
+#ifdef GIAC_64VARS
+	ptr[0]=2*(lm[0]+lm[1]+lm[2]);
+#else
 	ptr[0]=lm[0]+lm[1]+lm[2];
+#endif
 	ptr[1]=lm[2];
 	ptr[2]=lm[1];
 	ptr[3]=lm[0];
@@ -495,7 +593,11 @@ namespace giac {
 	return;
       }
       if (order==_7VAR_ORDER){
+#ifdef GIAC_64VARS
+	ptr[0]=2*(lm[0]+lm[1]+lm[2]+lm[3]+lm[4]+lm[5]+lm[6]);
+#else
 	ptr[0]=lm[0]+lm[1]+lm[2]+lm[3]+lm[4]+lm[5]+lm[6];
+#endif
 	ptr[1]=lm[6];
 	ptr[2]=lm[5];
 	ptr[3]=lm[4];
@@ -514,7 +616,11 @@ namespace giac {
 	return;
       }
       if (order==_11VAR_ORDER){
+#ifdef GIAC_64VARS
+	ptr[0]=2*(lm[0]+lm[1]+lm[2]+lm[3]+lm[4]+lm[5]+lm[6]+lm[7]+lm[8]+lm[9]+lm[10]);
+#else
 	ptr[0]=lm[0]+lm[1]+lm[2]+lm[3]+lm[4]+lm[5]+lm[6]+lm[7]+lm[8]+lm[9]+lm[10];
+#endif
 	ptr[1]=lm[10];
 	ptr[2]=lm[9];
 	ptr[3]=lm[8];
@@ -553,6 +659,9 @@ namespace giac {
 #ifdef GBASIS_SWAP
       swap_indices(tab);
 #endif
+#ifdef GIAC_64VARS
+      *tab *=2;
+#endif
     }
   };
 
@@ -561,6 +670,10 @@ namespace giac {
 #ifdef NSPIRE
   template<class T>
   nio::ios_base<T> & operator << (nio::ios_base<T> & os,const tdeg_t & x){
+#ifdef GIAC_64VARS
+    if (x.tab[0]%2)
+      return os << *x.i();
+#endif    
     os << "[";
     for (unsigned i=0; i<=GROEBNER_VARS;++i){
       os << x.tab[i] << ",";
@@ -569,6 +682,10 @@ namespace giac {
   }
 #else
   ostream & operator << (ostream & os,const tdeg_t & x){
+#ifdef GIAC_64VARS
+    if (x.tab[0]%2)
+      return os << *x.i();
+#endif    
     os << "[";
     for (unsigned i=0; i<=GROEBNER_VARS;++i){
       os << x.tab[i] << ",";
@@ -576,37 +693,17 @@ namespace giac {
     return os << "]";
   }
 #endif
-  inline void add(const tdeg_t & x,const tdeg_t & y,tdeg_t & res,int dim){
-#if 1
-    ulonglong *xtab=(ulonglong *)&x,*ytab=(ulonglong *)&y,*ztab=(ulonglong *)&res;
-    ztab[0]=xtab[0]+ytab[0];
-    ztab[1]=xtab[1]+ytab[1];
-    ztab[2]=xtab[2]+ytab[2];
-#if GROEBNER_VARS>11
-    ztab[3]=xtab[3]+ytab[3];
-#endif
-#else
-    for (unsigned i=0;i<=dim;++i)
-      res.tab[i]=x.tab[i]+y.tab[i];
-#endif
-  }
-  inline tdeg_t operator + (const tdeg_t & x,const tdeg_t & y){
-    tdeg_t res;
-#if 1
-    ulonglong *xtab=(ulonglong *)&x,*ytab=(ulonglong *)&y,*ztab=(ulonglong *)&res;
-    ztab[0]=xtab[0]+ytab[0];
-    ztab[1]=xtab[1]+ytab[1];
-    ztab[2]=xtab[2]+ytab[2];
-#if GROEBNER_VARS>11
-    ztab[3]=xtab[3]+ytab[3];
-#endif
-#else
-    for (unsigned i=0;i<=GROEBNER_VARS;++i)
-      res.tab[i]=x.tab[i]+y.tab[i];
-#endif
-    return res;
-  }
   inline tdeg_t & operator += (tdeg_t & x,const tdeg_t & y){ 
+#ifdef GIAC_64VARS
+    if (x.tab[0]%2){
+      if (!y.tab[0]%2)
+	COUT << "erreur" << endl;
+      *x.i() = *x.i()+*y.i();
+      x.tdeg += 2*(y.tdeg/2);
+      x.tdeg2 += y.tdeg2;
+      return x;
+    }
+#endif    
 #if 1
     ulonglong *xtab=(ulonglong *)&x,*ytab=(ulonglong *)&y;
     xtab[0]+=ytab[0];
@@ -621,7 +718,69 @@ namespace giac {
 #endif
     return x;  
   }
+  inline tdeg_t operator + (const tdeg_t & x,const tdeg_t & y){
+#ifdef GIAC_64VARS
+    if (x.tab[0]%2){
+      if (!y.tab[0]%2)
+	COUT << "erreur" << endl;
+      tdeg_t res(*x.i()+*y.i(),x.order_);
+      return res;
+    }
+#endif    
+    tdeg_t res(x);
+    return res += y;
+#if 1
+    ulonglong *xtab=(ulonglong *)&x,*ytab=(ulonglong *)&y,*ztab=(ulonglong *)&res;
+    ztab[0]=xtab[0]+ytab[0];
+    ztab[1]=xtab[1]+ytab[1];
+    ztab[2]=xtab[2]+ytab[2];
+#if GROEBNER_VARS>11
+    ztab[3]=xtab[3]+ytab[3];
+#endif
+#else
+    for (unsigned i=0;i<=GROEBNER_VARS;++i)
+      res.tab[i]=x.tab[i]+y.tab[i];
+#endif
+    return res;
+  }
+  inline void add(const tdeg_t & x,const tdeg_t & y,tdeg_t & res,int dim){
+#ifdef GIAC_64VARS
+    if (x.tab[0]%2){
+      if (!y.tab[0]%2)
+	COUT << "erreur" << endl;
+      res=tdeg_t(*x.i()+*y.i(),x.order_);
+      return;
+    }
+#endif    
+#ifdef GIAC_64VARS
+    if (x.tab[0]%2){
+      res = x;
+      res += y;
+      return;
+    }
+#endif    
+#if 1
+    ulonglong *xtab=(ulonglong *)&x,*ytab=(ulonglong *)&y,*ztab=(ulonglong *)&res;
+    ztab[0]=xtab[0]+ytab[0];
+    ztab[1]=xtab[1]+ytab[1];
+    ztab[2]=xtab[2]+ytab[2];
+#if GROEBNER_VARS>11
+    ztab[3]=xtab[3]+ytab[3];
+#endif
+#else
+    for (unsigned i=0;i<=dim;++i)
+      res.tab[i]=x.tab[i]+y.tab[i];
+#endif
+  }
   inline tdeg_t operator - (const tdeg_t & x,const tdeg_t & y){ 
+#ifdef GIAC_64VARS
+    if (x.tab[0]%2){
+      if (!y.tab[0]%2)
+	COUT << "erreur" << endl;
+      tdeg_t res1(*x.i()-*y.i(),x.order_);
+      return res1;
+    }
+#endif    
     tdeg_t res;
 #if 1
     ulonglong *xtab=(ulonglong *)&x,*ytab=(ulonglong *)&y,*ztab=(ulonglong *)&res;
@@ -638,6 +797,10 @@ namespace giac {
     return res;
   }
   inline bool operator == (const tdeg_t & x,const tdeg_t & y){ 
+#ifdef GIAC_64VARS
+    if (x.tab[0]%2)
+      return x.tdeg==y.tdeg && *x.i()==*y.i();
+#endif    
     return  ((longlong *) x.tab)[0] == ((longlong *) y.tab)[0] && 
       ((longlong *) x.tab)[1] == ((longlong *) y.tab)[1] &&
       ((longlong *) x.tab)[2] == ((longlong *) y.tab)[2] 
@@ -899,6 +1062,20 @@ namespace giac {
   }
 
   inline bool tdeg_t_greater (const tdeg_t & x,const tdeg_t & y,short order){
+#ifdef GIAC_64VARS
+    if (x.tab[0]%2){
+      if (order==_3VAR_ORDER || order>=_7VAR_ORDER){
+	if (x.tdeg!=y.tdeg)
+	  return x.tdeg>y.tdeg;
+	return i_nvar_is_greater(*x.i(),*y.i(),order,true);
+      }
+      if (order==_REVLEX_ORDER)
+	return i_total_revlex_is_greater(*x.i(),*y.i());
+      if (order==_TDEG_ORDER && x.tdeg!=y.tdeg) 
+	return x.tdeg>y.tdeg;
+      return i_lex_is_greater(*x.i(),*y.i());
+    }
+#endif
 #if GROEBNER_VARS==15
     if (order==_3VAR_ORDER)
       return tdeg_t_3var_greater(x,y);
@@ -916,6 +1093,10 @@ namespace giac {
   }
 
   inline bool tdeg_t_all_greater(const tdeg_t & x,const tdeg_t & y,short order){
+#ifdef GIAC_64VARS
+    if (x.tab[0]%2)
+      return *x.i()>=*y.i();
+#endif
     ulonglong *xtab=(ulonglong *)&x,*ytab=(ulonglong *)&y;
     if ((xtab[0]-ytab[0]) & 0x8000800080008000ULL)
       return false;
@@ -931,6 +1112,16 @@ namespace giac {
   }
 
   void index_lcm(const tdeg_t & x,const tdeg_t & y,tdeg_t & z,short order){
+#ifdef GIAC_64VARS
+    if (x.tdeg%2){
+      if (!y.tab[0]%2)
+	COUT << "erreur" << endl;
+      index_t res;
+      index_lcm(*x.i(),*y.i(),res);
+      z=tdeg_t(res,order);
+      return;
+    }
+#endif
     int t=0;
     const short * xtab=&x.tab[1],*ytab=&y.tab[1];
     short *ztab=&z.tab[1];
@@ -942,7 +1133,11 @@ namespace giac {
     ++xtab; ++ytab; ++ztab;
 #if GROEBNER_VARS==15
     if (order==_3VAR_ORDER){
+#ifdef GIAC_64VARS
+      z.tab[0]=2*t;
+#else
       z.tab[0]=t;
+#endif
       t=0;
       ++xtab;++ytab;++ztab;
       t += (*ztab=(*xtab>*ytab)?*xtab:*ytab); // 5
@@ -980,7 +1175,11 @@ namespace giac {
     ++xtab; ++ytab; ++ztab;
 #if GROEBNER_VARS==15
     if (order==_7VAR_ORDER){
+#ifdef GIAC_64VARS
+      z.tab[0]=2*t;
+#else
       z.tab[0]=t;
+#endif
       t=0;
       ++xtab;++ytab;++ztab;
       t += (*ztab=(*xtab>*ytab)?*xtab:*ytab); // 9
@@ -1011,7 +1210,11 @@ namespace giac {
     ++xtab; ++ytab; ++ztab;
 #if GROEBNER_VARS==15
     if (order==_11VAR_ORDER){
+#ifdef GIAC_64VARS
+      z.tab[0]=2*t;
+#else
       z.tab[0]=t;
+#endif
       t=0;
       ++xtab; ++ytab; ++ztab;
       t += (*ztab=(*xtab>*ytab)?*xtab:*ytab); // 13
@@ -1031,13 +1234,29 @@ namespace giac {
     ++xtab; ++ytab; ++ztab;
     t += (*ztab=(*xtab>*ytab)?*xtab:*ytab); // 15
 #endif
-    if (order==_REVLEX_ORDER || order==_TDEG_ORDER)
+    if (order==_REVLEX_ORDER || order==_TDEG_ORDER){
+#ifdef GIAC_64VARS
+      z.tab[0]=2*t;
+#else
       z.tab[0]=t;
-    else
-      t += (z.tab[0]=(x.tab[0]>y.tab[0])?x.tab[0]:y.tab[0]);
+#endif
+    }
+    else {
+#ifdef GIAC_64VARS
+      z.tab[0]=2*((x.tab[0]>y.tab[0])?x.tab[0]:y.tab[0]);
+#else
+      z.tab[0]=(x.tab[0]>y.tab[0])?x.tab[0]:y.tab[0];
+#endif
+    }
   }
 
   void get_index(const tdeg_t & x_,index_t & idx,int order,int dim){
+#ifdef GIAC_64VARS
+    if (x_.tab[0]%2){
+      idx=x_.i()->iref();
+      return;
+    }
+#endif
     idx.resize(dim);
 #ifdef GBASIS_SWAP    
     tdeg_t x(x_);
@@ -1084,10 +1303,17 @@ namespace giac {
     else {
       for (int i=0;i<dim;++ptr,++i)
 	idx[i]=*ptr;
+#ifdef GIAC_64VARS
+      idx[0]/=2;
+#endif
     }
   }
   
   bool disjoint(const tdeg_t & a,const tdeg_t & b,short order,short dim){
+#ifdef GIAC_64VARS
+    if (a.tab[0]%2)
+      return disjoint(*a.i(),*b.i());
+#endif
 #if GROEBNER_VARS==15
     if (order==_3VAR_ORDER){
       if ( (a.tab[1] && b.tab[1]) ||
@@ -1184,7 +1410,11 @@ namespace giac {
 	if (p.is_strictly_greater==i_total_lex_is_strictly_greater)
 	  order=_TDEG_ORDER;
       }
-      if (p.dim>GROEBNER_VARS)
+      if (
+#ifdef GIAC_64VARS
+	  0 &&
+#endif
+	  p.dim>GROEBNER_VARS)
 	CERR << "Number of variables is too large to be handled by giac";
       else {
 	coord.reserve(p.coord.size());
@@ -3162,7 +3392,7 @@ namespace giac {
     vector<tdeg_t> tmp(tmpsize);
     for (unsigned i=0;i<tmpsize;++i){
       if (res[G[i]].coord.empty()){
-	tmp[i].tab[0]=-1;
+	tmp[i].tab[0]=-2;
       }
       else
 	index_lcm(h0,res[G[i]].coord.front().u,tmp[i],order); 
@@ -3175,7 +3405,7 @@ namespace giac {
     vector<tdeg_t> tmp(tmpsize);
     for (unsigned i=0;i<tmpsize;++i){
       if (res[i].coord.empty()){
-	tmp[i].tab[0]=-1;
+	tmp[i].tab[0]=-2;
       }
       else
 	index_lcm(h0,res[i].coord.front().u,tmp[i],order); 
@@ -3197,7 +3427,7 @@ namespace giac {
 #endif
       tdeg_t * tmp2=&tmp[0],*tmpend=tmp2+tmpsize;
       for (;tmp2!=tmp1;++tmp2){
-	if (tmp2->tab[0]==-1)
+	if (tmp2->tab[0]<0)
 	  continue;
 	if (tdeg_t_all_greater(*tmp1,*tmp2,order))
 	  break; // found another pair, keep the smallest, or the first if equal
@@ -3205,7 +3435,7 @@ namespace giac {
       if (tmp2!=tmp1)
 	continue;
       for (++tmp2;tmp2<tmpend;++tmp2){
-	if (tmp2->tab[0]==-1)
+	if (tmp2->tab[0]<0)
 	  continue;
 	if (tdeg_t_all_greater(*tmp1,*tmp2,order) && *tmp1!=*tmp2){
 	  break; 
@@ -3513,7 +3743,7 @@ namespace giac {
     tdeg_t u;
     heap_tt(bool l,unsigned a,unsigned b,tdeg_t t):left(l),f4buchbergervpos(a),polymodpos(b),u(t){};
     heap_tt(unsigned a,unsigned b,tdeg_t t):left(true),f4buchbergervpos(a),polymodpos(b),u(t){};
-    heap_tt():left(true),f4buchbergervpos(0),polymodpos(0),u(0){};
+    heap_tt():left(true),f4buchbergervpos(0),polymodpos(0),u(){};
   };
 
   struct heap_tt_compare {
@@ -3629,7 +3859,7 @@ namespace giac {
       const polymod & q=res[B[i].second];
       if (debug_infolevel>2)
 	CERR << "leftright " << p << "," << q << endl;
-      tdeg_t l;
+      tdeg_t l(p.coord.front().u);
       index_lcm(p.coord.front().u,q.coord.front().u,l,p.order);
       leftshift[i]=l-p.coord.front().u;
       rightshift[i]=l-q.coord.front().u;
@@ -6572,7 +6802,7 @@ namespace giac {
 	CERR << CLOCK() << " begin new iteration mod, number of pairs: " << B.size() << ", base size: " << G.size() << endl;
       if (1){
 	// mem clear: remove res[i] if i is not in G nor in B
-	vector<bool> clean(G.back(),true);
+	vector<bool> clean(G.back()+1,true);
 	for (unsigned i=0;i<G.size();++i){
 	  clean[G[i]]=false;
 	}
@@ -8162,8 +8392,8 @@ namespace giac {
     vector<zmodint> coord;
     const vector<tdeg_t> * expo;
     tdeg_t ldeg;
-    zpolymod():order(0),dim(0),expo(0),ldeg(0) {}
-    zpolymod(int o,int d): order(o),dim(d),expo(0),ldeg(0) {}
+    zpolymod():order(0),dim(0),expo(0),ldeg() {}
+    zpolymod(int o,int d): order(o),dim(d),expo(0),ldeg() {}
     zpolymod(int o,int d,const tdeg_t & l): order(o),dim(d),expo(0),ldeg(l) {}
     zpolymod(int o,int d,const vector<tdeg_t> * e,const tdeg_t & l): order(o),dim(d),expo(e),ldeg(l) {}
     void dbgprint() const;
