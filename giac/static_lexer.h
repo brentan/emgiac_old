@@ -660,7 +660,11 @@
 {"ggb_ang",13,9,0,*((ulonglong *) at_ggb_ang)},
 {"giac",13,9,0,*((ulonglong *) at_giac)},
 {"goto",13,77,0,*((ulonglong *) at_goto)},
-{"grad",13,9,0,*((ulonglong *) at_grad)| 1},
+#ifdef SWIFT_CALCS_OPTIONS
+	{"gradient",13,9,0,*((ulonglong *) at_grad)| 1}, // Avoid conflict with _grad unit
+#else
+	{"grad",13,9,0,*((ulonglong *) at_grad)| 1},
+#endif
 {"gramschmidt",13,9,0,*((ulonglong *) at_gramschmidt)},
 {"graph2tex",13,9,0,*((ulonglong *) at_graph2tex)},
 {"graph3d2tex",13,9,0,*((ulonglong *) at_graph3d2tex)},
