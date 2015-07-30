@@ -11398,7 +11398,11 @@ namespace giac {
     case _SET__VECT:
       if (xcas_mode(contextptr)>0 || calc_mode(contextptr)==1){
 	if (tex)
-	  s+="\\{";
+        #ifdef SWIFT_CALCS_OPTIONS
+          s+="\\left\\{";
+        #else
+          s+="\\{";
+        #endif
 	else
 	  s="{";
       }
@@ -11457,7 +11461,11 @@ namespace giac {
       break;
     case _LIST__VECT:
       if (tex)
-	s="\\{";
+        #ifdef SWIFT_CALCS_OPTIONS
+	        s="\\left\\{";
+        #else
+          s="\\{";
+        #endif
       else
 	s=abs_calc_mode(contextptr)==38?"{":"list[";
       break;
@@ -11507,7 +11515,11 @@ namespace giac {
     case _SET__VECT:
       if (xcas_mode(contextptr)>0 || calc_mode(contextptr)==1){
   if (tex)
-    return "\\}";
+        #ifdef SWIFT_CALCS_OPTIONS
+          return "\\right\\}";
+        #else
+          return "\\}";
+        #endif
   else
     return "}";
       }
@@ -11519,7 +11531,11 @@ namespace giac {
       return " >>";
     case _LIST__VECT:
       if (tex)
-  return "\\}";
+        #ifdef SWIFT_CALCS_OPTIONS
+          return "\\right\\}";
+        #else
+          return "\\}";
+        #endif
       else
   return abs_calc_mode(contextptr)==38?"}":"]";
     case _GGB__VECT:
