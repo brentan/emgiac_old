@@ -8304,7 +8304,7 @@ namespace giac {
       res[0]=inv(res[0],contextptr);
       int s=int(res.size());
       for (int i=1;i<s;++i)
-	res[i]=-res[i];
+	      res[i]=-res[i];
       return res;
     }
     if (g._SYMBptr->sommet==at_pow){
@@ -8322,21 +8322,41 @@ namespace giac {
     if (g._SYMBptr->sommet==at_prod){
       gen & f=g._SYMBptr->feuille;
       if (f.type!=_VECT)
-	return mksa_convert(f,contextptr);
+	      return mksa_convert(f,contextptr);
       vecteur & v=*f._VECTptr;
       vecteur res(makevecteur(plus_one));
       const_iterateur it=v.begin(),itend=v.end();
       for (;it!=itend;++it){
-	vecteur tmp(mksa_convert(*it,contextptr));
-	res[0]=res[0]*tmp[0];
-	iterateur it=res.begin()+1,itend=res.end(),jt=tmp.begin()+1,jtend=tmp.end();
-	for (;it!=itend && jt!=jtend;++it,++jt)
-	  *it=*it+*jt;
-	for (;jt!=jtend;++jt)
-	  res.push_back(*jt);
+      	vecteur tmp(mksa_convert(*it,contextptr));
+      	res[0]=res[0]*tmp[0];
+      	iterateur it=res.begin()+1,itend=res.end(),jt=tmp.begin()+1,jtend=tmp.end();
+      	for (;it!=itend && jt!=jtend;++it,++jt)
+      	  *it=*it+*jt;
+      	for (;jt!=jtend;++jt)
+      	  res.push_back(*jt);
       }
       return res;
     }
+    #ifdef SWIFT_CALCS_OPTIONS
+      if (g._SYMBptr->sommet==at_plus) {
+        gen & f=g._SYMBptr->feuille;
+        if (f.type!=_VECT)
+          return mksa_convert(f,contextptr);
+        vecteur res(makevecteur(zero));
+        for (unsigned i=0;i<f._VECTptr->size();++i){
+          vecteur tmp(mksa_convert((*f._VECTptr)[i],contextptr));
+          res[0]=res[0] + tmp[0];
+        }
+        return res;
+      }
+      if (g._SYMBptr->sommet==at_neg) {
+        vecteur res(mksa_convert(g._SYMBptr->feuille,contextptr));
+        int s=int(res.size());
+        for (int i=0;i<s;++i)
+          res[i]=-res[i];
+        return res;
+      }
+    #endif
     return makevecteur(g);
   }
 
@@ -8350,6 +8370,155 @@ namespace giac {
       return g;
     return symbolic(at_pow,gen(makevecteur(g,exponent),_SEQ__VECT));
   }
+  #ifdef SWIFT_CALCS_OPTIONS
+    // Mode switch: all units will be converted to mksa and have the unit portion dropped
+    gen mksareduce_mode(const gen & g,GIAC_CONTEXT){
+      if ( g.type==_STRNG &&  g.subtype==-1) return  g;
+      gen args(g);
+      if (g.type==_DOUBLE_)
+        args=int(g._DOUBLE_val);    
+      if (args.type!=_INT_)
+        return mksareduce_mode(contextptr);
+      mksareduce_mode((args.val)!=0,contextptr);
+      return args;
+    }
+    static const char _mksareduce_mode_s []="mksareduce_mode";
+    static define_unary_function_eval (__mksareduce_mode,&mksareduce_mode,_mksareduce_mode_s);
+    define_unary_function_ptr5( at_mksareduce_mode ,alias_at_mksareduce_mode ,&__mksareduce_mode,0,true);
+
+    // Mode switch: all units will be converted to mksa and have trailing variables added that represent mksa units
+    gen mksavariable_mode(const gen & g,GIAC_CONTEXT){
+      if ( g.type==_STRNG &&  g.subtype==-1) return  g;
+      gen args(g);
+      if (g.type==_DOUBLE_)
+        args=int(g._DOUBLE_val);    
+      if (args.type!=_INT_)
+        return mksavariable_mode(contextptr);
+      mksavariable_mode((args.val)!=0,contextptr);
+      return args;
+    }
+    static const char _mksavariable_mode_s []="mksavariable_mode";
+    static define_unary_function_eval (__mksavariable_mode,&mksavariable_mode,_mksavariable_mode_s);
+    define_unary_function_ptr5( at_mksavariable_mode ,alias_at_mksavariable_mode ,&__mksavariable_mode,0,true);
+
+    // Like unitpow, but returns the actual exponent
+    double unitpow_double(const gen & g,const gen & exponent_){
+      gen exponent=evalf_double(exponent_,1,context0);
+      if (exponent.type!=_DOUBLE_)
+        return 0;
+      if (std::abs(exponent._DOUBLE_val)<1e-6)
+        return 0;
+      return exponent._DOUBLE_val;
+    }
+
+    // Function that takes a unit and returns an expression with variables in mksa space (u__[UNIT]) with the correct powers.  Example: 1_in/1_h -> u__m^1 * u__s^-1
+    gen mksa_to_var(const gen & g,GIAC_CONTEXT){
+      if (g.type==_VECT)
+        return apply(g,mksa_to_var,contextptr);
+      vecteur v(mksa_convert(g,contextptr));
+      if (is_undef(v)) return v;
+      gen res1=v[0];
+      gen res=plus_one;
+      int s=int(v.size());
+      int length = 0;
+      double exponent;
+      char outstr[256];
+      length += sprintf(outstr + length, "1");
+      if (s>2) {
+        exponent = unitpow_double(_kg_unit,v[2]);
+        if(exponent != 0)
+          length += sprintf(outstr + length, "*u__kg^(%f)", exponent);
+      }
+      if (s>1) {
+        exponent = unitpow_double(_m_unit,v[1]);
+        if(exponent != 0)
+          length += sprintf(outstr + length, "*u__m^(%f)", exponent);
+      }
+      if (s>3) {
+        exponent = unitpow_double(_s_unit,v[3]);
+        if(exponent != 0)
+          length += sprintf(outstr + length, "*u__s^(%f)", exponent);
+      }
+      if (s>4) {
+        exponent = unitpow_double(_A_unit,v[4]);
+        if(exponent != 0)
+          length += sprintf(outstr + length, "*u__A^(%f)", exponent);
+      }
+      if (s>5) {
+        exponent = unitpow_double(_K_unit,v[5]);
+        if(exponent != 0)
+          length += sprintf(outstr + length, "*u__K^(%f)", exponent);
+      }
+      if (s>6) {
+        exponent = unitpow_double(_mol_unit,v[6]);
+        if(exponent != 0)
+          length += sprintf(outstr + length, "*u__mol^(%f)", exponent);
+      }
+      if (s>7) {
+        exponent = unitpow_double(_cd_unit,v[7]);
+        if(exponent != 0)
+          length += sprintf(outstr + length, "*u__cd^(%f)", exponent);
+      }
+      if (s>8) {
+        exponent = unitpow_double(_E_unit,v[8]);
+        if(exponent != 0)
+          length += sprintf(outstr + length, "*u__E^(%f)", exponent);
+      }
+      return symb_prod(mksa_remove_base(g,contextptr), gen(outstr,contextptr));
+    }
+    static const char _mksa_var_s []="mksa_var";
+    static define_unary_function_eval (__mksa_var,&mksa_to_var,_mksa_var_s);
+    define_unary_function_ptr5( at_mksa_var ,alias_at_mksa_var,&__mksa_var,0,true);
+    
+    // Function returns the base of the units in mksa space.  Example 1_in -> 1_m, 23_h -> 1_s
+    gen mksa_reduce_base(const gen & g,GIAC_CONTEXT){
+      if (g.type==_VECT) 
+        return apply(g,mksa_reduce_base,contextptr);
+      
+      vecteur v(mksa_convert(g,contextptr));
+      if (is_undef(v)) return v;
+      gen res1=v[0];
+      gen res=plus_one;
+      int s=int(v.size());
+      if (s>2)
+        res = res *unitpow(_kg_unit,v[2]);
+      if (s>1)
+        res = res *unitpow(_m_unit,v[1]);
+      if (s>3)
+        res = res *unitpow(_s_unit,v[3]);
+      if (s>4)
+        res = res * unitpow(_A_unit,v[4]);
+      if (s>5)
+        res = res * unitpow(_K_unit,v[5]);
+      if (s>6)
+        res = res * unitpow(_mol_unit,v[6]);
+      if (s>7)
+        res = res * unitpow(_cd_unit,v[7]);
+      if (s>8)
+        res = res * unitpow(_E_unit,v[8]);
+      if (is_one(res))
+        return plus_one;
+      else
+        return symbolic(at_unit,makevecteur(plus_one,res));
+    }
+    static const char _mksa_base_s []="mksa_base";
+    static define_unary_function_eval (__mksa_base,&mksa_reduce_base,_mksa_base_s);
+    define_unary_function_ptr5( at_mksa_base ,alias_at_mksa_base,&__mksa_base,0,true);
+    
+    // Function returns the value of the unit in mksa space, with unit removed.  1_h -> 3600, 1_in -> 0.0254
+    gen mksa_remove_base(const gen & g,GIAC_CONTEXT){
+      if (g.type==_VECT) 
+        return apply(g,mksa_remove_base,contextptr);
+      vecteur v(mksa_convert(g,contextptr));
+      if (is_undef(v)) return v;
+      gen res1=v[0];
+      return res1;
+    }
+    static const char _mksa_remove_s []="mksa_remove";
+    static define_unary_function_eval (__mksa_remove,&mksa_remove_base,_mksa_remove_s);
+    define_unary_function_ptr5( at_mksa_remove ,alias_at_mksa_remove,&__mksa_remove,0,true);
+
+  #endif
   gen mksa_reduce(const gen & g,GIAC_CONTEXT){
     if (g.type==_VECT)
       return apply(g,mksa_reduce,contextptr);
@@ -8486,6 +8655,12 @@ namespace giac {
     for (;it!=itend;++it){
       find_or_make_symbol("_"+it->print(contextptr),*it,0,false,contextptr);
     }
+    #ifdef SWIFT_CALCS_OPTIONS
+    if(mksareduce_mode(contextptr))
+      return mksa_remove_base(symbolic(at_unit,makevecteur(a,subst(b,v,w,true,contextptr))), contextptr);
+    if(mksavariable_mode(contextptr))
+      return mksa_to_var(symbolic(at_unit,makevecteur(a,subst(b,v,w,true,contextptr))), contextptr);
+    #endif
     return symbolic(at_unit,makevecteur(a,subst(b,v,w,true,contextptr)));
   }
   string printasunit(const gen & feuille,const char * sommetstr,GIAC_CONTEXT){
@@ -8517,6 +8692,12 @@ namespace giac {
   static gen unit(const gen & g,GIAC_CONTEXT){
     if (g.type!=_VECT || g._VECTptr->size()!=2)
       return gensizeerr(contextptr);
+    #ifdef SWIFT_CALCS_OPTIONS
+      if(mksareduce_mode(contextptr))
+        return mksa_remove_base(symbolic(at_unit,g), contextptr);
+      if(mksavariable_mode(contextptr))
+        return mksa_to_var(symbolic(at_unit,g), contextptr);
+    #endif
     return symbolic(at_unit,g);
   }
   static const char _unit_s []="_";

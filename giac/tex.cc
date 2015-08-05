@@ -1329,28 +1329,37 @@ namespace giac {
       return res+"^{"+gen2tex(v.back(),contextptr)+'}';
     }
     #ifndef SWIFT_CALCS_OPTIONS
-    s = opstring +"\\left(";
-    for (int i=0;;++i){
-      s += gen2tex((*(feu._VECTptr))[i],contextptr);
-      if (i==l-1)
-	return s+"\\right)";
-      s += ',';
-    }
-    #else
-
-      s = opstring +"\\Unit{";
-      s += gen2tex((*(feu._VECTptr))[0],contextptr);
-      s += "}{";
-      if(l == 1)
-        return s+"}";
-      giac::unit_mode = true;
-      for (int i=1;;++i){
+      s = opstring +"\\left(";
+      for (int i=0;;++i){
         s += gen2tex((*(feu._VECTptr))[i],contextptr);
-        if (i==l-1) {
-          giac::unit_mode = false;
-          return s+"}";
-        }
+        if (i==l-1)
+  	     return s+"\\right)";
         s += ',';
+      }
+    #else
+      if((opstring.length() == 0) && (l == 2)) {
+        s =  "\\Unit{";
+        s += gen2tex((*(feu._VECTptr))[0],contextptr);
+        s += "}{";
+        if(l == 1)
+          return s+"}";
+        giac::unit_mode = true;
+        for (int i=1;;++i){
+          s += gen2tex((*(feu._VECTptr))[i],contextptr);
+          if (i==l-1) {
+            giac::unit_mode = false;
+            return s+"}";
+          }
+          s += ',';
+        }
+      } else {
+        s = opstring +"\\left(";
+        for (int i=0;;++i){
+          s += gen2tex((*(feu._VECTptr))[i],contextptr);
+          if (i==l-1)
+           return s+"\\right)";
+          s += ',';
+        }
       }
     #endif
   }

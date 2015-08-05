@@ -793,6 +793,13 @@
 *((size_t *) at_min),
 *((size_t *) at_mkisom),
 *((size_t *) at_mksa),
+#ifdef SWIFT_CALCS_OPTIONS
+	*((size_t *) at_mksa_base),
+	*((size_t *) at_mksa_remove),
+	*((size_t *) at_mksa_var),
+	*((size_t *) at_mksareduce_mode),
+	*((size_t *) at_mksavariable_mode),
+#endif
 *((size_t *) at_modgcd),
 *((size_t *) at_modgcd_cachesize),
 *((size_t *) at_modp),

@@ -686,7 +686,10 @@ namespace giac {
     #ifndef SWIFT_CALCS_OPTIONS
       return "\\frac{\\partial \\left("+gen2tex(feuille._VECTptr->front(),contextptr)+"\\right)}{\\partial "+gen2tex(feuille._VECTptr->back(),contextptr)+"}";
     #else
-      return "\\pderivative_{" + gen2tex(feuille._VECTptr->back(),contextptr) + "}\\left({" + gen2tex(feuille._VECTptr->front(),contextptr) + "}\\right)";
+      if ((feuille._VECTptr->size()==2) || (gen2tex(feuille._VECTptr->back(),contextptr).compare("1") == 0))
+        return "\\pderivative_{" + gen2tex(feuille._VECTptr->back(),contextptr) + "}\\left({" + gen2tex(feuille._VECTptr->front(),contextptr) + "}\\right)";
+      else 
+        return "\\pderivatived_{" + gen2tex(feuille._VECTptr->back(),contextptr) + "}_{" + gen2tex((*feuille._VECTptr)[1],contextptr) + "}\\left({" + gen2tex(feuille._VECTptr->front(),contextptr) + "}\\right)";
     #endif
   }
   static define_unary_function_eval4_quoted (__derive,&step_derive,_derive_s,printasderive,texprintasderive);

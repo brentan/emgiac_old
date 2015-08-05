@@ -902,6 +902,11 @@ extern const unary_function_ptr * const  at_midpoint;
 extern const unary_function_ptr * const  at_min;
 extern const unary_function_ptr * const  at_mkisom;
 extern const unary_function_ptr * const  at_mksa;
+#ifdef SWIFT_CALCS_OPTIONS
+	extern const unary_function_ptr * const  at_mksa_base;
+	extern const unary_function_ptr * const  at_mksa_remove;
+	extern const unary_function_ptr * const  at_mksa_var;
+#endif
 extern const unary_function_ptr * const  at_modgcd;
 extern const unary_function_ptr * const  at_modgcd_cachesize;
 extern const unary_function_ptr * const  at_modp;

@@ -301,6 +301,13 @@ namespace giac {
 
   gen _angle_radian(const gen & args,GIAC_CONTEXT);
   extern const unary_function_ptr * const  at_angle_radian;
+
+  #ifdef SWIFT_CALCS_OPTIONS
+    gen _mksareduce_mode(const gen & args,GIAC_CONTEXT);
+    extern const unary_function_ptr * const  at_mksareduce_mode;
+    gen _mksavariable_mode(const gen & args,GIAC_CONTEXT);
+    extern const unary_function_ptr * const  at_mksavariable_mode;
+  #endif
  
   gen _epsilon(const gen & args,GIAC_CONTEXT);
   extern const unary_function_ptr * const  at_epsilon;
@@ -602,6 +609,11 @@ namespace giac {
   // Unit management
   gen unitpow(const gen & g,const gen & exponent);
   gen mksa_reduce(const gen & g,GIAC_CONTEXT);
+  #ifdef SWIFT_CALCS_OPTIONS
+    gen mksa_reduce_base(const gen & g,GIAC_CONTEXT);
+    gen mksa_remove_base(const gen & g,GIAC_CONTEXT);
+    gen mksa_to_var(const gen & g,GIAC_CONTEXT);
+  #endif
   gen chk_not_unit(const gen & g);
   gen find_or_make_symbol(const std::string & s,bool check38,GIAC_CONTEXT);
   std::map<const char *, const mksa_unit *,ltstr> & unit_conversion_map();

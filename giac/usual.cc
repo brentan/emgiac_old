@@ -4867,19 +4867,19 @@ namespace giac {
       return gensizeerr(contextptr);
     if (rcl_38){
       if (v.front().type==_IDNT){
-	gen value;
-	if (rcl_38(value,0,v.front()._IDNTptr->id_name,v.back(),false,contextptr)){
-	  return value;
-	}
+      	gen value;
+      	if (rcl_38(value,0,v.front()._IDNTptr->id_name,v.back(),false,contextptr)){
+      	  return value;
+      	}
       }
       if (v.front().is_symb_of_sommet(at_double_deux_points)){
-	gen & f=v.front()._SYMBptr->feuille;
-	if (f[0].type==_IDNT && f[1].type==_IDNT){
-	  gen value;
-	  if (rcl_38(value,f[0]._IDNTptr->id_name,f[1]._IDNTptr->id_name,v.back(),false,contextptr)){
-	    return value;
-	  }
-	}
+      	gen & f=v.front()._SYMBptr->feuille;
+      	if (f[0].type==_IDNT && f[1].type==_IDNT){
+      	  gen value;
+      	  if (rcl_38(value,f[0]._IDNTptr->id_name,f[1]._IDNTptr->id_name,v.back(),false,contextptr)){
+      	    return value;
+      	  }
+      	}
       }
     }
     gen a=v.front().eval(eval_level(contextptr),contextptr);
@@ -4887,9 +4887,9 @@ namespace giac {
     if (a.type==_MAP){
       gen_map::const_iterator it=a._MAPptr->find(b),itend=a._MAPptr->end();
       if (it!=itend)
-	return it->second;
+	      return it->second;
       // if (a.subtype==_SPARSE_MATRIX)
-	return 0;
+	    return 0;
       return symb_at(makevecteur(v.front(),b));
     }
     return a.operator_at(b,contextptr);

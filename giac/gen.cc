@@ -1685,8 +1685,8 @@ namespace giac {
     const_iterateur it=g._VECTptr->begin(),itend=g._VECTptr->end(),jt,jtend;
     if (subtype!=_SET__VECT && subtype!=_SEQ__VECT){
       for (;it!=itend;++it){
-	if (it->in_eval(level,evaled,contextptr))
-	  break;
+      	if (it->in_eval(level,evaled,contextptr)) 
+      	  break;
       }
       if (it==itend)
 	return false;
@@ -1851,7 +1851,7 @@ namespace giac {
     if (level==0)
       return *this;
     // return in_eval(level,res,contextptr)?res:*this;
-    if (in_eval(level,res,contextptr))
+    if (in_eval(level,res,contextptr)) 
       return res;
     else
       return *this;
@@ -2083,15 +2083,21 @@ namespace giac {
         }
       }
       std::string asm_code;
-      asm_code += "eval_method( ";
-      if(method_call[0] != '\'') asm_code += "'";
+      asm_code += "eval_method( ";  
+      size_t pos = 0;
+      while((pos = method_call.find("'", pos)) != std::string::npos) {
+        method_call.replace(pos, 1, "\\'");
+        pos += 2;
+      }
+      if(method_call[0] != '\'') asm_code += "'";  
       asm_code += method_call;
       if(method_call[method_call.length()-1] != '\'') asm_code += "'";
+      if((method_call.length() >= 2) && (method_call[method_call.length()-1] == '\'') && (method_call[method_call.length()-2] == '\\')) asm_code += "'"; 
       asm_code += " , '";
-      size_t pos;
+      pos = 0;
       while ((pos = all_inputs.find('\'', pos)) != std::string::npos) {
-           all_inputs.replace(pos, 1, " ");
-           pos += 1;
+           all_inputs.replace(pos, 1, "\\'");
+           pos += 2;
       }
       asm_code += all_inputs;
       asm_code += "' );";
@@ -2101,7 +2107,7 @@ namespace giac {
           evaled = gensizeerr(out.substr(7,string::npos));
         else
           evaled = gen(out, contextptr);
-      } else
+      } else 
   	    evaled=(*_SYMBptr->sommet.ptr())(evaled,contextptr); 
       #else
         evaled=(*_SYMBptr->sommet.ptr())(evaled,contextptr); 
@@ -2223,7 +2229,7 @@ namespace giac {
     if (level==0)
       return *this;
     gen evaled;
-    if (in_evalf(level,evaled,contextptr))
+    if (in_evalf(level,evaled,contextptr)) 
       return evaled;
     else
       return *this;
@@ -2344,9 +2350,8 @@ namespace giac {
       return false;
     }
     if (g.type==_FRAC){
-      if (is_cinteger(g._FRACptr->num) && is_cinteger(g._FRACptr->den)){
-	return g.in_evalf(1,res,contextptr);
-      }
+      if (is_cinteger(g._FRACptr->num) && is_cinteger(g._FRACptr->den))
+        return g.in_evalf(1,res,contextptr);
       gen num,den;
       if (has_evalf(g._FRACptr->num,num,level,contextptr) && has_evalf(g._FRACptr->den,den,level,contextptr)){
 	res=num/den;
@@ -8288,22 +8293,22 @@ namespace giac {
     if (i.type==_DOUBLE_){
       double id=i._DOUBLE_val;
       if (int(id)==id)
-	return (*this)[int(id)];
+	      return (*this)[int(id)];
     }
     if (i.type==_FLOAT_){
       giac_float id=i._FLOAT_val;
       if (giac_float(get_int(id))==id)
-	return (*this)[get_int(id)];
+	      return (*this)[get_int(id)];
     }
     if (i.type==_REAL){
       double id=i.evalf_double(1,contextptr)._DOUBLE_val;
       if (int(id)==id)
-	return (*this)[int(id)];
+	      return (*this)[int(id)];
     }
     if ((type==_STRNG) && (i.type==_INT_)){
       int s=int(_STRNGptr->size());
       if ( (i.val<s) && (i.val>=0))
-	return string2gen(string()+'"'+(*_STRNGptr)[i.val]+'"');
+	      return string2gen(string()+'"'+(*_STRNGptr)[i.val]+'"');
     }
     if (type==_IDNT)
       return new_ref_symbolic(symbolic(at_at,gen(makenewvecteur(*this,i),_SEQ__VECT)));
@@ -8312,16 +8317,16 @@ namespace giac {
     if (type==_MAP){
       gen_map::const_iterator it=_MAPptr->find(i),itend=_MAPptr->end();
       if (it!=itend)
-	return it->second;
+	      return it->second;
       if (subtype==_SPARSE_MATRIX)
-	return 0;
+	      return 0;
     }
     if (is_symb_of_sommet(at_at)){ // add i at the end of the index
       if (_SYMBptr->feuille.type==_VECT && _SYMBptr->feuille._VECTptr->size()==2){
-	gen operand=_SYMBptr->feuille._VECTptr->front();
-	vecteur indice=makevecteur(_SYMBptr->feuille._VECTptr->back());
-	indice.push_back(i);
-	return symb_at(makenewvecteur(operand,gen(indice,_SEQ__VECT)));
+      	gen operand=_SYMBptr->feuille._VECTptr->front();
+      	vecteur indice=makevecteur(_SYMBptr->feuille._VECTptr->back());
+      	indice.push_back(i);
+      	return symb_at(makenewvecteur(operand,gen(indice,_SEQ__VECT)));
       }
     }
     if (i.type==_DOUBLE_)
@@ -8330,58 +8335,120 @@ namespace giac {
       return (*this)[ get_int(i._FLOAT_val) ];
     if (i.type==_SYMB){
       if (i._SYMBptr->sommet==at_interval) {
-	gen i1=_ceil(i._SYMBptr->feuille._VECTptr->front(),contextptr);
-	gen i2=_floor(i._SYMBptr->feuille._VECTptr->back(),contextptr);
-	if (is_integral(i1) && is_integral(i2)){
-	  int debut=i1.val,fin=i2.val;
-	  debut=giacmax(debut,0);
-	  if (type==_STRNG)
-	    fin=giacmin(fin,int(_STRNGptr->size())-1);
-	  if (type==_VECT)
-	    fin=giacmin(fin,int(_VECTptr->size())-1);
-	  if (fin<debut)
-	    return (type==_STRNG)?string2gen("",false):gen(vecteur(0),subtype); // swap(debut,fin);
-	  if (type==_STRNG){
-	    return string2gen('"'+_STRNGptr->substr(debut,fin-debut+1)+'"');
-	  }
-	  if (type==_VECT){
-	    return gen(vecteur(_VECTptr->begin()+debut,_VECTptr->begin()+fin+1),subtype);
-	  }
-	}
+      	gen i1=_ceil(i._SYMBptr->feuille._VECTptr->front(),contextptr);
+     	  gen i2=_floor(i._SYMBptr->feuille._VECTptr->back(),contextptr);
+        
+        #ifdef SWIFT_CALCS_OPTIONS // Adds support for i__s and i__e keywords for use in intervals when accessing matrix/list contents.  i__s..3 is start to index 3.  2..i__e is index 2 until end.  etc
+          int debut, fin;
+          if(is_integral(i1)) 
+            debut = i1.val;
+          else if(gen2string(i._SYMBptr->feuille._VECTptr->front()).compare("i__s") == 0) // Test for special keyword i__s, which indicates 'start'
+            debut = 0;
+          if(is_integral(i2))
+            fin = i2.val;
+          else if(gen2string(i._SYMBptr->feuille._VECTptr->back()).compare("i__e") == 0) // Test for special keyword i__e, which indicates 'end'
+            fin = int(_VECTptr->size())-1;
+          debut=giacmax(debut,0);
+          if (type==_STRNG)
+            fin=giacmin(fin,int(_STRNGptr->size())-1);
+          if (type==_VECT)
+            fin=giacmin(fin,int(_VECTptr->size())-1);
+          if (fin<debut)
+            return (type==_STRNG)?string2gen("",false):gen(vecteur(0),subtype); // swap(debut,fin);
+          if (type==_STRNG){
+            return string2gen('"'+_STRNGptr->substr(debut,fin-debut+1)+'"');
+          }
+          if (type==_VECT){
+            return gen(vecteur(_VECTptr->begin()+debut,_VECTptr->begin()+fin+1),subtype);
+          }
+        #else
+          if (is_integral(i1) && is_integral(i2)){
+            int debut=i1.val,fin=i2.val;
+            debut=giacmax(debut,0);
+            if (type==_STRNG)
+              fin=giacmin(fin,int(_STRNGptr->size())-1);
+            if (type==_VECT)
+              fin=giacmin(fin,int(_VECTptr->size())-1);
+            if (fin<debut)
+              return (type==_STRNG)?string2gen("",false):gen(vecteur(0),subtype); // swap(debut,fin);
+            if (type==_STRNG){
+              return string2gen('"'+_STRNGptr->substr(debut,fin-debut+1)+'"');
+            }
+            if (type==_VECT){
+              return gen(vecteur(_VECTptr->begin()+debut,_VECTptr->begin()+fin+1),subtype);
+            }
+          }
+        #endif
       }
     }
     if (i.type==_VECT){
       const_iterateur it=i._VECTptr->begin(),itend=i._VECTptr->end();
       gen res (*this);
       for (;it!=itend;++it){
-	if (it->type==_VECT){
-	  vecteur tmp;
-	  const_iterateur jt=it->_VECTptr->begin(),jtend=it->_VECTptr->end();
-	  for (;jt!=jtend;++jt){
-	    tmp.push_back(res[*jt]);
-	  }
-	  return gen(tmp,it->subtype);
-	}
-	if ( (it->type==_SYMB) && (it->_SYMBptr->sommet==at_interval) && (it+1!=itend) ){
-	  // submatrix extraction
-	  if ((it->_SYMBptr->feuille._VECTptr->front().type==_INT_) && (it->_SYMBptr->feuille._VECTptr->back().type==_INT_) ){
-	    int debut=it->_SYMBptr->feuille._VECTptr->front().val,fin=it->_SYMBptr->feuille._VECTptr->back().val;
-	    if (fin<debut)
-	      swap(debut,fin);
-	    if (res.type==_VECT){
-	      debut=giacmax(debut,0);
-	      fin=giacmin(fin,int(res._VECTptr->size())-1);
-	      iterateur jt=res._VECTptr->begin()+debut,jtend=_VECTptr->begin()+fin+1;
-	      gen fin_it(vecteur(it+1,itend),_SEQ__VECT);
-	      vecteur v;
-	      v.reserve(jtend-jt);
-	      for (;jt!=jtend;++jt)
-		v.push_back((*jt)[fin_it]);
-	      return gen(v,res.subtype);
-	    }
-	  }
-	}
-	res = res[*it];
+      	if (it->type==_VECT){
+      	  vecteur tmp;
+      	  const_iterateur jt=it->_VECTptr->begin(),jtend=it->_VECTptr->end();
+      	  for (;jt!=jtend;++jt){
+      	    tmp.push_back(res[*jt]);
+      	  }
+      	  return gen(tmp,it->subtype);
+      	}
+      	if ( (it->type==_SYMB) && (it->_SYMBptr->sommet==at_interval) && (it+1!=itend) ){
+      	  // submatrix extraction
+          #ifdef SWIFT_CALCS_OPTIONS // Adds support for i__s and i__e keywords for use in intervals when accessing matrix/list contents.  i__s..3 is start to index 3.  2..i__e is index 2 until end.  etc
+            int debut, fin;
+            bool start_int = false, end_int = false;
+            if(it->_SYMBptr->feuille._VECTptr->front().type!=_INT_ && (gen2string(it->_SYMBptr->feuille._VECTptr->front()).compare("i__s") == 0)) {// Test for special keyword i__s, which indicates 'start'
+              debut = 0;
+              start_int = true;
+            }
+            if(it->_SYMBptr->feuille._VECTptr->back().type!=_INT_ && (gen2string(it->_SYMBptr->feuille._VECTptr->back()).compare("i__e") == 0)) {// Test for special keyword i__e, which indicates 'end'
+              fin = int(res._VECTptr->size())-1;
+              end_int = true;
+            }
+            if (it->_SYMBptr->feuille._VECTptr->front().type==_INT_) {
+              debut=it->_SYMBptr->feuille._VECTptr->front().val;
+              start_int = true;
+            }
+            if (it->_SYMBptr->feuille._VECTptr->back().type==_INT_) {
+              fin=it->_SYMBptr->feuille._VECTptr->back().val;
+              end_int = true;
+            }
+            if(start_int && end_int) {
+              if (fin<debut)
+                swap(debut,fin);
+              if (res.type==_VECT){
+                debut=giacmax(debut,0);
+                fin=giacmin(fin,int(res._VECTptr->size())-1);
+                iterateur jt=res._VECTptr->begin()+debut,jtend=_VECTptr->begin()+fin+1;
+                gen fin_it(vecteur(it+1,itend),_SEQ__VECT);
+                vecteur v;
+                v.reserve(jtend-jt);
+                for (;jt!=jtend;++jt)
+                  v.push_back((*jt)[fin_it]);
+                return gen(v,res.subtype);
+              }
+            }
+          #else
+        	  if ((it->_SYMBptr->feuille._VECTptr->front().type==_INT_) && (it->_SYMBptr->feuille._VECTptr->back().type==_INT_) ){
+        	    int debut=it->_SYMBptr->feuille._VECTptr->front().val,fin=it->_SYMBptr->feuille._VECTptr->back().val;
+        	    if (fin<debut)
+        	      swap(debut,fin);
+        	    if (res.type==_VECT){
+        	      debut=giacmax(debut,0);
+        	      fin=giacmin(fin,int(res._VECTptr->size())-1);
+        	      iterateur jt=res._VECTptr->begin()+debut,jtend=_VECTptr->begin()+fin+1;
+        	      gen fin_it(vecteur(it+1,itend),_SEQ__VECT);
+        	      vecteur v;
+        	      v.reserve(jtend-jt);
+        	      for (;jt!=jtend;++jt)
+        		      v.push_back((*jt)[fin_it]);
+        	      return gen(v,res.subtype);
+        	    }
+        	  }
+          #endif
+      	}
+      	res = res[*it];
       }
       return res;
     }

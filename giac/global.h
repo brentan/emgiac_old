@@ -514,6 +514,10 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
     bool _rpn_mode_;
     bool _try_parse_i_;
     bool _specialtexprint_double_;
+    #ifdef SWIFT_CALCS_OPTIONS
+      bool _mksareduce_mode_;
+      bool _mksavariable_mode_;
+    #endif
     int _angle_mode_;
     int _bounded_function_no_;
     int _series_flags_; // bit1= full simplify, bit2=1 for truncation
@@ -701,6 +705,13 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
   int & angle_mode(GIAC_CONTEXT);
   void angle_radian(bool b,GIAC_CONTEXT);
   bool angle_radian(GIAC_CONTEXT);
+
+  #ifdef SWIFT_CALCS_OPTIONS
+    bool & mksareduce_mode(GIAC_CONTEXT);
+    void mksareduce_mode(bool b,GIAC_CONTEXT);
+    bool & mksavariable_mode(GIAC_CONTEXT);
+    void mksavariable_mode(bool b,GIAC_CONTEXT);
+  #endif
 
   bool & show_point(GIAC_CONTEXT);
   void show_point(bool b,GIAC_CONTEXT);

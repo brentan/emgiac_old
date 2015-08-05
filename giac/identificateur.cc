@@ -1074,8 +1074,18 @@ namespace giac {
       for (;cur->previous;cur=cur->previous){
       	sym_tab::const_iterator it=cur->tabptr->find(id_name);
       	if (it!=cur->tabptr->end()){
-      	  if (!it->second.in_eval(level,evaled,contextptr->globalcontextptr))
-      	    evaled=it->second;
+      	  if (!it->second.in_eval(level,evaled,contextptr->globalcontextptr)) {
+            #ifdef SWIFT_CALCS_OPTIONS
+            if(contextptr && mksareduce_mode(contextptr)) 
+              evaled = mksa_remove_base(it->second, contextptr);
+            else if(contextptr && mksavariable_mode(contextptr)) 
+              evaled = mksa_to_var(it->second, contextptr);
+            else 
+              evaled=it->second;
+           #else
+             evaled=it->second;
+           #endif
+          }
       	  return true;
       	}
       }
@@ -1092,10 +1102,16 @@ namespace giac {
         #ifdef SWIFT_CALCS_OPTIONS
           // CODE ADDED TO CALL OUTSIDE FUNCTION 'eval_function' AND TEST FOR PRESENCE OF THIS VARIABLE...IF SO, RETURN VALUE!
           std::string asm_code;
+          std::string method_call = id_name;
           asm_code += "eval_function( ";
-          if(id_name[0] != '\'') asm_code += "'";
+          size_t pos = 0;
+          while((pos = method_call.find("'", pos)) != std::string::npos) {
+            method_call.replace(pos, 1, "\\'");
+            pos += 2;
+          }
+          if(method_call[0] != '\'') asm_code += "'";
           asm_code += id_name;
-          if(id_name[strlen(id_name)-1] != '\'') asm_code += "'";
+          if(method_call[method_call.length()-1] != '\'') asm_code += "'";
           asm_code += " );";
           std::string out = emscripten_run_script_string( asm_code.data() );
           if(out.length() > 0) {
@@ -1106,8 +1122,18 @@ namespace giac {
       	return false;
       }
       else {
-      	if (!it->second.in_eval(level,evaled,contextptr->globalcontextptr))
-      	  evaled=it->second;
+      	if (!it->second.in_eval(level,evaled,contextptr->globalcontextptr)) {
+          #ifdef SWIFT_CALCS_OPTIONS
+          if(contextptr && mksareduce_mode(contextptr)) 
+            evaled = mksa_remove_base(it->second, contextptr);
+          else if(contextptr && mksavariable_mode(contextptr)) 
+            evaled = mksa_to_var(it->second, contextptr);
+          else 
+      	    evaled=it->second;
+         #else
+           evaled=it->second;
+         #endif
+        }
       	return true;
       }
       if (!No38Lookup && sto_38){ //  && abs_calc_mode(contextptr)==38)

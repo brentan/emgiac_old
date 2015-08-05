@@ -759,6 +759,38 @@ extern "C" void Sleep(unsigned int miliSecond);
       return _angle_mode_;
   }
 
+  #ifdef SWIFT_CALCS_OPTIONS
+    static bool _mksareduce_mode_=false;
+    bool & mksareduce_mode(GIAC_CONTEXT){
+      if (contextptr && contextptr->globalptr )
+        return contextptr->globalptr->_mksareduce_mode_;
+      else
+        return _mksareduce_mode_;
+    }
+
+    void mksareduce_mode(bool b,GIAC_CONTEXT){
+      if (contextptr && contextptr->globalptr )
+        contextptr->globalptr->_mksareduce_mode_=b;
+      else
+        _mksareduce_mode_=b;
+    }
+
+    static bool _mksavariable_mode_=false;
+    bool & mksavariable_mode(GIAC_CONTEXT){
+      if (contextptr && contextptr->globalptr )
+        return contextptr->globalptr->_mksavariable_mode_;
+      else
+        return _mksavariable_mode_;
+    }
+
+    void mksavariable_mode(bool b,GIAC_CONTEXT){
+      if (contextptr && contextptr->globalptr )
+        contextptr->globalptr->_mksavariable_mode_=b;
+      else
+        _mksavariable_mode_=b;
+    }
+  #endif
+
   static bool _show_point_=true;
   bool & show_point(GIAC_CONTEXT){
     if (contextptr && contextptr->globalptr )
@@ -3192,6 +3224,10 @@ extern "C" void Sleep(unsigned int miliSecond);
      ptr->globalptr->_approx_mode_=_approx_mode_;
      ptr->globalptr->_autosimplify_=_autosimplify_();
      ptr->globalptr->_angle_mode_=_angle_mode_;
+     #ifdef SWIFT_CALCS_OPTIONS
+       ptr->globalptr->_mksareduce_mode_=_mksareduce_mode_;
+       ptr->globalptr->_mksavariable_mode_=_mksavariable_mode_;
+     #endif
      ptr->globalptr->_variables_are_files_=_variables_are_files_;
      ptr->globalptr->_bounded_function_no_=_bounded_function_no_;
      ptr->globalptr->_series_flags_=_series_flags_; // bit1= full simplify, bit2=1 for truncation
@@ -3596,6 +3632,9 @@ extern "C" void Sleep(unsigned int miliSecond);
 		     _withsqrt_(true), 
 		     _show_point_(true),  _io_graph_(true),
 		     _all_trig_sol_(false),
+#ifdef SWIFT_CALCS_OPTIONS
+         _mksareduce_mode_(false),_mksavariable_mode_(false),
+#endif
 #ifdef WITH_MYOSTREAM
 		     _ntl_on_(true),
 		     _lexer_close_parenthesis_(true),_rpn_mode_(false),_try_parse_i_(true),_specialtexprint_double_(false),_angle_mode_(0), _bounded_function_no_(0), _series_flags_(0x3),_default_color_(FL_BLACK), _epsilon_(1e-12), _proba_epsilon_(1e-15),  _show_axes_(1),_spread_Row_ (-1), _spread_Col_ (-1),_logptr_(&my_CERR),_prog_eval_level_val(1), _eval_level(DEFAULT_EVAL_LEVEL), _rand_seed(123457),_max_sum_sqrt_(3),_max_sum_add_(100000),_total_time_(0),_evaled_table_(0),_extra_ptr_(0)
@@ -3648,6 +3687,10 @@ _prog_eval_level_val(1), _eval_level(DEFAULT_EVAL_LEVEL), _rand_seed(123457),_ma
      _do_lnabs_=g._do_lnabs_;
      _eval_abs_=g._eval_abs_;
      _complex_mode_=g._complex_mode_;
+     #ifdef SWIFT_CALCS_OPTIONS
+       _mksareduce_mode_=g._mksareduce_mode_;
+       _mksavariable_mode_=g._mksavariable_mode_;
+     #endif
      _complex_variables_=g._complex_variables_;
      _increasing_power_=g._increasing_power_;
      _approx_mode_=g._approx_mode_;

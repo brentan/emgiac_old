@@ -903,6 +903,13 @@
 {"min",13,9,0,*((ulonglong *) at_min)},
 {"mkisom",13,9,0,*((ulonglong *) at_mkisom)},
 {"mksa",13,9,0,*((ulonglong *) at_mksa)},
+#ifdef SWIFT_CALCS_OPTIONS
+	{"mksa_base",13,9,0,*((ulonglong *) at_mksa_base)},
+	{"mksa_remove",13,9,0,*((ulonglong *) at_mksa_remove)},
+	{"mksa_var",13,9,0,*((ulonglong *) at_mksa_var)},
+	{"mksareduce_mode",13,9,0,*((ulonglong *) at_mksareduce_mode)},
+	{"mksavariable_mode",13,9,0,*((ulonglong *) at_mksavariable_mode)},
+#endif
 {"modgcd",13,9,0,*((ulonglong *) at_modgcd)},
 {"modgcd_cachesize",13,9,0,*((ulonglong *) at_modgcd_cachesize)},
 {"modp",13,9,0,*((ulonglong *) at_modp)},
