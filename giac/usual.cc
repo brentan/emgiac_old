@@ -335,7 +335,12 @@ namespace giac {
     return symbolic(at_ln,e);
   }
 
-  gen ln(const gen & e,GIAC_CONTEXT){
+  gen ln(const gen & e_in,GIAC_CONTEXT){
+    #ifdef SWIFT_CALCS_OPTIONS
+      gen e = _usimplify(e_in, contextptr);
+    #else
+      gen e = e_in;
+    #endif
     // if (abs_calc_mode(contextptr)==38 && do_lnabs(contextptr) && !complex_mode(contextptr) && (e.type<=_POLY || e.type==_FLOAT_) && !is_positive(e,contextptr)) return gensizeerr(contextptr);
     if (e.type==_FLOAT_){
 #ifdef BCD
@@ -459,7 +464,12 @@ namespace giac {
 #endif
   define_unary_function_ptr5( at_ln ,alias_at_ln,&__ln,0,true);
 
-  gen log10(const gen & e,GIAC_CONTEXT){
+  gen log10(const gen & e_in,GIAC_CONTEXT){
+    #ifdef SWIFT_CALCS_OPTIONS
+      gen e = _usimplify(e_in, contextptr);
+    #else
+      gen e = e_in;
+    #endif
     if (e.type==_FLOAT_) {
       if (is_positive(e,contextptr)){
 #ifdef BCD
@@ -524,7 +534,12 @@ namespace giac {
 #endif
   define_unary_function_ptr5( at_log10 ,alias_at_log10,&__log10,0,true);
 
-  gen alog10(const gen & e,GIAC_CONTEXT){
+  gen alog10(const gen & e_in,GIAC_CONTEXT){
+    #ifdef SWIFT_CALCS_OPTIONS
+      gen e = _usimplify(e_in, contextptr);
+    #else
+      gen e = e_in;
+    #endif
 #ifdef BCD
     if (e.type==_FLOAT_)
       return falog10(e._FLOAT_val);
@@ -550,7 +565,12 @@ namespace giac {
   static gen atanasln(const gen & e,GIAC_CONTEXT){
     return plus_one_half*cst_i*ln(rdiv(cst_i+e,cst_i-e,contextptr),contextptr);
   }
-  gen atan(const gen & e0,GIAC_CONTEXT){
+  gen atan(const gen & e_in,GIAC_CONTEXT){
+    #ifdef SWIFT_CALCS_OPTIONS
+      gen e0 = _usimplify(e_in, contextptr);
+    #else
+      gen e0 = e_in;
+    #endif
     if (e0.type==_FLOAT_)
 #ifdef BCD
       return fatan(e0._FLOAT_val,angle_mode(contextptr));
@@ -738,7 +758,12 @@ namespace giac {
     return res;
   }
 
-  gen exp(const gen & e0,GIAC_CONTEXT){
+  gen exp(const gen & e_in,GIAC_CONTEXT){
+    #ifdef SWIFT_CALCS_OPTIONS
+      gen e0 = _usimplify(e_in, contextptr);
+    #else
+      gen e0 = e_in;
+    #endif
     if (e0.type==_FLOAT_){
 #ifdef BCD
       return fexp(e0._FLOAT_val);
@@ -1114,7 +1139,12 @@ namespace giac {
     return oldres;
   }
 
-  gen sqrt(const gen & e,GIAC_CONTEXT){
+  gen sqrt(const gen & e_in,GIAC_CONTEXT){
+    #ifdef SWIFT_CALCS_OPTIONS
+      gen e = _usimplify(e_in, contextptr);
+    #else
+      gen e = e_in;
+    #endif
     // if (abs_calc_mode(contextptr)==38 && do_lnabs(contextptr) &&!complex_mode(contextptr) && (e.type<=_POLY || e.type==_FLOAT_) && !is_positive(e,contextptr)) return gensizeerr(contextptr);
     if (e.type==_FLOAT_){
       if (fsign(e._FLOAT_val)==1)
@@ -1308,7 +1338,12 @@ namespace giac {
   symbolic symb_cos(const gen & e){
     return symbolic(at_cos,e);
   }
-  gen cos(const gen & e0,GIAC_CONTEXT){
+  gen cos(const gen & e_in,GIAC_CONTEXT){
+    #ifdef SWIFT_CALCS_OPTIONS
+      gen e0 = _usimplify(e_in, contextptr);
+    #else
+      gen e0 = e_in;
+    #endif
     if (e0.type==_FLOAT_){
 #ifdef BCD
       return fcos(e0._FLOAT_val,angle_mode(contextptr));
@@ -1517,7 +1552,12 @@ namespace giac {
   symbolic symb_sin(const gen & e){
     return symbolic(at_sin,e);
   }
-  gen sin(const gen & e0,GIAC_CONTEXT){
+  gen sin(const gen & e_in,GIAC_CONTEXT){
+    #ifdef SWIFT_CALCS_OPTIONS
+      gen e0 = _usimplify(e_in, contextptr);
+    #else
+      gen e0 = e_in;
+    #endif
     if (e0.type==_FLOAT_){
 #ifdef BCD
       return fsin(e0._FLOAT_val,angle_mode(contextptr));
@@ -1722,7 +1762,12 @@ namespace giac {
   symbolic symb_tan(const gen & e){
     return symbolic(at_tan,e);
   }
-  gen tan(const gen & e0,GIAC_CONTEXT){
+  gen tan(const gen & e_in,GIAC_CONTEXT){
+    #ifdef SWIFT_CALCS_OPTIONS
+      gen e0 = _usimplify(e_in, contextptr);
+    #else
+      gen e0 = e_in;
+    #endif
     if (e0.type==_FLOAT_){
 #ifdef BCD
       return ftan(e0._FLOAT_val,angle_mode(contextptr));
@@ -1864,7 +1909,12 @@ namespace giac {
     return -cst_i*ln(cst_i*x+sqrt(1-x*x,contextptr),contextptr);
     // return cst_i*ln(sqrt(x*x-1,contextptr)+x,contextptr)+cst_pi_over_2;
   }
-  gen asin(const gen & e0,GIAC_CONTEXT){
+  gen asin(const gen & e_in,GIAC_CONTEXT){
+    #ifdef SWIFT_CALCS_OPTIONS
+      gen e0 = _usimplify(e_in, contextptr);
+    #else
+      gen e0 = e_in;
+    #endif
     if (calc_mode(contextptr)==38 && !complex_mode(contextptr) && (e0.type<=_POLY || e0.type==_FLOAT_) && (!is_positive(e0+1,contextptr) || !is_positive(1-e0,contextptr)))
       return gensizeerr(contextptr);
     if (e0.type==_FLOAT_){
@@ -2060,7 +2110,12 @@ namespace giac {
   static symbolic symb_acos(const gen & e){
     return symbolic(at_acos,e);
   }
-  gen acos(const gen & e0,GIAC_CONTEXT){
+  gen acos(const gen & e_in,GIAC_CONTEXT){
+    #ifdef SWIFT_CALCS_OPTIONS
+      gen e0 = _usimplify(e_in, contextptr);
+    #else
+      gen e0 = e_in;
+    #endif
     if (calc_mode(contextptr)==38 && !complex_mode(contextptr) && (e0.type<=_POLY || e0.type==_FLOAT_) && (!is_positive(e0+1,contextptr) || !is_positive(1-e0,contextptr)))
       return gensizeerr(contextptr);
     if (e0.type==_FLOAT_ && is_positive(e0+1,contextptr) && is_positive(1-e0,contextptr)){
@@ -2163,7 +2218,12 @@ namespace giac {
   symbolic symb_sinh(const gen & e){
     return symbolic(at_sinh,e);
   }
-  gen sinh(const gen & e0,GIAC_CONTEXT){
+  gen sinh(const gen & e_in,GIAC_CONTEXT){
+    #ifdef SWIFT_CALCS_OPTIONS
+      gen e0 = _usimplify(e_in, contextptr);
+    #else
+      gen e0 = e_in;
+    #endif
     if (e0.type==_FLOAT_){
 #ifdef BCD
       return fsinh(e0._FLOAT_val);
@@ -2228,7 +2288,12 @@ namespace giac {
   symbolic symb_cosh(const gen & e){
     return symbolic(at_cosh,e);
   }
-  gen cosh(const gen & e0,GIAC_CONTEXT){
+  gen cosh(const gen & e_in,GIAC_CONTEXT){
+    #ifdef SWIFT_CALCS_OPTIONS
+      gen e0 = _usimplify(e_in, contextptr);
+    #else
+      gen e0 = e_in;
+    #endif
     if (e0.type==_FLOAT_){
 #ifdef BCD
       return fcosh(e0._FLOAT_val);
@@ -2292,7 +2357,12 @@ namespace giac {
   define_unary_function_ptr5( at_cosh ,alias_at_cosh,&__cosh,0,true);
 
   // static symbolic symb_tanh(const gen & e){ return symbolic(at_tanh,e);  }
-  gen tanh(const gen & e0,GIAC_CONTEXT){
+  gen tanh(const gen & e_in,GIAC_CONTEXT){
+    #ifdef SWIFT_CALCS_OPTIONS
+      gen e0 = _usimplify(e_in, contextptr);
+    #else
+      gen e0 = e_in;
+    #endif
     if (e0.type==_FLOAT_){
 #ifdef BCD
       return ftanh(e0._FLOAT_val);
@@ -2363,7 +2433,12 @@ namespace giac {
   static gen asinhasln(const gen & x,GIAC_CONTEXT){
     return ln(x+sqrt(x*x+1,contextptr),contextptr);
   }
-  gen asinh(const gen & e0,GIAC_CONTEXT){
+  gen asinh(const gen & e_in,GIAC_CONTEXT){
+    #ifdef SWIFT_CALCS_OPTIONS
+      gen e0 = _usimplify(e_in, contextptr);
+    #else
+      gen e0 = e_in;
+    #endif
     if (e0.type==_FLOAT_){
 #ifdef BCD
       return fasinh(e0._FLOAT_val);
@@ -2412,7 +2487,12 @@ namespace giac {
   static gen acoshasln(const gen & x,GIAC_CONTEXT){
     return ln(x+sqrt(x+1,contextptr)*sqrt(x-1,contextptr),contextptr);
   }
-  gen acosh(const gen & e0,GIAC_CONTEXT){
+  gen acosh(const gen & e_in,GIAC_CONTEXT){
+    #ifdef SWIFT_CALCS_OPTIONS
+      gen e0 = _usimplify(e_in, contextptr);
+    #else
+      gen e0 = e_in;
+    #endif
     if (e0.type==_FLOAT_){
       if (is_strictly_greater(1,e0,contextptr))
 	return ln(e0+sqrt(pow(e0,2)-1,contextptr),contextptr);
@@ -2460,7 +2540,12 @@ namespace giac {
   define_unary_function_ptr5( at_acosh ,alias_at_acosh,&__acosh,0,true);
 
   // static symbolic symb_atanh(const gen & e){  return symbolic(at_atanh,e);}
-  gen atanh(const gen & e0,GIAC_CONTEXT){
+  gen atanh(const gen & e_in,GIAC_CONTEXT){
+    #ifdef SWIFT_CALCS_OPTIONS
+      gen e0 = _usimplify(e_in, contextptr);
+    #else
+      gen e0 = e_in;
+    #endif
     if (e0.type==_FLOAT_){
       if (is_strictly_greater(e0,1,contextptr) || is_strictly_greater(-1,e0,contextptr))
 	return rdiv(ln(rdiv(1+e0,1-e0),contextptr),plus_two,contextptr);

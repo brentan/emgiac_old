@@ -3759,7 +3759,12 @@ namespace giac {
     return idnt_abs(s,contextptr);
   }
 
-  gen abs(const gen & a,GIAC_CONTEXT){ 
+  gen abs(const gen & a_in,GIAC_CONTEXT){ 
+    #ifdef SWIFT_CALCS_OPTIONS
+      gen a = _usimplify(a_in, contextptr);
+    #else
+      gen a = a_in;
+    #endif
     if (is_equal(a))
       return apply_to_equal(a,abs,contextptr);
     switch (a.type ) {
