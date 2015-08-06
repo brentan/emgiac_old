@@ -85,6 +85,7 @@ namespace giac {
   void swapdouble(double & a,double & b);
 
   // index type for tensors
+  void add(const index_t & a, const index_t & b,index_t & res);
 
   index_t operator + (const index_t & a, const index_t & b);
   index_t operator - (const index_t & a, const index_t & b);
@@ -574,6 +575,8 @@ namespace giac {
 
 #endif
 
+  void add(const index_m & a, const index_m & b,index_t & res);
+  bool equal(const index_m & a,const index_t &b);
   index_m operator + (const index_m & a, const index_m & b);
   index_m operator - (const index_m & a, const index_m & b);
   index_m operator * (const index_m & a, int fois);
@@ -585,6 +588,7 @@ namespace giac {
   bool operator >= (const index_m & a, const index_m & b);
   bool operator <= (const index_m & a, const index_m & b);
   int sum_degree(const index_m & v1);
+  int sum_degree_from(const index_m & v1,int start);
   inline int total_degree(const index_m & v1){ return sum_degree(v1); }
   bool i_lex_is_greater(const index_m & v1, const index_m & v2);
   bool i_lex_is_strictly_greater(const index_m & v1, const index_m & v2);

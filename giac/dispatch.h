@@ -420,6 +420,9 @@ namespace giac {
     _RUR_3VAR=-3,
     _RUR_7VAR=-7,
     _RUR_11VAR=-11,
+    _RUR_16VAR=-16,
+    _RUR_32VAR=-32,
+    _RUR_64VAR=-64,
   };
 
   enum int_subtypes {

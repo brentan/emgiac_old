@@ -1,3 +1,4 @@
+<!DOCTYPE HTML>
 <html id="fulldocument" manifest="xcas.appcache">
 <head>
 <meta charset="utf-8">
@@ -34,13 +35,27 @@ width:400px;
 </head>
 
 <body>
+<script language="javascript">
+  var ua = window.navigator.userAgent;
+  var old_ie = ua.indexOf('MSIE ');
+  var new_ie = ua.indexOf('Trident/');
+  if ((old_ie > -1) || (new_ie > -1) || window.chrome){
+ (function () {
+  var script = document.createElement("script");
+  script.type = "text/javascript";
+  script.src  = "http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+  document.getElementsByTagName("head")[0].appendChild(script);
+})();
+}
+</script>
+
 
 <span id="apropos">
 This is a demo interface to a full web-based CAS engine.
 This CAS does not need any server,
 all the computations are done locally with the javascript
 engine of your browser (requires Firefox version 19 or later,
-or Chrome or Safari,
+or Safari,
 the latest version of Firefox is recommended for good performances).
 The code of the CAS is 12M, it is downloaded once
 (giac.js javascript 
@@ -72,6 +87,10 @@ Initial Mathml and SVG code by J.P. Branchard.
       Digits:<input type="number" name="digits_mode" title="Number of decimal digits (if &gt; 14 multiprecision, slower computation)" value=12>
     </td>
     <td>
+      Autosimplify: <input type="number" name="autosimp_level"
+  title="0: none, 1: minimum, 2: maximum" value=1 max=2 min=0>
+    </td>
+    <td>
 Radians <input type="checkbox" name="angle_mode" title="Check for radians, uncheck for degrees" checked>
 Complex <input type="checkbox" name="complex_mode" title="Check for default base field = complexes">
       √ <input type="checkbox" name="sqrt_mode" title="Check : always factor degree 2 polynomials">
@@ -79,6 +98,8 @@ Complex <input type="checkbox" name="complex_mode" title="Check for default base
   </tr>
   <tr>
     <td>
+      2d <input type="checkbox" name="prettyprint"
+  title="Check for pretty print" checked>
       History <input type="number" name="history_width" value=1000
         title="Max history width">
       x <input type="number" name="history_height" value=400
@@ -111,9 +132,9 @@ Complex <input type="checkbox" name="complex_mode" title="Check for default base
   onclick="document.getElementById('manuels').style.display='none';">Hide</button>
   <ul>
     <li> Reference :
-  <a href="file:///usr/share/giac/doc/en/cascmd_en/cascmd_en.html"
+  <a href="file:///usr/share/giac/doc/en/cascmd_en/index.html"
     target="_blank">hard disk</a>,
-  <a href="http://www-fourier.ujf-grenoble.fr/~parisse/giac/doc/en/cascmd/cascmd.html"
+  <a href="http://www-fourier.ujf-grenoble.fr/~parisse/giac/doc/en/cascmd_en/index.html"
   target="_blank">Internet</a>,
     </li>
   </ul>
@@ -175,7 +196,7 @@ title="Show or hide the list of manuals">Manuals</button>
 <td id="history4" style="visibility:hidden">
 &nbsp;&nbsp;<b>Variables</b>
 <button onclick="UI.addhelp(' ','VARS(1)')" title="Show list of variables/values">List</button>
-<button onclick="UI.addhelp(' ','rm_all_vars(1)')"title="Erase content for all variables">Erase</button>
+<button onclick="UI.addhelp(' ','rm_all_vars(1)')" title="Erase content for all variables">Erase</button>
   <b>Help</b>  <button onclick="helpoutput.innerHTML=''">Clear</button>
   </td>
 </tr>
@@ -243,10 +264,8 @@ title="Show or hide the list of manuals">Manuals</button>
   </tr>
   <tr>
     <td>
-      <input type="button" style="width:30;height:30" name="select_button" value="sel."
-      onmousedown="event.preventDefault()" onClick="UI.focused.focus(); if (UI.focused.type!="textarea"){UI.focused.execCommand('selectAll'); } else {UI.focused.select(); UI.selection=UI.focused.value;}}" title="Selectionne la ligne de commande">  
-      <input type="button" style="width:30;height:30" name="add_x"
-  value="x" onmousedown="event.preventDefault()" onClick="UI.insert(UI.focused,'x')" title="x">  
+      <input type="button" style="width:30;height:30" name="select_button" value="sel" onmousedown="event.preventDefault()" onClick="UI.focused.focus(); if (UI.focused.type!='textarea'){UI.focused.execCommand('selectAll'); } else {UI.focused.select(); UI.selection=UI.focused.value;}" title="Selectionne la ligne de commande">  
+      <input type="button" style="width:30;height:30" name="add_x" value="x" onmousedown="event.preventDefault()" onClick="UI.insert(UI.focused,'x')" title="x">  
     </td>
     <td>
       <input type="button" style="width:30;height:30"
@@ -434,7 +453,7 @@ The screen is divided in
   </li>
 </ul>
 
-<a name="examples"<b>Examples of input:</b></a> 
+<a name="examples"><b>Examples of input:</b></a> 
 <ul>
   <li> Algebra : You can expand an expression with
   <button onclick="Module.insert(entree,'normal(')"><tt>normal</tt></button>
@@ -444,11 +463,11 @@ The screen is divided in
   <button
   onmousedown="event.preventDefault()" onClick="Module.insert(entree,'factor(')"><tt>factor(</tt></button>
   or <button
-  onmousedown="event.preventDefault()" onClick="Module.insert(entree,cfactor(')"><tt>cfactor(</tt>)</button>
+  onmousedown="event.preventDefault()" onClick="Module.insert(entree,'cfactor(')"><tt>cfactor(</tt>)</button>
   factors an expression (like <button
   onmousedown="event.preventDefault()" onClick="Module.insert(entree,'x^4-1')"><tt>x^4-1</tt></button>)
   over Q or Q[i]. 
-    <br> simplify(sin(3x)/sin(x)); gcd(x^4-1,x^3-1) </tt>
+    <br> <tt>simplify(sin(3x)/sin(x)); gcd(x^4-1,x^3-1) </tt>
   </li>
   <li> Solve equations :
     <tt> solve(x^2-3*x+2=0); csolve(x^2=2*i);
@@ -1061,6 +1080,8 @@ cols="80" title="Console"></textarea>
   var UI ={
   docprefix:"http://www-fourier.ujf-grenoble.fr/%7eparisse/giac/doc/en/cascmd_en/",
   base_url:"http://www-fourier.ujf-grenoble.fr/%7eparisse/",
+  usemathjax:false,
+  prettyprint:true,
   focused:entree,
   usecm:true,
   histcount:0,
@@ -1069,9 +1090,27 @@ cols="80" title="Console"></textarea>
   canvas_lastx:0,
   canvas_lasty:0,
   canvas_pushed:false,
+  browser_type: function(){
+   var isOpera = !!window.opera || navigator.userAgent.indexOf(' OPR/') >= 0;
+   var isFirefox = typeof InstallTrigger !== 'undefined';   // Firefox 1.0+
+   var isSafari = Object.prototype.toString.call(window.HTMLElement).indexOf('Constructor') > 0;
+   var isChrome = !!window.chrome && !isOpera;              // Chrome 1+
+   var isIE = /*@cc_on!@*/false || !!document.documentMode; // At least IE6
+   if (isFirefox) return 1;
+   if (isSafari) return 2;
+   if (isChrome) return 3;
+   if (isIE) return 4;
+   if (isOpera) return 5;
+   return 0;
+  },
   caseval: function(text){
-    var docaseval = Module.cwrap('_ZN4giac7casevalEPKc',  'string', ['string']);
-    var s=docaseval(text);
+   var docaseval = Module.cwrap('_ZN4giac7casevalEPKc',  'string', ['string']);
+   var value=text;
+   var n=value.search(';');
+   if (n<0 || n>=value.length)
+     value='add_autosimplify('+value+')';
+    var s=docaseval(value);
+    // Module.print(text+ ' '+s);
     return s;
   },
   ckenter: function(event,field){
@@ -1145,7 +1184,7 @@ cols="80" title="Console"></textarea>
        }
        var pos=fs.search("<textarea");
        if (pos>=0 && pos<fs.length){
-         s += '+'+field.firstChild.value.replace('\n','')+'&';
+         s += '+'+field.firstChild.value.replace('\n', ' ', 'g')+'&';
          cur=cur.nextSibling;
          continue;
        }
@@ -1155,6 +1194,7 @@ cols="80" title="Console"></textarea>
      }
      cur=cur.nextSibling;
    }
+   s=s.replace(/\"/g,'%22');
    return s;
   },
   canvas_mousemove:function(event){
@@ -1187,10 +1227,12 @@ cols="80" title="Console"></textarea>
      UI.docprefix=UI.base_url+'giac/doc/en/cascmd_en/';
    else
      UI.docprefix="file://"+form.doc_path.value;
+   if (form.prettyprint.checked) UI.prettyprint=true; else UI.prettyprint=false;
    var w=form.outdiv_width.value;
    if (w>hw-300) w=hw-300;
    s='input[type="number"] { width:40px;}\n .outdiv { width:'+w+'px; max-height: '+form.outdiv_height.value+'px;  overflow: auto;}\n.filenamecss {width:120px;height:20px}\n.historyinput {width:'+(hw-w-200)+'px;}';
    st.innerHTML=s;
+   UI.caseval("autosimplify("+form.autosimp_level.value+")");
    //Module.print(st.innerHTML);
    s='Digits:=';
    s += form.digits_mode.value;
@@ -1309,7 +1351,7 @@ cols="80" title="Console"></textarea>
    var out=document.getElementById('mathoutput');
    //Module.print(s);
    out.innerHTML += s;
-   out.parentNode.scrollTop = out.parentNode.scrollHeight; // focus at end
+   UI.scrollatend(out.parentNode);
    UI.link(0);
    UI.focused.focus();
   },
@@ -1347,7 +1389,6 @@ cols="80" title="Console"></textarea>
   UI.eval_cmdline1(value,true);
   },
   eval_cmdline1:function(value,docaseval){
-  UI.histcount++;
   UI.set_locale();
   var out;
   // suppress leading non ascii char
@@ -1370,14 +1411,19 @@ cols="80" title="Console"></textarea>
       if (out.substr(1,4)=='<svg'){
         s=out; out='Done_svg';
       }
-      else {
-        s='mathml(quote('+out+'),1)'; //Module.print(s);
-        s=UI.caseval(s);
+    else {
+        if (UI.prettyprint){
+         if (UI.usemathjax)
+           s='latex(quote('+out+'))';
+         else
+           s='mathml(quote('+out+'),1)'; //Module.print(s);
+         s=UI.caseval(s);
+        } else s=out;
       }
     }
     else { out=' Non evalue '; s=out; }
   }
-  var add=UI.addinput(value,out,s,UI.histcount);
+  var add=UI.addinput(value,out,s);
   //var s=UI.caseval('mathml(quote('+value+'),1)');
   //add += '&nbsp;&nbsp;'+s.substr(1,s.length-2);
   //Module.print(value+'  ->  '+out);
@@ -1386,8 +1432,10 @@ cols="80" title="Console"></textarea>
   //document.getElementById('canvas').focus();
   var mathoutput=document.getElementById('mathoutput');
   mathoutput.innerHTML += add;
-  mathoutput.parentNode.scrollTop = mathoutput.parentNode.scrollHeight; // focus at end
+  UI.scrollatend(mathoutput.parentNode);
   UI.link(0);
+  if (UI.prettyprint && UI.usemathjax && UI.histcount>0)
+    MathJax.Hub.Queue(["Typeset",MathJax.Hub,'"hist'+(UI.histcount-1)+'"']);
   var l=mathoutput.lastChild;
   l=l.firstChild;
   l=l.firstChild;
@@ -1455,9 +1503,14 @@ cols="80" title="Console"></textarea>
    }
    else {
      // Module.print(text+' -> '+out);
-     s=UI.caseval('mathml(quote('+out+'),1)');
+     if (UI.prettyprint){
+      if (UI.usemathjax)
+        s=UI.caseval('latex(quote('+out+'))');
+      else
+      s=UI.caseval('mathml(quote('+out+'),1)');
+     } else s=out;
    }
-   s=UI.addinput(textin,out,s,UI.histcount);
+   s=UI.addinput(textin,out,s);
    return s;
   },
   reeval: function(field,prefix){
@@ -1468,6 +1521,8 @@ cols="80" title="Console"></textarea>
   s=UI.eval(prefix+s,s);
   par.innerHTML=s;
   UI.link(0);
+  if (UI.prettyprint && UI.usemathjax && UI.histcount>0)
+    MathJax.Hub.Queue(["Typeset",MathJax.Hub,'"hist'+(UI.histcount-1)+'"']);
   par.focus();
   },
   eval_level: function(field){
@@ -1496,6 +1551,8 @@ cols="80" title="Console"></textarea>
     var s=cur.value;
     s=UI.eval(s,s);
     field.innerHTML=s;
+    if (UI.prettyprint && UI.usemathjax )
+      MathJax.Hub.Queue(["Typeset",MathJax.Hub,field]);
   },
   before: function(field){
   var s='';
@@ -1543,7 +1600,7 @@ addcomment: function(text){
   var pos=txt.selectionStart;
   cm.setCursor({line:0,ch:pos}); cm.refresh();
   },
-  addinput: function(textin,textout,mathmlout,count){
+  addinput: function(textin,textout,mathmlout){
   if (textout=='Done') document.getElementById('boutons_3d').style.display='inherit';;
   if (textin.length > 2 && textin.substr(0,2)=='//') return UI.addcomment(textin);
          UI.show_history123();
@@ -1569,8 +1626,14 @@ addcomment: function(text){
     }
     else {
       s += '<td style="color:blue; text-align:center">';
-      s += '<div title="Double click: see in text mode (useful for copy-paste)" class="outdiv" ondblclick="nextSibling.style.display=\'inherit\';this.nextSibling.select();UI.selection=nextSibling.value;this.style.display=\'none\';this.nextSibling.nextSibling.style.display=\'inherit\';">';
-      s += mathmlout.substr(1,mathmlout.length-2);
+      s += '<div title="Double click: see in text mode (useful for copy-paste)" class="outdiv" ondblclick="nextSibling.style.display=\'inherit\';this.nextSibling.select();UI.selection=nextSibling.value;this.style.display=\'none\';this.nextSibling.nextSibling.style.display=\'inherit\';" id="hist'+UI.histcount+'">';
+      UI.histcount++;
+      if (UI.prettyprint){
+       if (UI.usemathjax)
+        s += '$$'+mathmlout.substr(1,mathmlout.length-2)+'$$';
+       else
+        s += mathmlout.substr(1,mathmlout.length-2);
+      } else s += mathmlout;
       s += '</div>';
       s += '<textarea class="outdiv" onfocus="UI.set_focused(this)" onselect="if (UI.getsel(this).length>0) UI.selection=UI.getsel(this);" style="display:none">'+textout+'</textarea>';
       s += '<button style="display:none" onclick="previousSibling.previousSibling.style.display=\'block\'; previousSibling.style.display=\'none\';this.style.display=\'none\'">cancel</button>';
@@ -1611,13 +1674,18 @@ gr(text);
      cm.setSelection({line: pos.line,ch:k+1},{line:pos.line, ch:pos.ch});
      UI.addhelp('?',s);
   },      
+  isie:false,    
+  scrollatend:function(field){
+    if (!UI.isie)
+      field.scrollTop=field.scrollHeight;    
+  },    
   addhelp: function(prefixe,text){
   var input=prefixe+text;
   var out=UI.eval(input,input);
   var add=out;
   var helpoutput=document.getElementById('helpoutput');
   helpoutput.innerHTML += add;  
-  helpoutput.parentNode.scrollTop = helpoutput.parentNode.scrollHeight; // focus at end
+  UI.scrollatend(helpoutput.parentNode); // focus at end
   UI.focused.focus();
   },
   renderhelp: function(text){
@@ -1666,8 +1734,8 @@ gr(text);
     pos1=examples.search(';');
     if (pos1<0) break;
     var cmd=examples.substr(0,pos1);
-    cmd=cmd.replace('>','&gt;');
-    cmd=cmd.replace('<','&lt;');
+    cmd=cmd.replace(/>/g,'&gt;');
+    cmd=cmd.replace(/</g,'&lt;');
     s += '<button onmousedown="event.preventDefault()" onclick="UI.insert(UI.focused,\''+cmd+'\')">'+cmd+'</button>';
     examples = examples.substr(pos1+1,examples.length-pos1-1);
    }
@@ -1913,6 +1981,16 @@ insert: function(myField, myValue) {
 // En ajoutant async a la fin de script src=giac.js on accelere les chargements
 // de la page nue (cache), mais pas si il y a un lien
  window.onload = function(e){
+  var ua = window.navigator.userAgent;
+  var old_ie = ua.indexOf('MSIE ');
+  var new_ie = ua.indexOf('Trident/');
+  //if (window.chrome) UI.prettyprint=false;
+  if ((old_ie > -1) || (new_ie > -1)) UI.isie=true;
+  var bt=UI.browser_type();
+  if (UI.isie || (bt!=1 && bt!=2)){
+     UI.usemathjax=true;
+     alert("Your browser does not support MathML, using MathJax for 2d rendering. Consider switching to Firefox for faster results and better rendering");
+  }
  document.getElementById('apropos').style.display='none';
  console.log("window.onload");
  var hist=document.getElementById('mathoutput');
