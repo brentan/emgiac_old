@@ -504,7 +504,8 @@ namespace giac {
     // methods
     unsigned total_degree(short order) const {
 #ifdef GIAC_64VARS
-      return tab[0]/2;
+      if (tab[0]%2)
+	return tdeg/2+tdeg2;
 #endif
       // works only for revlex and tdeg
 #if 0
@@ -557,10 +558,9 @@ namespace giac {
       if (lm.size()>GROEBNER_VARS){
 	++lm.riptr->ref_count;
 	ui=*(size_t*)&lm;
-	// FIXME use order to find tdeg2
 	tdeg=nvar_total_degree(lm,order);
 	tdeg=2*tdeg+1;
-	tdeg2=0; 
+	tdeg2=sum_degree_from(lm,order); 
 	order_=order;
 	return;
       }
@@ -799,7 +799,7 @@ namespace giac {
   inline bool operator == (const tdeg_t & x,const tdeg_t & y){ 
 #ifdef GIAC_64VARS
     if (x.tab[0]%2)
-      return x.tdeg==y.tdeg && *x.i()==*y.i();
+      return x.tdeg==y.tdeg && x.tdeg2==y.tdeg2 && *x.i()==*y.i();
 #endif    
     return  ((longlong *) x.tab)[0] == ((longlong *) y.tab)[0] && 
       ((longlong *) x.tab)[1] == ((longlong *) y.tab)[1] &&
@@ -1063,8 +1063,8 @@ namespace giac {
 
   inline bool tdeg_t_greater (const tdeg_t & x,const tdeg_t & y,short order){
 #ifdef GIAC_64VARS
-    if (x.tab[0]%2){
-      if (order==_3VAR_ORDER || order>=_7VAR_ORDER){
+    if (x.tdeg%2){
+      if (order>=_7VAR_ORDER || order==_3VAR_ORDER){
 	if (x.tdeg!=y.tdeg)
 	  return x.tdeg>y.tdeg;
 	return i_nvar_is_greater(*x.i(),*y.i(),order,true);
@@ -1094,8 +1094,9 @@ namespace giac {
 
   inline bool tdeg_t_all_greater(const tdeg_t & x,const tdeg_t & y,short order){
 #ifdef GIAC_64VARS
-    if (x.tab[0]%2)
-      return *x.i()>=*y.i();
+    if (x.tab[0]%2){
+      return x.tdeg>=y.tdeg && x.tdeg2>=y.tdeg2 && *x.i()>=*y.i();
+    }
 #endif
     ulonglong *xtab=(ulonglong *)&x,*ytab=(ulonglong *)&y;
     if ((xtab[0]-ytab[0]) & 0x8000800080008000ULL)
@@ -5804,12 +5805,39 @@ namespace giac {
       v.push_back(it->g);
   }
 
+  // dichotomic seach for jt->u==u in [jt,jtend[
+  bool dicho(std::vector< T_unsigned<modint,tdeg_t> >::const_iterator & jt,std::vector< T_unsigned<modint,tdeg_t> >::const_iterator jtend,const tdeg_t & u,int order){
+    if (jt->u==u) return true;
+    for (;;){
+      std::vector< T_unsigned<modint,tdeg_t> >::const_iterator j=jt+(jtend-jt)/2;
+      if (j==jt)
+	return j->u==u;
+      if (tdeg_t_greater(j->u,u,order)){
+	jt=j;
+	if (j->u==u)
+	  return true;
+      }
+      else
+	jtend=j;
+    }
+  }
+
   void makelinesplit(const polymod & p,const tdeg_t * shiftptr,const polymod & R,vector<shifttype> & v){
     std::vector< T_unsigned<modint,tdeg_t> >::const_iterator it=p.coord.begin(),itend=p.coord.end(),jt=R.coord.begin(),jtend=R.coord.end();
     unsigned pos=0;
+    double nop1=R.coord.size(); 
+    double nop2=4*p.coord.size()*std::log(nop1)/std::log(2.0);
+    bool dodicho=nop2<nop1;
     if (shiftptr){
       for (;it!=itend;++it){
 	tdeg_t u=it->u+*shiftptr;
+	/* new faster code */
+	if (dodicho && dicho(jt,jtend,u,R.order)){
+	  pushsplit(v,pos,unsigned(jt-R.coord.begin()));
+	  ++jt;
+	  continue;
+	}
+	/* end new faster code */
 	for (;jt!=jtend;++jt){
 	  if (jt->u==u){
 	    pushsplit(v,pos,unsigned(jt-R.coord.begin()));
@@ -5822,6 +5850,13 @@ namespace giac {
     else {
       for (;it!=itend;++it){
 	const tdeg_t & u=it->u;
+	/* new faster code */
+	if (dodicho && dicho(jt,jtend,u,R.order)){
+	  pushsplit(v,pos,unsigned(jt-R.coord.begin()));
+	  ++jt;
+	  continue;
+	}
+	/* end new faster code */
 	for (;jt!=jtend;++jt){
 	  if (jt->u==u){
 	    pushsplit(v,pos,unsigned(jt-R.coord.begin()));
@@ -6019,7 +6054,7 @@ namespace giac {
       }
     }
     if (debug_infolevel>1)
-      CERR << CLOCK() << " end build Mindex/Mcoeff" << endl;
+      CERR << CLOCK() << " end build Mindex/Mcoeff rref_f4buchbergermodsplit_interreduce" << endl;
     // should not sort but compare res[G[i]]*quo[i] monomials to build M already sorted
     // CERR << "before sort " << M << endl;
     sort_vector_sparse_element(atrier.begin(),atrier.end()); // sort(atrier.begin(),atrier.end(),tri1); 
@@ -6341,7 +6376,7 @@ namespace giac {
   void reducemodf4buchberger(vectpolymod & f4buchbergerv,vectpolymod & res,const vector<unsigned> & G,unsigned excluded, modint env,info_t & info_tmp){
     polymod allf4buchberger(f4buchbergerv.front().order,f4buchbergerv.front().dim),rem(f4buchbergerv.front().order,f4buchbergerv.front().dim);
     if (debug_infolevel>1)
-      CERR << CLOCK() << " f4buchberger begin collect monomials" << f4buchbergerv.size() << endl;
+      CERR << CLOCK() << " f4buchberger begin collect monomials on #polys " << f4buchbergerv.size() << endl;
     // collect all terms in f4buchbergerv
     collect(f4buchbergerv,allf4buchberger);
     if (debug_infolevel>1)
@@ -6404,7 +6439,7 @@ namespace giac {
     else {
       polymod all(res[B[0].first].order,res[B[0].first].dim),rem;
       if (debug_infolevel>1)
-	CERR << CLOCK() << " f4buchberger begin collect monomials" << f4buchbergerv.size() << endl;
+	CERR << CLOCK() << " f4buchberger begin collect monomials on #polys " << f4buchbergerv.size() << endl;
       collect(res,B,all,leftshift,rightshift);
       if (debug_infolevel>1)
 	CERR << CLOCK() << " f4buchberger symbolic preprocess" << endl;
@@ -6490,7 +6525,7 @@ namespace giac {
       }
     }
     if (debug_infolevel>1)
-      CERR << CLOCK() << " end build Mindex/Mcoeff" << endl;
+      CERR << CLOCK() << " end build Mindex/Mcoeff f4mod" << endl;
     // should not sort but compare res[G[i]]*quo[i] monomials to build M already sorted
     // CERR << "before sort " << M << endl;
     sort_vector_sparse_element(atrier.begin(),atrier.end()); // sort(atrier.begin(),atrier.end(),tri1); 
@@ -6799,7 +6834,7 @@ namespace giac {
     }
     for (;!B.empty() && !interrupted && !ctrl_c;){
       if (debug_infolevel>1)
-	CERR << CLOCK() << " begin new iteration mod, number of pairs: " << B.size() << ", base size: " << G.size() << endl;
+	CERR << CLOCK() << " begin new iteration mod, " << env << " number of pairs: " << B.size() << ", base size: " << G.size() << endl;
       if (1){
 	// mem clear: remove res[i] if i is not in G nor in B
 	vector<bool> clean(G.back()+1,true);
@@ -7857,7 +7892,7 @@ namespace giac {
     vectpolymod resmod,quo;
     convert(res,resmod,0);
     if (debug_infolevel>1)
-      CERR << CLOCK() << " checkf4buchberger begin collect monomials" << f4buchbergerv.size() << endl;
+      CERR << CLOCK() << " checkf4buchberger begin collect monomials on #polys " << f4buchbergerv.size() << endl;
     // collect all terms in f4buchbergerv
     collect(f4buchbergerv,allf4buchberger);
     if (debug_infolevel>1)
@@ -8051,7 +8086,7 @@ namespace giac {
     vectpolymod resmod,quo;
     convert(res,resmod,0);
     if (debug_infolevel>1)
-      CERR << CLOCK() << " checkf4buchberger split begin collect monomials" << f4buchbergerv.size() << endl;
+      CERR << CLOCK() << " checkf4buchberger split begin collect monomials on #polys " << f4buchbergerv.size() << endl;
     // collect all terms in f4buchbergerv
     collect(f4buchbergerv,allf4buchberger);
     if (debug_infolevel>1)
@@ -8736,14 +8771,41 @@ namespace giac {
       v.push_back(it->g);
   }
 
+  // dichotomic seach for jt->u==u in [jt,jtend[
+  bool dicho(std::vector<tdeg_t>::const_iterator & jt,std::vector<tdeg_t>::const_iterator jtend,const tdeg_t & u,int order){
+    if (*jt==u) return true;
+    for (;;){
+      std::vector<tdeg_t>::const_iterator j=jt+(jtend-jt)/2;
+      if (j==jt)
+	return *j==u;
+      if (tdeg_t_greater(*j,u,order)){
+	jt=j;
+	if (*j==u)
+	  return true;
+      }
+      else
+	jtend=j;
+    }
+  }
+
   void zmakelinesplit(const zpolymod & p,const tdeg_t * shiftptr,const vector<tdeg_t> & R,vector<shifttype> & v){
     std::vector<zmodint>::const_iterator it=p.coord.begin(),itend=p.coord.end();
     std::vector<tdeg_t>::const_iterator jt=R.begin(),jtend=R.end();
+    double nop1=R.size(); 
+    double nop2=4*p.coord.size()*std::log(nop1)/std::log(2.0);
+    bool dodicho=nop2<nop1;
     const vector<tdeg_t> & expo=*p.expo;
     unsigned pos=0;
     if (shiftptr){
       for (;it!=itend;++it){
 	tdeg_t u=expo[it->u]+*shiftptr;
+#if 1
+	if (dodicho && dicho(jt,jtend,u,p.order)){
+	  pushsplit(v,pos,unsigned(jt-R.begin()));
+	  ++jt;
+	  continue;
+	}
+#endif
 	for (;jt!=jtend;++jt){
 	  if (*jt==u){
 	    pushsplit(v,pos,int(jt-R.begin()));
@@ -8756,6 +8818,13 @@ namespace giac {
     else {
       for (;it!=itend;++it){
 	const tdeg_t & u=expo[it->u];
+#if 1
+	if (dodicho && dicho(jt,jtend,u,p.order)){
+	  pushsplit(v,pos,unsigned(jt-R.begin()));
+	  ++jt;
+	  continue;
+	}
+#endif
 	for (;jt!=jtend;++jt){
 	  if (*jt==u){
 	    pushsplit(v,pos,int(jt-R.begin()));
@@ -8867,7 +8936,7 @@ namespace giac {
     else {
       vector<tdeg_t> all;
       if (debug_infolevel>1)
-	CERR << CLOCK() << " zf4buchberger begin collect monomials" << f4buchbergerv.size() << endl;
+	CERR << CLOCK() << " zf4buchberger begin collect monomials on #polys " << f4buchbergerv.size() << endl;
       zcollect(res,B,all,leftshift,rightshift);
       if (debug_infolevel>1)
 	CERR << CLOCK() << " zf4buchberger symbolic preprocess" << endl;
@@ -8931,7 +9000,7 @@ namespace giac {
       }
     }
     if (debug_infolevel>1)
-      CERR << CLOCK() << " end build Mindex/Mcoeff" << endl;
+      CERR << CLOCK() << " end build Mindex/Mcoeff zf4mod" << endl;
     // should not sort but compare res[G[i]]*quo[i] monomials to build M already sorted
     // CERR << "before sort " << Mindex << endl;
     sort_vector_sparse_element(atrier.begin(),atrier.end()); // sort(atrier.begin(),atrier.end(),tri1); 
@@ -9326,7 +9395,7 @@ namespace giac {
       if (f4buchberger_info_position>=capa-1)
 	return false;
       if (debug_infolevel>1)
-	CERR << CLOCK() << " begin new iteration zmod, number of pairs: " << B.size() << ", base size: " << G.size() << endl;
+	CERR << CLOCK() << " begin new iteration zmod, " << env << " number of pairs: " << B.size() << ", base size: " << G.size() << endl;
       // mem clear: remove res[i] if i is not in G nor in B
       vector<bool> clean(G.back(),true);
       vector<tdeg_t> Blcm(B.size());
@@ -9493,6 +9562,9 @@ namespace giac {
     if (order==_3VAR_ORDER) return 3;
     if (order==_7VAR_ORDER) return 7;
     if (order==_11VAR_ORDER) return 11;
+    if (order==_16VAR_ORDER) return 16;
+    if (order==_32VAR_ORDER) return 32;
+    if (order==_64VAR_ORDER) return 64;
     return dim;
   }
 
@@ -9976,7 +10048,7 @@ namespace giac {
 	  return false;
       }
     }
-    if (order!=_REVLEX_ORDER && order!=_3VAR_ORDER && order!=_7VAR_ORDER && order!=_11VAR_ORDER)
+    if (order!=_REVLEX_ORDER && order!=_3VAR_ORDER && order!=_7VAR_ORDER && order!=_11VAR_ORDER && order!=_16VAR_ORDER && order!=_32VAR_ORDER && order!=_64VAR_ORDER)
       return false;
     // if (order!=_REVLEX_ORDER) zdata=false;
     vectpoly8 current,vtmp,afewpolys;
@@ -10194,8 +10266,8 @@ namespace giac {
 	    }
 	  }
 	  gbmod.swap(rurv); // reconstruct the rur instead of the gbasis
-	}
-	unsigned jpos; gen num,den;
+	} // end if (rur)
+	unsigned jpos; gen num,den; 
 	if (debug_infolevel>2)
 	  CERR << "p=" << p << ":" << gbmod << endl;
 	for (i=0;i<V.size();++i){
@@ -10578,7 +10650,7 @@ namespace giac {
     return false;
   }
 
-  bool gbasis8(const vectpoly & v,int & order,vectpoly & newres,environment * env,bool modularcheck,bool & rur,GIAC_CONTEXT){
+bool gbasis8(const vectpoly & v,int & order,vectpoly & newres,environment * env,bool modularalgo,bool modularcheck,bool & rur,GIAC_CONTEXT){
     vectpoly8 res;
     vectpolymod resmod;
     vector<unsigned> G;
@@ -10588,9 +10660,13 @@ namespace giac {
       rur=false;
       order=absint(order);
     }
-    if (!env || env->modulo==0 || env->moduloon==false){
+    if (modularalgo && (!env || env->modulo==0 || env->moduloon==false)){
       if (mod_gbasis(res,modularcheck,
+#ifdef EMCC
+		     false,
+#else
 		     order==_REVLEX_ORDER /* zdata*/,
+#endif
 		     // true /* zdata*/,
 		     rur,contextptr)){
 	newres=vectpoly(res.size(),polynome(v.front().dim,v.front()));

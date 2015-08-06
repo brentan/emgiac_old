@@ -1,3 +1,4 @@
+<!DOCTYPE HTML>
 <html id="fulldocument" manifest="xcas.appcache">
 <head>
 <meta charset="utf-8">
@@ -78,6 +79,11 @@ Sortie mathml et SVG (c) code principalement &eacute;crit par J.P. Branchard.
       Chiffres:<input type="number" name="digits_mode" title="Nombre de chiffres significatifs (si &gt; 14 multipr&eacute;cision, calculs plus lents)" value=12>
     </td>
     <td>
+      Autosimplification: <input type="number" name="autosimp_level"
+  title="0: pas d'autosimplification, 1: minimum, 2: maximum" value=1
+  max=2 min=0>
+    </td>
+    <td>
 Radians <input type="checkbox" name="angle_mode" title="Cocher pour utiliser les radians, d&eacute;cocher pour utiliser les degr&eacute;s" checked>
 Complexe <input type="checkbox" name="complex_mode" title="Cocher pour travailler par d&eacute;faut sur les complexes">
       √ <input type="checkbox" name="sqrt_mode" title="Cocher pour toujours factoriser les polynomes de degr&eacute; 2">
@@ -85,6 +91,8 @@ Complexe <input type="checkbox" name="complex_mode" title="Cocher pour travaille
   </tr>
   <tr>
     <td>
+      2d <input type="checkbox" name="prettyprint"
+  title="Cocher pour affichage 2d" checked>
       Historique <input type="number" name="history_width" value=1000
         title="Largeur maximale de l'historique">
       par <input type="number" name="history_height" value=400
@@ -127,33 +135,33 @@ Complexe <input type="checkbox" name="complex_mode" title="Cocher pour travaille
   target="_blank">Internet</a>,
     </li>
     <li> Programmation :
-  <a href="file:///usr/share/giac/doc/fr/casrouge/casrouge.html"
+  <a href="file:///usr/share/giac/doc/fr/casrouge/index.html"
     target="_blank">disque dur</a>,
-  <a href="http://www-fourier.ujf-grenoble.fr/~parisse/giac/doc/fr/casrouge/casrouge.html"
+  <a href="http://www-fourier.ujf-grenoble.fr/~parisse/giac/doc/fr/casrouge/index.html"
   target="_blank">Internet</a>,
     </li>
     <li> G&eacute;om&eacute;trie :
-  <a href="file:///usr/share/giac/doc/fr/casgeo/casgeo.html"
+  <a href="file:///usr/share/giac/doc/fr/casgeo/index.html"
     target="_blank">disque dur</a>,
-  <a href="http://www-fourier.ujf-grenoble.fr/~parisse/giac/doc/fr/casgeo/casgeo.html"
+  <a href="http://www-fourier.ujf-grenoble.fr/~parisse/giac/doc/fr/casgeo/index.html"
   target="_blank">Internet</a>,
     </li>
     <li> Simulation :
-  <a href="file:///usr/share/giac/doc/fr/cassim/cassim.html"
+  <a href="file:///usr/share/giac/doc/fr/cassim/index.html"
     target="_blank">disque dur</a>,
-  <a href="http://www-fourier.ujf-grenoble.fr/~parisse/giac/doc/fr/cassim/cassim.html"
+  <a href="http://www-fourier.ujf-grenoble.fr/~parisse/giac/doc/fr/cassim/index.html"
   target="_blank">Internet</a>,
     </li>
     <li> Exercices :
-  <a href="file:///usr/share/giac/doc/fr/casexo/casexo.html"
+  <a href="file:///usr/share/giac/doc/fr/casexo/index.html"
     target="_blank">disque dur</a>,
-  <a href="http://www-fourier.ujf-grenoble.fr/~parisse/giac/doc/fr/casexo/casexo.html"
+  <a href="http://www-fourier.ujf-grenoble.fr/~parisse/giac/doc/fr/casexo/index.html"
   target="_blank">Internet</a>,
     </li>
     <li> Amusement :
-  <a href="file:///usr/share/giac/doc/fr/cascas/cascas.html"
+  <a href="file:///usr/share/giac/doc/fr/cascas/index.html"
     target="_blank">disque dur</a>,
-  <a href="http://www-fourier.ujf-grenoble.fr/~parisse/giac/doc/fr/cascas/cascas.html"
+  <a href="http://www-fourier.ujf-grenoble.fr/~parisse/giac/doc/fr/cascas/index.html"
   target="_blank">Internet</a>,
     </li>
   </ul>
@@ -216,8 +224,7 @@ title="Montrer ou cacher la liste des manuels">Manuels</button>
 <td id="history4" style="visibility:hidden">
 &nbsp;&nbsp;<b>Variables</b>
 <button onclick="UI.addhelp(' ','VARS(1)')" title="Commande pour afficher la liste des variables">Lister</button>
-<button onclick="UI.addhelp(' ','rm_all_vars(1)')"title="Effacer le contenu
-  de toutes les variables">Effacer</button>
+<button onclick="UI.addhelp(' ','rm_all_vars(1)')" title="Effacer le contenu de toutes les variables">Effacer</button>
   <b>Aide</b>  <button onclick="helpoutput.innerHTML=''">Vider</button>
   </td>
 </tr>
@@ -285,10 +292,8 @@ title="Montrer ou cacher la liste des manuels">Manuels</button>
   </tr>
   <tr>
     <td>
-      <input type="button" style="width:30;height:30" name="select_button" value="sel."
-      onmousedown="event.preventDefault()" onClick="UI.focused.focus(); if (UI.focused.type!="textarea"){UI.focused.execCommand('selectAll'); } else {UI.focused.select(); UI.selection=UI.focused.value;}}" title="Selectionne la ligne de commande">  
-      <input type="button" style="width:30;height:30" name="add_x"
-  value="x" onmousedown="event.preventDefault()" onClick="UI.insert(UI.focused,'x')" title="x">  
+      <input type="button" style="width:30;height:30" name="select_button" value="sel" onmousedown="event.preventDefault()" onClick="UI.focused.focus(); if (UI.focused.type!='textarea'){UI.focused.execCommand('selectAll'); } else {UI.focused.select(); UI.selection=UI.focused.value;}" title="Selectionne la ligne de commande">  
+      <input type="button" style="width:30;height:30" name="add_x" value="x" onmousedown="event.preventDefault()" onClick="UI.insert(UI.focused,'x')" title="x">  
     </td>
     <td>
       <input type="button" style="width:30;height:30"
@@ -543,11 +548,10 @@ ou <b>exporter</b> la feuille de calcul. La sauvegarde
   <button
   onmousedown="event.preventDefault()" onClick="UI.insert(UI.focused,'factor(')"><tt>factor</tt></button>
   (respectivement <button
-  onmousedown="event.preventDefault()" onClick="UI.insert(UI.focused,cfactor(')"><tt>cfactor</tt></button>)
-  factorise une expression (par exemple <button
-  onmousedown="event.preventDefault()" onClick="UI.insert(UI.focused,'x^4-1')"><tt>x^4-1</tt></button>)
+  onmousedown="event.preventDefault()" onClick="UI.insert(UI.focused,'cfactor(')"><tt>cfactor</tt></button>)
+  factorise une expression (par exemple <button onmousedown="event.preventDefault()" onClick="UI.insert(UI.focused,'x^4-1')"><tt>x^4-1</tt></button>)
   sur Q (resp. Q[i]). Pour factoriser un entier, utiliser la commande
-  <button onclick="UI.insert(UI.focused,'ifactor(')"<tt>ifactor</tt></button>.
+  <button onclick="UI.insert(UI.focused,'ifactor(')"><tt>ifactor</tt></button>.
   Autres exemples : <tt>simplify(sin(3x)/sin(x)); gcd(x^4-1,x^3-1)
   </tt> (simplification, PGCD).
   </li>
@@ -599,9 +603,9 @@ ou <b>exporter</b> la feuille de calcul. La sauvegarde
   <br>
   &nbsp;&nbsp;var y;
   <br>
-  &nbsp;&nbsp;if (x > 100) return "Nombre trop grand";
+  &nbsp;&nbsp;if (x &gt; 100) return "Nombre trop grand";
   <br>
-  &nbsp;&nbsp;for (y:=0;y < x;y++){
+  &nbsp;&nbsp;for (y:=0;y &lt; x;y++){
   <br>
   &nbsp;&nbsp;&nbsp;&nbsp;print(y+"^2="+y^2);
   <br>
@@ -635,8 +639,7 @@ ou <b>exporter</b> la feuille de calcul. La sauvegarde
   document.getElementById('assistant_prog').style.display='none';">Nouvelle fonction</button>
       <button onclick="UI.insert(UI.focused,'si alors sinon fsi;\n  ')">Test</button>
       <button onclick="UI.insert(UI.focused,'pour de jusque faire\n    \n  fpour;\n  ')">Boucle pour</button>
-      <button onclick="UI.insert(UI.focused,'tantque faire\n    \n
-  ftantque;\n  ')">tantque</button>
+      <button onclick="UI.insert(UI.focused,'tantque faire\n    \n  ftantque;\n  ')">tantque</button>
       </span>
       <div id="assistant_prog" style="display:none">
 	  <b>Nouvelle fonction</b>
@@ -1211,15 +1214,34 @@ cols="80" title="Console"></textarea>
   base_url:"http://www-fourier.ujf-grenoble.fr/%7eparisse/",
   focused:entree,
   usecm:true,
+  usemathjax:false,
+  prettyprint:true,
   histcount:0,
   selection:'',
   langue:-1,
   canvas_lastx:0,
   canvas_lasty:0,
   canvas_pushed:false,
+  browser_type: function(){
+   var isOpera = !!window.opera || navigator.userAgent.indexOf(' OPR/') >= 0;
+   var isFirefox = typeof InstallTrigger !== 'undefined';   // Firefox 1.0+
+   var isSafari = Object.prototype.toString.call(window.HTMLElement).indexOf('Constructor') > 0;
+   var isChrome = !!window.chrome && !isOpera;              // Chrome 1+
+   var isIE = /*@cc_on!@*/false || !!document.documentMode; // At least IE6
+   if (isFirefox) return 1;
+   if (isSafari) return 2;
+   if (isChrome) return 3;
+   if (isIE) return 4;
+   if (isOpera) return 5;
+   return 0;
+  },
   caseval: function(text){
-    var docaseval = Module.cwrap('_ZN4giac7casevalEPKc',  'string', ['string']);
-    var s=docaseval(text);
+   var docaseval = Module.cwrap('_ZN4giac7casevalEPKc',  'string', ['string']);
+   var value=text;
+   var n=value.search(';');
+   if (n<0 || n>=value.length)
+     value='add_autosimplify('+value+')';
+    var s=docaseval(value);
     // Module.print(text+ ' '+s);
     return s;
   },
@@ -1294,7 +1316,7 @@ cols="80" title="Console"></textarea>
        }
        var pos=fs.search("<textarea");
        if (pos>=0 && pos<fs.length){
-         s += '+'+field.firstChild.value.replace('\n','')+'&';
+         s += '+'+field.firstChild.value.replace('\n',' ','g')+'&';
          cur=cur.nextSibling;
          continue;
        }
@@ -1304,6 +1326,9 @@ cols="80" title="Console"></textarea>
      }
      cur=cur.nextSibling;
    }
+   // Module.print(s);
+   s=s.replace(/\"/g,'%22');
+   // Module.print(s);
    return s;
   },
   canvas_mousemove:function(event){
@@ -1336,10 +1361,12 @@ cols="80" title="Console"></textarea>
      UI.docprefix=UI.base_url+'giac/doc/fr/cascmd_fr/';
    else
      UI.docprefix="file://"+form.doc_path.value;
+   if (form.prettyprint.checked) UI.prettyprint=true; else UI.prettyprint=false;
    var w=form.outdiv_width.value;
    if (w>hw-300) w=hw-300;
    s='input[type="number"] { width:40px;}\n .outdiv { width:'+w+'px; max-height: '+form.outdiv_height.value+'px;  overflow: auto;}\n.filenamecss {width:120px;height:20px}\n.historyinput {width:'+(hw-w-200)+'px;}';
    st.innerHTML=s;
+   UI.caseval("autosimplify("+form.autosimp_level.value+")");
    //Module.print(st.innerHTML);
    s='Digits:=';
    s += form.digits_mode.value;
@@ -1461,7 +1488,7 @@ cols="80" title="Console"></textarea>
    //Module.print(s);
    out.innerHTML += s;
    UI.link(0);
-   out.parentNode.scrollTop = out.parentNode.scrollHeight; // focus at end
+   UI.scrollatend(out.parentNode);
    UI.focused.focus();
   },
   exec_history: function(){alert('Historique!');},
@@ -1494,11 +1521,10 @@ cols="80" title="Console"></textarea>
     UI.reeval(prev.parentNode.previousSibling.lastChild,prefix);
   },
   eval_cmdline: function(){
-  var value=cmentree.getValue();
+   var value=cmentree.getValue();
   UI.eval_cmdline1(value,true);
   },
   eval_cmdline1:function(value,docaseval){
-  UI.histcount++;
   UI.set_locale();
   var out;
   // suppress leading non ascii char
@@ -1522,13 +1548,18 @@ cols="80" title="Console"></textarea>
         s=out; out='Done_svg';
       }
       else {
-        s='mathml(quote('+out+'),1)'; //Module.print(s);
-        s=UI.caseval(s);
+        if (UI.prettyprint){
+         if (UI.usemathjax)
+           s='latex(quote('+out+'))';
+         else
+           s='mathml(quote('+out+'),1)'; //Module.print(s);
+         s=UI.caseval(s);
+        } else s=out;
       }
     }
     else { out=' Non evalue '; s=out; }
   }
-  var add=UI.addinput(value,out,s,UI.histcount);
+  var add=UI.addinput(value,out,s);
   //var s=UI.caseval('mathml(quote('+value+'),1)');
   //add += '&nbsp;&nbsp;'+s.substr(1,s.length-2);
   //Module.print(value+'  ->  '+out);
@@ -1537,8 +1568,10 @@ cols="80" title="Console"></textarea>
   //document.getElementById('canvas').focus();
   var mathoutput=document.getElementById('mathoutput');
   mathoutput.innerHTML += add;
-  mathoutput.parentNode.scrollTop = mathoutput.parentNode.scrollHeight; // focus at end
+  UI.scrollatend(mathoutput.parentNode);
   UI.link(0);
+  if (UI.prettyprint && UI.usemathjax && UI.histcount>0)
+    MathJax.Hub.Queue(["Typeset",MathJax.Hub,'"hist'+(UI.histcount-1)+'"']);
   var l=mathoutput.lastChild;
   l=l.firstChild;
   l=l.firstChild;
@@ -1606,9 +1639,14 @@ cols="80" title="Console"></textarea>
    }
    else {
      // Module.print(text+' -> '+out);
-     s=UI.caseval('mathml(quote('+out+'),1)');
+     if (UI.prettyprint){
+      if (UI.usemathjax)
+        s=UI.caseval('latex(quote('+out+'))');
+      else
+      s=UI.caseval('mathml(quote('+out+'),1)');
+     } else s=out;
    }
-   s=UI.addinput(textin,out,s,UI.histcount);
+   s=UI.addinput(textin,out,s);
    return s;
   },
   reeval: function(field,prefix){
@@ -1619,6 +1657,8 @@ cols="80" title="Console"></textarea>
   s=UI.eval(prefix+s,s);
   par.innerHTML=s;
   UI.link(0);
+  if (UI.prettyprint && UI.usemathjax && UI.histcount>0)
+    MathJax.Hub.Queue(["Typeset",MathJax.Hub,'"hist'+(UI.histcount-1)+'"']);
   par.focus();
   },
   eval_level: function(field){
@@ -1647,6 +1687,8 @@ cols="80" title="Console"></textarea>
     var s=cur.value;
     s=UI.eval(s,s);
     field.innerHTML=s;
+    if (UI.prettyprint && UI.usemathjax )
+      MathJax.Hub.Queue(["Typeset",MathJax.Hub,field]);
   },
   before: function(field){
   var s='';
@@ -1694,7 +1736,7 @@ addcomment: function(text){
    }
   });
   },
-  addinput: function(textin,textout,mathmlout,count){
+  addinput: function(textin,textout,mathmlout){
   if (textout=='Done') document.getElementById('boutons_3d').style.display='inherit';;
   if (textin.length > 2 && textin.substr(0,2)=='//') return UI.addcomment(textin);
          UI.show_history123();
@@ -1719,8 +1761,14 @@ addcomment: function(text){
     }
     else {
       s += '<td style="color:blue; text-align:center">';
-      s += '<div title="Double clic: voir en mode texte (utile pour copier-coller)" class="outdiv" ondblclick="nextSibling.style.display=\'inherit\';this.nextSibling.select();UI.selection=nextSibling.value;this.style.display=\'none\';this.nextSibling.nextSibling.style.display=\'inherit\';">';
-      s += mathmlout.substr(1,mathmlout.length-2);
+      s += '<div title="Double clic: voir en mode texte (utile pour copier-coller)" class="outdiv" ondblclick="nextSibling.style.display=\'inherit\';this.nextSibling.select();UI.selection=nextSibling.value;this.style.display=\'none\';this.nextSibling.nextSibling.style.display=\'inherit\';" id="hist'+UI.histcount+'">';
+      UI.histcount++;
+      if (UI.prettyprint){
+       if (UI.usemathjax)
+        s += '$$'+mathmlout.substr(1,mathmlout.length-2)+'$$';
+       else
+        s += mathmlout.substr(1,mathmlout.length-2);
+      } else s += mathmlout;
       s += '</div>';
       s += '<textarea class="outdiv" onfocus="UI.set_focused(this)" onselect="if (UI.getsel(this).length>0) UI.selection=UI.getsel(this);" style="display:none">'+textout+'</textarea>';
       s += '<button style="display:none" onclick="previousSibling.previousSibling.style.display=\'block\'; previousSibling.style.display=\'none\';this.style.display=\'none\'">cancel</button>';
@@ -1760,14 +1808,19 @@ gr(text);
      if (s.length<2){ UI.insert(UI.focused,'?'); return;}
      cm.setSelection({line: pos.line,ch:k+1},{line:pos.line, ch:pos.ch});
      UI.addhelp('?',s);
-  },      
+  },
+  isie:false,    
+  scrollatend:function(field){
+    if (!UI.isie)
+      field.scrollTop=field.scrollHeight;    
+  },    
   addhelp: function(prefixe,text){
   var input=prefixe+text;
   var out=UI.eval(input,input);
   var add=out;
   var helpoutput=document.getElementById('helpoutput');
   helpoutput.innerHTML += add;  
-  helpoutput.parentNode.scrollTop = helpoutput.parentNode.scrollHeight; // focus at end
+  UI.scrollatend(helpoutput.parentNode); // focus at end
   UI.focused.focus();
   },
   renderhelp: function(text){
@@ -1816,8 +1869,8 @@ gr(text);
     pos1=examples.search(';');
     if (pos1<0) break;
     var cmd=examples.substr(0,pos1);
-    cmd=cmd.replace('>','&gt;');
-    cmd=cmd.replace('<','&lt;');
+    cmd=cmd.replace(/>/g,'&gt;');
+    cmd=cmd.replace(/</g,'&lt;');
     s += '<button onmousedown="event.preventDefault()" onclick="UI.insert(UI.focused,\''+cmd+'\')">'+cmd+'</button>';
     examples = examples.substr(pos1+1,examples.length-pos1-1);
    }
@@ -2061,9 +2114,33 @@ insert: function(myField, myValue) {
 <script src="longhelp.js"></script>
 
 <script language="javascript">
+  var ua = window.navigator.userAgent;
+  var old_ie = ua.indexOf('MSIE ');
+  var new_ie = ua.indexOf('Trident/');
+  if ((old_ie > -1) || (new_ie > -1) || window.chrome){
+ (function () {
+  var script = document.createElement("script");
+  script.type = "text/javascript";
+  script.src  = "http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+  document.getElementsByTagName("head")[0].appendChild(script);
+})();
+}
+</script>
+
+<script language="javascript">
 // En ajoutant async a la fin de script src=giac.js on accelere les chargements
 // de la page nue (cache), mais pas si il y a un lien
- window.onload = function(e){
+  window.onload = function(e){
+  var ua = window.navigator.userAgent;
+  var old_ie = ua.indexOf('MSIE ');
+  var new_ie = ua.indexOf('Trident/');
+  //if (window.chrome) UI.prettyprint=false;
+  if ((old_ie > -1) || (new_ie > -1)) UI.isie=true;
+  var bt=UI.browser_type();
+  if (UI.isie || (bt!=1 && bt!=2)){
+     UI.usemathjax=true;
+     alert("Votre navigateur ne supporte pas MathML, on utilise MathJax pour l'affichage 2d. Les calculs seraient plus rapides et les resultats seraient mieux affiches avec Firefox.");
+  }
  document.getElementById('apropos').style.display='none';
  console.log("window.onload");
  var hist=document.getElementById('mathoutput');

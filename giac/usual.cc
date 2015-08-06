@@ -3570,8 +3570,26 @@ namespace giac {
 	  if (i2.is_symb_of_sommet(*at_interval) && i2._SYMBptr->feuille.type==_VECT && i2._SYMBptr->feuille._VECTptr->size()==2){
 	    gen deb2=i2._SYMBptr->feuille._VECTptr->front();
 	    gen fin2=i2._SYMBptr->feuille._VECTptr->back();
-	    if (!is_integral(deb2) || !is_integral(fin2) || deb2.type!=_INT_ || fin2.type!=_INT_ || deb2.val<0 || fin2.val<0 || fin2.val-deb2.val!=fin.val-deb.val || fin2.val>=cols )
+	    if (!is_integral(deb2) || !is_integral(fin2) || deb2.type!=_INT_ || fin2.type!=_INT_ || deb2.val<0 || fin2.val<0 || fin2.val>=cols )
 	      return gendimerr(contextptr);
+	    if (ckmatrix(a)){
+	      if (fin2.val-deb2.val+1!=a._VECTptr->front()._VECTptr->size())
+		return gendimerr(contextptr);	      
+	      for (int i=deb.val;i<=fin.val;++i){
+		vecteur & target=*(*vptr)[i]._VECTptr;
+		const vecteur & source=*(*a._VECTptr)[i]._VECTptr;
+		if (target.size()<=fin2.val)
+		  target.resize(fin2.val+1);
+		for (int j=deb2.val;j<=fin2.val;++j){
+		  target[j]=source[j-deb.val];
+		}
+	      }
+	      if (in_place)
+		return valeur; // string2gen("Done",false);
+	      return sto(gen(v,valeur.subtype),destination,in_place,contextptr);
+	    }
+	    if (fin2.val-deb2.val!=fin.val-deb.val)
+	      return gendimerr(contextptr);	      
 	    int shift=deb2.val-deb.val;
 	    if (a.type==_VECT){
 	      for (int i=deb.val;i<=fin.val;++i)
