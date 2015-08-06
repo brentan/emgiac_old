@@ -413,6 +413,10 @@ namespace giac {
   extern const unary_function_ptr * const  at_plus ;
   extern const unary_function_ptr * const  at_pointplus ;
   extern const unary_function_ptr * const  at_pointminus ;
+  #ifdef SWIFT_CALCS_OPTIONS
+    gen pointplus(const gen &a,const gen &b,GIAC_CONTEXT);
+    gen pointminus(const gen &a,const gen &b,GIAC_CONTEXT);
+  #endif
 
   gen symb_prod(const gen & a,const gen & b);
   gen _prod(const gen & args,GIAC_CONTEXT);
