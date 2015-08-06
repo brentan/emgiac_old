@@ -18,6 +18,7 @@
  *  along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 using namespace std;
+#include "emscripten.h"
 #include <stdexcept>
 #include <cmath>
 #include <cstdlib>
@@ -3551,6 +3552,12 @@ namespace giac {
 	if (it->is_symb_of_sommet(*at_interval)&& it->_SYMBptr->feuille.type==_VECT && it->_SYMBptr->feuille._VECTptr->size()==2){
 	  gen deb=it->_SYMBptr->feuille._VECTptr->front();
 	  gen fin=it->_SYMBptr->feuille._VECTptr->back();
+#ifdef SWIFT_CALCS_OPTIONS // Adds support for i__s and i__e keywords for use in intervals when accessing matrix/list contents.  i__s..3 is start to index 3.  2..i__e is index 2 until end.  etc
+          if(!is_integral(deb) && (gen2string(it->_SYMBptr->feuille._VECTptr->front()).compare("i__s") == 0)) // Test for special keyword i__s, which indicates 'start'
+            deb = gen(0);
+          if(!is_integral(fin) && (gen2string(it->_SYMBptr->feuille._VECTptr->back()).compare("i__e") == 0)) // Test for special keyword i__e, which indicates 'end'
+            fin = gen(int((*vptr).size())-1);
+#endif
 	  if (!is_integral(deb) || !is_integral(fin) || deb.type!=_INT_ || fin.type!=_INT_ || deb.val<0 || fin.val<0 || deb.val>fin.val)
 	    return gendimerr(contextptr);
 	  if (a.type==_VECT && a._VECTptr->size()!=fin.val-deb.val+1)
@@ -3570,6 +3577,12 @@ namespace giac {
 	  if (i2.is_symb_of_sommet(*at_interval) && i2._SYMBptr->feuille.type==_VECT && i2._SYMBptr->feuille._VECTptr->size()==2){
 	    gen deb2=i2._SYMBptr->feuille._VECTptr->front();
 	    gen fin2=i2._SYMBptr->feuille._VECTptr->back();
+#ifdef SWIFT_CALCS_OPTIONS // Adds support for i__s and i__e keywords for use in intervals when accessing matrix/list contents.  i__s..3 is start to index 3.  2..i__e is index 2 until end.  etc
+            if(!is_integral(deb2) && (gen2string(i2._SYMBptr->feuille._VECTptr->front()).compare("i__s") == 0)) // Test for special keyword i__s, which indicates 'start'
+              deb2 = gen(0);
+            if(!is_integral(fin2) && (gen2string(i2._SYMBptr->feuille._VECTptr->back()).compare("i__e") == 0)) // Test for special keyword i__e, which indicates 'end'
+              fin2 = gen(int((*(*vptr)[deb.val]._VECTptr).size())-1);
+#endif
 	    if (!is_integral(deb2) || !is_integral(fin2) || deb2.type!=_INT_ || fin2.type!=_INT_ || deb2.val<0 || fin2.val<0 || fin2.val>=cols )
 	      return gendimerr(contextptr);
 	    if (ckmatrix(a)){
@@ -3577,11 +3590,11 @@ namespace giac {
 		return gendimerr(contextptr);	      
 	      for (int i=deb.val;i<=fin.val;++i){
 		vecteur & target=*(*vptr)[i]._VECTptr;
-		const vecteur & source=*(*a._VECTptr)[i]._VECTptr;
+		const vecteur & source=*(*a._VECTptr)[i-deb.val]._VECTptr;
 		if (target.size()<=fin2.val)
 		  target.resize(fin2.val+1);
 		for (int j=deb2.val;j<=fin2.val;++j){
-		  target[j]=source[j-deb.val];
+		  target[j]=source[j-deb2.val];
 		}
 	      }
 	      if (in_place)
