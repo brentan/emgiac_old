@@ -7688,6 +7688,10 @@ namespace giac {
   }
 
   bool operator_equal(const gen & a,const gen & b,GIAC_CONTEXT){
+#ifdef SWIFT_CALCS_OPTIONS
+    gen aa, bb;   // Allow equal check to work with units
+    std::string text;
+#endif
     switch ( (a.type<< _DECALAGE) | b.type ) {
     case _INT___INT_: 
       return (a.val==b.val);
