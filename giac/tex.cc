@@ -1364,6 +1364,37 @@ namespace giac {
     #endif
   }
 
+  static string cplx2tex(const gen & e,GIAC_CONTEXT) {
+      if (is_exactly_zero(*(e._CPLXptr+1)))
+        return e._CPLXptr->print(contextptr);
+      if (*complex_display_ptr(e) &1){
+#ifdef BCD
+        if (e._CPLXptr->type==_FLOAT_ && (e._CPLXptr+1)->type==_FLOAT_)
+#ifdef GIAC_HAS_STO_38  
+          return abs(e,contextptr).print(contextptr)+"\xe2\x88\xa1"+print_FLOAT_(atan2f(e._CPLXptr->_FLOAT_val,(e._CPLXptr+1)->_FLOAT_val,angle_radian(contextptr)?AMRad:AMDeg),contextptr);
+#else   
+        return abs(e,contextptr).print(contextptr)+"\xe2\x88\xa1"+print_FLOAT_(atan2f(e._CPLXptr->_FLOAT_val,(e._CPLXptr+1)->_FLOAT_val,angle_radian(contextptr)),contextptr);
+#endif
+#endif
+        // return abs(e,contextptr).print(contextptr)+"\xe2\x88\xa1"+(angle_radian(contextptr)?arg(e,contextptr):arg(e,contextptr)*rad2deg_g).print(contextptr);
+        return abs(e,contextptr).print(contextptr)+"\xe2\x88\xa1"+arg(e,contextptr).print(contextptr);
+      }
+      if (is_exactly_zero(*e._CPLXptr)){
+        if (is_one(*(e._CPLXptr+1)))
+          return printi(contextptr);
+        if (is_minus_one(*(e._CPLXptr+1)))
+          return (abs_calc_mode(contextptr)==38?string("−"):string("-"))+printi(contextptr);
+        return ((e._CPLXptr+1)->print(contextptr) + string("\\cdot "))+printi(contextptr);
+      }
+      if (is_one(*(e._CPLXptr+1)))
+        return (e._CPLXptr->print(contextptr) + string("+"))+printi(contextptr);
+      if (is_minus_one(*(e._CPLXptr+1)))
+        return (e._CPLXptr->print(contextptr) + string("-"))+printi(contextptr);
+      if (is_positive(-(*(e._CPLXptr+1)),contextptr))
+        return (e._CPLXptr->print(contextptr) + string("-") + (-(*(e._CPLXptr+1))).print(contextptr) + "\\cdot ")+printi(contextptr);
+      return (e._CPLXptr->print(contextptr) + string("+") + (e._CPLXptr+1)->print(contextptr) + "\\cdot ")+printi(contextptr);
+  }
+
   // assume math mode enabled
   string gen2tex(const gen & e,GIAC_CONTEXT){
     switch (e.type){
@@ -1375,7 +1406,7 @@ namespace giac {
       else
 	return e.print(contextptr);
     case _CPLX:
-      return e.print(contextptr);
+      return cplx2tex(e, contextptr); //e.print(contextptr);
     case _IDNT:
       return idnt2tex(e,contextptr);
     case _SYMB:
