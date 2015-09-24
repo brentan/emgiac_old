@@ -1338,9 +1338,8 @@ namespace giac {
       }
     #else
       if((opstring.length() == 0) && (l == 2)) {
-        s =  "\\Unit{";
-        s += gen2tex((*(feu._VECTptr))[0],contextptr);
-        s += "}{";
+        s = gen2tex((*(feu._VECTptr))[0],contextptr);
+        s += " \\Unit{";
         if(l == 1)
           return s+"}";
         giac::unit_mode = true;
