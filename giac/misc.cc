@@ -3763,11 +3763,15 @@ static define_unary_function_eval (__center2interval,&_center2interval,_center2i
 	if (*it>=max_class)
 	  break;
       }
+#ifdef SWIFT_CALCS_OPTIONS
+      res.push_back(makevecteur(min_class,max_class,effectif)); // Swift Calcs does its own plots, so histogram should just return the frequencies
+#else
       effectif /= s*class_size; // height of the class
       gen ming=min_class+gen(0.0,effectif);
       gen maxg=max_class+gen(0.0,effectif);
       gen rectan(makevecteur(min_class,max_class,maxg,ming,min_class),_LINE__VECT);
       res.push_back(pnt_attrib(rectan,attributs,contextptr));
+#endif
       // res.push_back(_segment(makevecteur(min_class,ming),contextptr));
       // res.push_back(_segment(makevecteur(ming,maxg),contextptr));
       // res.push_back(_segment(makevecteur(maxg,max_class),contextptr));
