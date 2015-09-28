@@ -8143,6 +8143,9 @@ namespace giac {
       return is_exactly_zero(a._FLOAT_val); 
     case _VECT:
       return is_zero__VECT(*a._VECTptr,contextptr);
+    case _SYMB:
+      if(a._SYMBptr->sommet == at_unit) 
+        return is_zero(a._SYMBptr->feuille[0]);
     case _POLY:
       return a._POLYptr->coord.empty();
     case _FRAC:
@@ -8151,13 +8154,6 @@ namespace giac {
       return is_zero(*a._MODptr,contextptr);
     case _USER:
       return a._USERptr->is_zero();
-    case _SYMB:
-      if(a._SYMBptr->sommet == at_unit) {
-        emscripten_run_script("console.log('HERE');");
-        return is_zero(a._SYMBptr->feuille[0]);
-      }
-      else
-        return false;
     default: 
       return false;
     }
@@ -8177,6 +8173,9 @@ namespace giac {
       return a._DOUBLE_val==0; 
     case _FLOAT_:
       return fis_exactly_zero(a._FLOAT_val);
+    case _SYMB:
+      if(a._SYMBptr->sommet == at_unit) 
+        return is_zero(a._SYMBptr->feuille[0]);
     case _POLY:
       return a._POLYptr->coord.empty();
     case _FRAC:
