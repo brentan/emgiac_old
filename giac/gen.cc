@@ -8146,6 +8146,13 @@ namespace giac {
       return is_zero(*a._MODptr,contextptr);
     case _USER:
       return a._USERptr->is_zero();
+    case _SYMB:
+      if(a._SYMBptr->sommet == at_unit) {
+        emscripten_run_script("console.log('HERE');");
+        return is_zero(a._SYMBptr->feuille[0]);
+      }
+      else
+        return false;
     default: 
       return false;
     }
