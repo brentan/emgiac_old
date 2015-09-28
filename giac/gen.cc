@@ -3804,6 +3804,10 @@ namespace giac {
     case _SYMB:
       if (a.is_symb_of_sommet(at_pnt))
 	return abs(_affixe(a,contextptr),contextptr);
+      if (a.is_symb_of_sommet(at_unit)) {
+        vecteur & v=*a._SYMBptr->feuille._VECTptr;
+        return symbolic(at_unit,makevecteur(abs(v[0],contextptr),v[1]));
+      }
       return symb_abs(*a._SYMBptr,contextptr);
     case _USER:
       return a._USERptr->abs(contextptr);
