@@ -552,6 +552,8 @@ namespace giac {
       }
 #endif
     }
+    if (!is_positive(p,contextptr) || !is_greater(1,p,contextptr))
+      return gensizeerr(contextptr);
     return comb(n,k,contextptr)*pow(p,k,contextptr)*pow(1-p,n-k,contextptr);
   }
   gen _binomial(const gen & g,GIAC_CONTEXT){
@@ -568,8 +570,11 @@ namespace giac {
 	return _factorial(v[0],contextptr)/(_factorial(v[1],contextptr)*_factorial(v[0]-v[1],contextptr));
       return comb(v[0],v[1],contextptr);
     }
-    if (s==3)
+    if (s==3){
+      if (0 && calc_mode(contextptr)==1)
+	return binomial(v[0],v[2],v[1],contextptr);	
       return binomial(v[0],v[1],v[2],contextptr);
+    }
     return gensizeerr(contextptr);
   }
   static const char _binomial_s []="binomial";

@@ -10,7 +10,8 @@
 # --compression lzma/lzma-native,lzma/lzma-decoder.js,LZMA.decompress
 # lzma/lzma-native < file_to_compress > compressed_file
 # -s options are in emscripten src/settings.js
-PREC = -s PRECISE_I32_MUL=1 #-DGIAC_GGB 
+#PREC = -s PRECISE_I32_MUL=1 #-DGIAC_GGB 
+PREC = -s PRECISE_I64_MATH=1 #-DGIAC_GGB 
 CXXFLAGS =  $(PREC) -I. -I.. -DHAVE_CONFIG_H -DIN_GIAC -DGIAC_GENERIC_CONSTANTS -DNO_STDEXCEPT -Oz -s ALLOW_MEMORY_GROWTH=1 -s ASSERTIONS=1 -s GL_UNSAFE_OPTS=0  # --bind -DEMCC_BIND # -g2 -s SAFE_HEAP=1 # -DEMCC_GLUT -s USE_SDL=2 # --llvm-opts 2 -v
 CFLAGS =  $(PREC) -I. -I.. -v  # -pg
 CPPFLAGS = $(CXXFLAGS)

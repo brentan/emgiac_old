@@ -564,6 +564,14 @@ namespace giac {
   static define_unary_function_eval (__nop,&_nop,_nop_s);
   define_unary_function_ptr5( at_nop ,alias_at_nop,&__nop,0,true);
 
+  gen _Nop(const gen & a,GIAC_CONTEXT){
+    if ( a.type==_STRNG &&  a.subtype==-1) return  a;
+    return a;
+  }
+  static const char _Nop_s []="Nop";
+  static define_unary_function_eval (__Nop,&_Nop,_Nop_s);
+  define_unary_function_ptr5( at_Nop ,alias_at_Nop,&__Nop,0,true);
+
   string printasinnerbloc(const gen & feuille,GIAC_CONTEXT){
     if ( (feuille.type==_SYMB) && feuille._SYMBptr->sommet==at_bloc)
       return printasinnerbloc(feuille._SYMBptr->feuille,contextptr);
@@ -3515,6 +3523,11 @@ namespace giac {
   static define_unary_function_eval4_index (58,__union,&_union,_union_s,&printsommetasoperator,&texprintsommetasoperator);
   define_unary_function_ptr( at_union ,alias_at_union ,&__union);
 
+  void chk_set(gen & a){
+    if (a.type==_VECT && a.subtype!=_SET__VECT){
+      vecteur av=*a._VECTptr; comprim(av); a=av;
+    }
+  }
   gen symb_intersect(const gen & args){
     return symbolic(at_intersect,args);
   }
@@ -3562,6 +3575,8 @@ namespace giac {
     }
 #endif
     if ( a.type==_VECT && b.type==_VECT){
+      chk_set(a);
+      chk_set(b);
       vecteur v;
       const_iterateur it=a._VECTptr->begin(),itend=a._VECTptr->end();
       for (;it!=itend;++it){
@@ -3586,6 +3601,8 @@ namespace giac {
     gen a=args._VECTptr->front(),b=args._VECTptr->back();
     if ( (a.type!=_VECT) || (b.type!=_VECT))
       return gensizeerr(gettext("Minus"));
+    chk_set(a);
+    chk_set(b);
     vecteur v;
     const_iterateur it=a._VECTptr->begin(),itend=a._VECTptr->end();
     for (;it!=itend;++it){
@@ -3614,6 +3631,19 @@ namespace giac {
   }
   gen _dollar(const gen & args,GIAC_CONTEXT){
     if ( args.type==_STRNG &&  args.subtype==-1) return  args;
+    if (abs_calc_mode(contextptr)==38){
+      int r,c;
+      if (iscell(args,r,c,contextptr)){
+	string s=symbolic(at_dollar,args).print(contextptr);
+	identificateur cellule(s);
+	return eval(cellule,1,contextptr);
+      }
+      if (args.type==_VECT && args._VECTptr->size()==2 && args._VECTptr->back().type==_INT_ && args._VECTptr->back().val>0){
+	string s=args._VECTptr->front().print(contextptr)+"$"+print_INT_(args._VECTptr->back().val);
+	identificateur cellule(s);
+	return eval(cellule,1,contextptr);
+      }
+    }
     vecteur vargs;
     if (args.type!=_VECT){
       identificateur tmp(" _t");
@@ -4754,10 +4784,27 @@ namespace giac {
     if ( g.type==_STRNG &&  g.subtype==-1) return  g;
     gen args(g);
     if (g.type==_DOUBLE_)
-      args=int(g._DOUBLE_val);    
+      args=int(g._DOUBLE_val);
+    //grad
+    //since this is a programming command, not sure what you want done here exactly..., will return 1 for radian, 0 for degree, and 2 for grads to match prior behavior
     if (args.type!=_INT_)
-      return angle_radian(contextptr);
-    angle_radian((args.val)!=0,contextptr);
+    {
+      if(angle_radian(contextptr))
+        return 1;
+      else if(angle_degree(contextptr))
+        return 0;
+      else
+        return 2;
+    }
+    //anything but 0 or 2 will result in radians...
+    int val = args.val;
+    if(val == 0) 
+      angle_mode(1, contextptr); //set to degrees if 0
+    else if(val==2)
+      angle_mode(2, contextptr); //set to grads if 2
+    else
+      angle_mode(0, contextptr); //set to radians for anything but those two
+
     parent_cas_setup(contextptr);
     return args;
   }
@@ -4894,11 +4941,31 @@ namespace giac {
 	complex_mode(v[2]._DOUBLE_val!=0,contextptr);
     }
     if (v[3].type==_INT_)
-      angle_radian(v[3].val!=0,contextptr);
+    {
+      //grad
+      //since end user sees val !=0 being radians, I have hijacked so 2 will be grad, 0 is deg, and anything else is radians
+      int val = v[3].val;
+      if(val == 0)
+        angle_mode(1, contextptr); //degrees if ==0
+      else if(val == 2)
+        angle_mode(2, contextptr); //grad if ==2
+      else
+        angle_mode(0, contextptr); //anything else is radians
+    }
     else {
       v[3]=evalf_double(v[3],1,contextptr);
       if (v[3].type==_DOUBLE_)
-	angle_radian(v[3]._DOUBLE_val!=0,contextptr);
+      {
+        //grad
+        //since end user sees val !=0 being radians, I have hijacked so 2 will be grad, 0 is deg, and anything else is radians
+        int val = v[3]._DOUBLE_val;
+        if(val == 0)
+          angle_mode(1, contextptr); //degrees if ==0
+        else if(val == 2)
+          angle_mode(2, contextptr); //grad if ==2
+        else
+          angle_mode(0, contextptr); //anything else is radians
+      }
     }
     v[4]=evalf_double(v[4],1,contextptr);
     if (v[4].type==_DOUBLE_){
@@ -4974,7 +5041,8 @@ namespace giac {
     v.push_back(approx_mode(contextptr));
     v.push_back(complex_variables(contextptr));
     v.push_back(complex_mode(contextptr));
-    v.push_back(angle_radian(contextptr));
+    int an=angle_mode(contextptr);
+    v.push_back(an==2?2:1-an); //grad //not sure if this will mess anything up on your side bernard, having int instead of bool
     v.push_back(scientific_format(contextptr)+16*integer_format(contextptr));
     v.push_back(makevecteur(epsilon(contextptr),proba_epsilon(contextptr)));
     v.push_back(decimal_digits(contextptr));
@@ -5466,12 +5534,12 @@ namespace giac {
 	// adjust (guess?) nbits
 	gen g_=evalf_double(g,1,contextptr); // rough evalf
 	vecteur P=*p._VECTptr;
-	gen val;
+	gen val=0.0;
 	double err=0;
 	double absg=abs(g,contextptr)._DOUBLE_val;
 	for (int i=0;i<P.size();++i){
-	  err += abs(val,contextptr)._DOUBLE_val+absg;
-	  val = val*g+P[i];
+	  err += evalf_double(abs(val,contextptr),1,contextptr)._DOUBLE_val+absg;
+	  val = evalf_double(val*g+P[i],1,contextptr);
 	}
 	err=err/abs(val,contextptr)._DOUBLE_val;
 	int nbitsmore=std::ceil(std::log(err)/std::log(2));
@@ -9145,7 +9213,7 @@ namespace giac {
 
   gen _autosimplify(const gen & g,GIAC_CONTEXT){
     if (is_zero(g)){
-      autosimplify("nop",contextptr);
+      autosimplify("Nop",contextptr);
       return 1;
     }
     if (is_one(g)){

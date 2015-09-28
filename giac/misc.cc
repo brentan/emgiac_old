@@ -294,7 +294,8 @@ namespace giac {
   gen _acot(const gen & args,GIAC_CONTEXT){
     if ( args.type==_STRNG && args.subtype==-1) return  args;
     if (is_zero(args))
-      return angle_radian(contextptr)?cst_pi_over_2:90;
+      //grad
+      return angle_radian(contextptr)?cst_pi_over_2:(angle_degree(contextptr)?90:100);
 #if 0
     if (abs_calc_mode(contextptr)==38)
       return cst_pi_over_2-atan(args,contextptr);
@@ -6190,6 +6191,20 @@ static define_unary_function_eval (__os_version,&_os_version,_os_version_s);
   static const char _Li_s []="Li";
   static define_unary_function_eval (__Li,&_Li,_Li_s);
   define_unary_function_ptr5( at_Li ,alias_at_Li,&__Li,0,true);
+
+  gen _coth(const gen & args,GIAC_CONTEXT){
+    return inv(tanh(args,contextptr),contextptr);
+  }
+  static const char _coth_s []="coth";
+  static define_unary_function_eval (__coth,&_coth,_coth_s);
+  define_unary_function_ptr5( at_coth ,alias_at_coth,&__coth,0,true);
+
+  gen _acoth(const gen & args,GIAC_CONTEXT){
+    return atanh(inv(args,contextptr),contextptr);
+  }
+  static const char _acoth_s []="acoth";
+  static define_unary_function_eval (__acoth,&_acoth,_acoth_s);
+  define_unary_function_ptr5( at_acoth ,alias_at_acoth,&__acoth,0,true);
 
   gen _add_autosimplify(const gen & args,GIAC_CONTEXT){
     return eval(add_autosimplify(args,contextptr),eval_level(contextptr),contextptr);

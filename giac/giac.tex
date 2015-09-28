@@ -6,34 +6,98 @@
 %% Commands \giacinput{} or \giacinputmath{} or \giacinputbigmath{} 
 %% \giaccmd{} or \giaccmdmath{} or \giaccmdbigmath{} 
 %% or \begin{giacprog}...\end{giacprog}
+%% contact hevea to output <frameset> </frameset> for canvas and menu?
 \usepackage{hevea} 
 \usepackage{listings}
 \usepackage{fancyvrb}
 \newcommand{\loadgiacjs}{
 \ifhevea
-\@print{<script language="javascript"> 
-var Module = { preRun: [], postRun: []};
+\@print{
+<button onclick="UI.exec(document.documentElement);" title='Click here to execute all commands'>Execute</button>
+<canvas id='canvas' width=0 height=0   onmousedown="UI.canvas_pushed=true;UI.canvas_lastx=event.clientX; UI.canvas_lasty=event.clientY;"  onmouseup="UI.canvas_pushed=false;" onmousemove="UI.canvas_mousemove(event,'')"></canvas>
+<textarea id="output" rows=2 cols="80" title="Console"></textarea>
+<script language="javascript"> 
+var Module = { preRun: [], postRun: [], 
+        print: (function() {
+          var element = document.getElementById('output');
+          element.value = ''; // clear browser cache
+          return function(text) {
+            element.style.display='inherit';
+            element.value += text + "\n";
+            element.scrollTop = 99999; // focus on bottom
+          };
+        })(),
+      canvas: document.getElementById('canvas'),};
 </script>
 <script src="file:///usr/share/giac/doc/giac.js" async></script> 
 <script language="javascript"> 
  var UI = {
   histcount:0,
   usemathjax:false,
+  canvas_pushed:false,
+  canvas_lastx:0,
+  canvas_lasty:0,
+  canvas_mousemove:function(event,no){
+    if (UI.canvas_pushed){
+      // Module.print(event.clientX);
+      if (UI.canvas_lastx!=event.clientX){
+        if (event.clientX>UI.canvas_lastx)
+          giac3d('r'+no);
+        else
+          giac3d('l'+no);
+        UI.canvas_lastx=event.clientX;
+      }
+      if (UI.canvas_lasty!=event.clientY){
+        if (event.clientY>UI.canvas_lasty)
+          giac3d('d'+no);
+        else
+          giac3d('u'+no);
+        UI.canvas_lasty=event.clientY;
+      }
+    }
+  },  
+  render_canvas:function(field){
+   var n=field.id;
+   if (n && n.length>5 && n.substr(0,5)=='gl3d_'){
+    Module.print(n);
+    var n3d=n.substr(5,n.length-5);
+    giac3d(n3d);
+    return;
+   }
+   var f=field.firstChild;
+   for (;f;f=f.nextSibling){
+     UI.render_canvas(f);
+   }
+  },
+  caseval:function(text){
+    var s="not evaled",err;
+    try {
+       s= giaceval(text);
+    } catch (err) { s=err.message;}
+    var is_3d=s.length>5 && s.substr(0,5)=='gl3d ';
+    if (is_3d){
+	var n3d=s.substr(5,s.length-5);
+	s = '<canvas id="gl3d_'+n3d+'" onmousedown="UI.canvas_pushed=true;UI.canvas_lastx=event.clientX; UI.canvas_lasty=event.clientY;" onmouseup="UI.canvas_pushed=false;" onmousemove="UI.canvas_mousemove(event,'+n3d+')" width=400 height=250></canvas>';
+    }
+   //console.log(s);
+    return s;
+  },
   eval_form: function(field){
-    caseval(field.name.value+':='+field.valname.value);
-    var s=caseval(field.prog.value);
+    giaceval(field.name.value+':='+field.valname.value);
+    var s=UI.caseval(field.prog.value);
     var is_svg=s.substr(1,4)=='<svg';
     if (is_svg) field.parentNode.lastChild.innerHTML=s.substr(1,s.length-2);
     else field.parentNode.lastChild.innerHTML=s;
+   UI.render_canvas(field.parentNode.lastChild);
   },
   latexeval:function(text){
     var tmp=text;
      if (UI.usemathjax){
-       tmp=caseval('latex(quote('+tmp+'))');
+       tmp=giaceval('latex(quote('+tmp+'))');
        tmp='$$'+tmp.substr(1,tmp.length-2)+'$$';
        return tmp;
      }
-     tmp=caseval('mathml(quote('+text+',1))');
+     tmp=giaceval('mathml(quote('+text+',1))');
      tmp=tmp.substr(1,tmp.length-2);
     return tmp;   
   },
@@ -41,7 +105,7 @@ var Module = { preRun: [], postRun: []};
     var key = event.keyCode;
     if (key != 13 || event.shiftKey) return true;
     var tmp=field.value;
-    tmp=caseval(tmp);
+    tmp=UI.caseval(tmp);
     if (mode==1){
       if (tmp.charCodeAt(0)==34) tmp=tmp.substr(1,tmp.length-2); 
    }
@@ -49,6 +113,7 @@ var Module = { preRun: [], postRun: []};
      tmp=UI.latexeval(text);
    }
    field.nextSibling.nextSibling.innerHTML='&nbsp;'+tmp;
+   UI.render_canvas(field.nextSibling.nextSibling);
    if (UI.usemathjax) MathJax.Hub.Queue(["Typeset",MathJax.Hub,field.nextSibling.nextSibling]);
    if (event.preventDefault) event.preventDefault();
     return false;
@@ -56,6 +121,10 @@ var Module = { preRun: [], postRun: []};
    exec: function(field){
      if (field.nodeName=="BUTTON"){
         field.click();
+        return;
+     }
+     if (field.nodeName=="FORM"){
+        UI.eval_form(field);
         return;
      }
      var f=field.firstChild;
@@ -81,11 +150,12 @@ var Module = { preRun: [], postRun: []};
     script.src  = "http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
     document.getElementsByTagName("head")[0].appendChild(script);
   }
-  caseval=Module.cwrap('_ZN4giac7casevalEPKc',  'string', ['string']);
-  caseval('set_language(1)');
-  if (confirm('Run history commands?')){
-    UI.exec(document.documentElement);
-  }
+  giaceval=Module.cwrap('_ZN4giac7casevalEPKc',  'string', ['string']);
+  giac3d = Module.cwrap('_ZN4giac13giac_rendererEPKc','number', ['string']);
+  giaceval('set_language(1);');
+  giaceval('factor(x^4-1)');
+  giaceval('sin(x+y)+f(t)');
+ if (confirm('Exec commands?')) UI.exec(document.documentElement);
  };
 </script>
 }
@@ -96,29 +166,79 @@ computer algebra system commands.
 }
 \newcommand{\loadgiacjsonline}{
 \ifhevea
-\@print{<script language="javascript"> 
-var Module = { preRun: [], postRun: []};
+\@print{
+<button onclick="UI.exec(document.documentElement);" title='Click here to execute all commands'>Execute</button>
+<canvas id='canvas' width=0 height=0   onmousedown="UI.canvas_pushed=true;UI.canvas_lastx=event.clientX; UI.canvas_lasty=event.clientY;"  onmouseup="UI.canvas_pushed=false;" onmousemove="UI.canvas_mousemove(event,'')"></canvas>
+<textarea id="output" rows=2 cols="80" title="Console"></textarea>
+<script language="javascript"> 
+var Module = { preRun: [], postRun: [], 
+        print: (function() {
+          var element = document.getElementById('output');
+          element.value = ''; // clear browser cache
+          return function(text) {
+            element.style.display='inherit';
+            element.value += text + "\n";
+            element.scrollTop = 99999; // focus on bottom
+          };
+        })(),
+      canvas: document.getElementById('canvas'),};
 </script>
 <script src="http://www-fourier.ujf-grenoble.fr/~parisse/giac.js" async></script> 
 <script language="javascript">
  var UI = {
   histcount:0,
   usemathjax:false,
+  canvas_pushed:false,
+  canvas_lastx:0,
+  canvas_lasty:0,
+  canvas_mousemove:function(event,no){
+    if (UI.canvas_pushed){
+      // Module.print(event.clientX);
+      if (UI.canvas_lastx!=event.clientX){
+        if (event.clientX>UI.canvas_lastx)
+          giac3d('r'+no);
+        else
+          giac3d('l'+no);
+        UI.canvas_lastx=event.clientX;
+      }
+      if (UI.canvas_lasty!=event.clientY){
+        if (event.clientY>UI.canvas_lasty)
+          giac3d('d'+no);
+        else
+          giac3d('u'+no);
+        UI.canvas_lasty=event.clientY;
+      }
+    }
+  },  
+  caseval:function(text){
+    var s="not evaled",err;
+    try {
+       s= giaceval(text);
+    } catch (err) { s=err.message;}
+    var is_3d=s.length>5 && s.substr(0,5)=='gl3d ';
+    if (is_3d){
+	var n3d=s.substr(5,s.length-5);
+	s = '<canvas id="gl3d_'+n3d+'" onmousedown="UI.canvas_pushed=true;UI.canvas_lastx=event.clientX; UI.canvas_lasty=event.clientY;" onmouseup="UI.canvas_pushed=false;" onmousemove="UI.canvas_mousemove(event,'+n3d+')" width=400 height=250></canvas>';
+    }
+   // console.log(s);
+    return s;
+  },
   eval_form: function(field){
-    caseval(field.name.value+':='+field.valname.value);
-    var s=caseval(field.prog.value);
+    giaceval(field.name.value+':='+field.valname.value);
+    var s=UI.caseval(field.prog.value);
     var is_svg=s.substr(1,4)=='<svg';
     if (is_svg) field.parentNode.lastChild.innerHTML=s.substr(1,s.length-2);
     else field.parentNode.lastChild.innerHTML=s;
+   UI.render_canvas(field.parentNode.lastChild);
   },
   latexeval:function(text){
     var tmp=text;
      if (UI.usemathjax){
-       tmp=caseval('latex(quote('+tmp+'))');
+       tmp=giaceval('latex(quote('+tmp+'))');
        tmp='$$'+tmp.substr(1,tmp.length-2)+'$$';
        return tmp;
      }
-     tmp=caseval('mathml(quote('+tmp+',1))');
+     tmp=giaceval('mathml(quote('+tmp+',1))');
      tmp=tmp.substr(1,tmp.length-2);
     return tmp;   
   },
@@ -126,7 +246,7 @@ var Module = { preRun: [], postRun: []};
     var key = event.keyCode;
     if (key != 13 || event.shiftKey) return true;
     var tmp=field.value;
-    tmp=caseval(tmp);
+    tmp=UI.caseval(tmp);
     if (mode==1){
       if (tmp.charCodeAt(0)==34) tmp=tmp.substr(1,tmp.length-2); 
    }
@@ -134,6 +254,7 @@ var Module = { preRun: [], postRun: []};
      tmp=UI.latexeval(tmp);
    }
    field.nextSibling.nextSibling.innerHTML=tmp;
+   UI.render_canvas(field.nextSibling.nextSibling);
    if (UI.usemathjax) MathJax.Hub.Queue(["Typeset",MathJax.Hub,field.nextSibling.nextSibling]);
    if (event.preventDefault) event.preventDefault();
     return false;
@@ -166,11 +287,12 @@ var Module = { preRun: [], postRun: []};
     script.src  = "http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
     document.getElementsByTagName("head")[0].appendChild(script);
   }
-  caseval=Module.cwrap('_ZN4giac7casevalEPKc',  'string', ['string']);
-  caseval('set_language(1)');
-  if (confirm('Run history commands?')){
-    UI.exec(document.documentElement);
-  }
+  giaceval=Module.cwrap('_ZN4giac7casevalEPKc',  'string', ['string']);
+  giac3d = Module.cwrap('_ZN4giac13giac_rendererEPKc','number', ['string']);
+  giaceval('set_language(1);');
+  giaceval('factor(x^4-1)');
+  giaceval('sin(x+y)+f(t)');
+ if (confirm('Exec commands?')) UI.exec(document.documentElement);
  };
 </script>
 }
@@ -183,7 +305,7 @@ computer algebra system commands.
 \newenvironment{giacprog}{
 \verbatim}
 {\endverbatim 
-\@print{<button onclick="var field=parentNode.previousSibling; var tmp=field.innerHTML;if(tmp.length==0) tmp=field.value;var t=createElement('TEXTAREA');t.style.fontSize=16;t.cols=60;t.rows=10;t.value=tmp;tmp=caseval(tmp);if (tmp.charCodeAt(0)==34) tmp=tmp.substr(1,tmp.length-2);nextSibling.innerHTML=tmp; field.parentNode.insertBefore(t,field);field.parentNode.removeChild(field);">ok</button><span></span><br>
+\@print{<button onclick="var field=parentNode.previousSibling; var tmp=field.innerHTML;if(tmp.length==0) tmp=field.value;var t=createElement('TEXTAREA');t.style.fontSize=16;t.cols=60;t.rows=10;t.value=tmp;tmp=UI.caseval(tmp);if (tmp.charCodeAt(0)==34) tmp=tmp.substr(1,tmp.length-2);nextSibling.innerHTML=tmp; UI.render_canvas(nextSibling.innerHTML); field.parentNode.insertBefore(t,field);field.parentNode.removeChild(field);">ok</button><span></span><br>
 }
 }
 \else
@@ -202,9 +324,9 @@ computer algebra system commands.
 \ifhevea
 \@print{<textarea}
 \@getprint{#1>#3}
-\@print{</textarea><button onclick="var tmp=caseval(}
+\@print{</textarea><button onclick="var tmp=UI.caseval(}
 \@getprint{'#2('}
-\@print{+previousSibling.value+')');if (tmp.charCodeAt(0)==34) tmp=tmp.substr(1,tmp.length-2); nextSibling.innerHTML='&nbsp;'+tmp">}
+\@print{+previousSibling.value+')');if (tmp.charCodeAt(0)==34) tmp=tmp.substr(1,tmp.length-2); nextSibling.innerHTML='&nbsp;'+tmp;UI.render_canvas(nextSibling)">}
 \@getprint{#2}
 \@print{</button><span></span><br>}
 \else
@@ -215,7 +337,7 @@ computer algebra system commands.
 \ifhevea
 \@print{<textarea onkeypress="UI.ckenter(event,this,1)" }
 \@getprint{#1>#2}
-\@print{</textarea><button onclick="var tmp=caseval(previousSibling.value);if (tmp.charCodeAt(0)==34) tmp=tmp.substr(1,tmp.length-2); nextSibling.innerHTML='&nbsp;'+tmp">ok</button><span></span><br>}
+\@print{</textarea><button onclick="var tmp=UI.caseval(previousSibling.value);if (tmp.charCodeAt(0)==34) tmp=tmp.substr(1,tmp.length-2); nextSibling.innerHTML='&nbsp;'+tmp;UI.render_canvas(nextSibling);">ok</button><span></span><br>}
 \else
 \lstinline@#2@
 \fi
@@ -223,7 +345,7 @@ computer algebra system commands.
 \newcommand{\giaccmdmath}[3][style="width:400px;height:20px;font-size:large"]{\ifhevea
 \begin{rawhtml}<br><textarea \end{rawhtml}
 \@getprint{#1>#3}
-\begin{rawhtml}</textarea><button onclick="var tmp=caseval(\end{rawhtml} 
+\begin{rawhtml}</textarea><button onclick="var tmp=UI.caseval(\end{rawhtml} 
 \@getprint{'#2('+}
 \begin{rawhtml}previousSibling.value+')');  tmp=UI.latexeval(tmp);nextSibling.innerHTML='&nbsp;'+tmp; if (UI.usemathjax) MathJax.Hub.Queue(['Typeset',MathJax.Hub,nextSibling]);
 ">\end{rawhtml}
@@ -236,7 +358,7 @@ computer algebra system commands.
 \newcommand{\giacinputmath}[2][style="width:400px;height:20px;font-size:large"]{\ifhevea
 \begin{rawhtml}<br><textarea onkeypress="UI.ckenter(event,this,2)" \end{rawhtml}
 \@getprint{#1>#2} 
-\begin{rawhtml}</textarea><button onclick="var tmp=caseval(previousSibling.value); tmp=UI.latexeval(tmp);nextSibling.innerHTML='&nbsp;'+tmp; if (UI.usemathjax) MathJax.Hub.Queue(['Typeset',MathJax.Hub,nextSibling])">ok</button><span></span><br>\end{rawhtml}
+\begin{rawhtml}</textarea><button onclick="var tmp=UI.caseval(previousSibling.value); tmp=UI.latexeval(tmp);nextSibling.innerHTML='&nbsp;'+tmp; if (UI.usemathjax) MathJax.Hub.Queue(['Typeset',MathJax.Hub,nextSibling])">ok</button><span></span><br>\end{rawhtml}
 \else
 \lstinline@#2@
 \fi
@@ -244,7 +366,7 @@ computer algebra system commands.
 \newcommand{\giaccmdbigmath}[3][style="width:800px;height:20px;font-size:large"]{\ifhevea
 \begin{rawhtml}<br><textarea \end{rawhtml}
 \@getprint{#1>#3} 
-\begin{rawhtml}</textarea><button onclick="var tmp=caseval(\end{rawhtml} 
+\begin{rawhtml}</textarea><button onclick="var tmp=UI.caseval(\end{rawhtml} 
 \@getprint{'#2('+}
 \begin{rawhtml}previousSibling.value+')');  tmp=UI.latexeval(tmp);nextSibling.innerHTML=tmp; if (UI.usemathjax) MathJax.Hub.Queue(['Typeset',MathJax.Hub,nextSibling])">\end{rawhtml}
 \@getprint{#2}
@@ -256,7 +378,7 @@ computer algebra system commands.
 \newcommand{\giacinputbigmath}[2][style="width:800px;height:20px;font-size:large"]{\ifhevea
 \begin{rawhtml}<div><textarea onkeypress="UI.ckenter(event,this,2)" \end{rawhtml}
 \@getprint{#1>#2} 
-\begin{rawhtml}</textarea><button onclick="var tmp=caseval(previousSibling.value); tmp=UI.latexeval(tmp);nextSibling.innerHTML=tmp; if (UI.usemathjax) MathJax.Hub.Queue(['Typeset',MathJax.Hub,nextSibling])">ok</button><div style="width:800px;max-height:200px;overflow:auto;color:blue;text-align:center"></div></div>\end{rawhtml}
+\begin{rawhtml}</textarea><button onclick="var tmp=UI.caseval(previousSibling.value); tmp=UI.latexeval(tmp);nextSibling.innerHTML=tmp; if (UI.usemathjax) MathJax.Hub.Queue(['Typeset',MathJax.Hub,nextSibling])">ok</button><div style="width:800px;max-height:200px;overflow:auto;color:blue;text-align:center"></div></div>\end{rawhtml}
 \else
 \lstinline@#2@
 \fi
@@ -293,8 +415,7 @@ onclick="valname.value=value;UI.eval_form(form);" value=
 \end{rawhtml}
 \@getprint{"#5" min="#2" max="#3" step="#4">}
 \begin{rawhtml}
-<br>
-<textarea name="prog" onchange="UI.eval_form(form)" style="width:400px;height:180px;vertical-align:bottom;font-size:large">
+<textarea name="prog" onchange="UI.eval_form(form)" style="width:400px;height:120px;vertical-align:bottom;font-size:large">
 \end{rawhtml}
 \@getprint{#6}
 \begin{rawhtml}

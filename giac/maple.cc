@@ -66,7 +66,7 @@ using namespace std;
 
 
 #ifdef GIAC_HAS_STO_38
-  u32 AspenGetNow();
+  TMillisecs AspenGetNow();
 #endif
 
 #if defined(EMCC) && !defined(PNACL)
@@ -869,7 +869,7 @@ namespace giac {
   // open a file, returns a FD
   gen _open(const gen & g,GIAC_CONTEXT){
     if ( g.type==_STRNG && g.subtype==-1) return  g;
-#if defined(VISUALC) || defined(__MINGW_H) || defined (BESTA_OS) || defined(NSPIRE) || defined(__ANDROID__) || defined(NSPIRE_NEWLIB) || defined(OSX)
+#if defined(VISUALC) || defined(__MINGW_H) || defined (BESTA_OS) || defined(NSPIRE) || defined(__ANDROID__) || defined(NSPIRE_NEWLIB) || defined(OSX) || defined(IOS)
     return gensizeerr(gettext("not implemented"));
 #else
     gen tmp=check_secure();
@@ -1588,7 +1588,7 @@ namespace giac {
   static define_unary_function_eval (__playsnd,&_playsnd,_playsnd_s);
   define_unary_function_ptr5( at_playsnd ,alias_at_playsnd,&__playsnd,0,true);
 #else
-#if !defined GGB_GIAC && defined EMCC // must have EM_ASM code javascript inlined (emscripten 1.30.4 at least?)
+#if !defined GIAC_GGB && defined EMCC // must have EM_ASM code javascript inlined (emscripten 1.30.4 at least?)
 #include <emscripten.h>
   gen _playsnd(const gen & args,GIAC_CONTEXT){
     if (args.type==_STRNG){
