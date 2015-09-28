@@ -967,7 +967,7 @@ namespace giac {
       vecteur Dl(l);
       if (embeddings && Dl[embeddings].type==_VECT)
 	Dl=*Dl[embeddings]._VECTptr;
-      if (!is_positive(r2e(D,Dl,contextptr),contextptr)){
+      if (is_positive(r2e(-D,Dl,contextptr),contextptr)){
 	D=-D;
 	if (d%2)
 	  S=-S;
@@ -2870,7 +2870,7 @@ namespace giac {
 	    tmp=r2e(algebraic_EXTension(makevecteur(1,0),vtmp),vecteur(1,vecteur(0)),contextptr);
 	  else
 	    tmp=-vtmp.back()/vtmp.front();
-	  *it=pow(base,rdiv(num.val/den.val,den),contextptr)*tmp;
+	  *it=pow(base,num.val/den.val,contextptr)*tmp;
 	}
 	else
 	  *it= pow(base, num.val /den.val,contextptr) *pow(base,rdiv(num.val%den.val,den),contextptr);

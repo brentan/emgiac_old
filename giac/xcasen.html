@@ -2,6 +2,7 @@
 <html id="fulldocument" manifest="xcas.appcache">
 <head>
 <meta charset="utf-8">
+<meta name=viewport content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <title>
 Session_Xcas
@@ -49,8 +50,14 @@ width:400px;
 }
 </script>
 
+<div id="startup">
+  <b>During load time</b>, the tutorial is displayed. Once Xcas is
+  ready (this will take more than one minute the first time, at most
+  a few seconds the next times), the tutorial will be hidden.
+  You can display it again by clicking on the Tutorial button.
+</div>
 
-<span id="apropos">
+<span id="apropos" style="display:none">
 This is a demo interface to a full web-based CAS engine.
 This CAS does not need any server,
 all the computations are done locally with the javascript
@@ -61,7 +68,7 @@ The code of the CAS is 12M, it is downloaded once
 (giac.js javascript 
   compiled from native <a href="http://www-fourier.ujf-grenoble.fr/~parisse/giac/emgiac.tgz">Giac/Xcas</a> by emscripten).
   The javascript code is at least 2 times slower than the native 
-code, and sometimes much much slower (e.g. more than 15 times slower
+code, and sometimes much slower (e.g. 8 times slower
 for computing a Groebner basis like cyclic7). Most of the time
 it is however fast enough (that would justify a better interface...),
 but it is recommended to run large computations with
@@ -99,7 +106,9 @@ Complex <input type="checkbox" name="complex_mode" title="Check for default base
   <tr>
     <td>
       2d <input type="checkbox" name="prettyprint"
-  title="Check for pretty print" checked>
+      title="Check for pretty print" checked>
+      Q/A on same line <input type="checkbox" name="qa"
+  title="Check to display commands and results on the same level">
       History <input type="number" name="history_width" value=1000
         title="Max history width">
       x <input type="number" name="history_height" value=400
@@ -243,10 +252,10 @@ title="Show or hide the list of manuals">Manuals</button>
   value="/" onmousedown="event.preventDefault()" onClick="UI.insert(UI.focused,'/')" title="Division. Type // for a comment">  
     </td>
     <td>
-      <input type="button" style="width:30;height:30" name="add_sin"
-  value="sin" onmousedown="event.preventDefault()" onClick="UI.insert(UI.focused,'sin(')" title="sine function, type asin for arcinus">        
       <input type="button" style="width:30;height:30" name="add_sqrt"
   value="√" onmousedown="event.preventDefault()" onClick="UI.insert(UI.focused,'sqrt(')" title="square root">        
+      <input type="button" style="width:30;height:30" name="add_sin"
+  value="sin" onmousedown="event.preventDefault()" onClick="UI.insert(UI.focused,'sin(')" title="sine function, type asin for arcinus">        
     </td>
     <td>
       <input type="button" style="width:50;height:30"
@@ -287,10 +296,10 @@ title="Show or hide the list of manuals">Manuals</button>
       <input type="button" style="width:30;height:30" name="add_*" value="*" onmousedown="event.preventDefault()" onClick="UI.insert(UI.focused,'*')">  
     </td>
     <td>
-      <input type="button" style="width:30;height:30" name="add_cos"
-  value="cos" onmousedown="event.preventDefault()" onClick="UI.insert(UI.focused,'cos(')" title="cosine function, type acos for arccosinus">        
       <input type="button" style="width:30;height:30" name="add_exp"
   value="exp" onmousedown="event.preventDefault()" onClick="UI.insert(UI.focused,'exp(')" title="Exponential function">   
+      <input type="button" style="width:30;height:30" name="add_cos"
+  value="cos" onmousedown="event.preventDefault()" onClick="UI.insert(UI.focused,'cos(')" title="cosine function, type acos for arccosinus">        
     </td>
     <td>
       <input type="button" style="width:50;height:30"
@@ -334,10 +343,10 @@ title="Show or hide the list of manuals">Manuals</button>
       <input type="button" style="width:30;height:30" name="add_-" value="-" onmousedown="event.preventDefault()" onClick="UI.insert(UI.focused,'-')">  
     </td>
     <td>
-      <input type="button" style="width:30;height:30" name="add_tan"
-  value="tan" onmousedown="event.preventDefault()" onClick="UI.insert(UI.focused,'tan(')" title="tangent function, type atan for arctangente">        
       <input type="button" style="width:30;height:30" name="add_ln"
   value="ln" onmousedown="event.preventDefault()" onClick="UI.insert(UI.focused,'ln(')" title="Neperian logarithme (base e)">        
+      <input type="button" style="width:30;height:30" name="add_tan"
+  value="tan" onmousedown="event.preventDefault()" onClick="UI.insert(UI.focused,'tan(')" title="tangent function, type atan for arctangente">        
     </td>    
     <td>
       <input type="button" style="width:50;height:30"
@@ -366,21 +375,18 @@ title="Show or hide the list of manuals">Manuals</button>
     </td>
     <td>
       <input type="button" style="width:30;height:30" name="add_'" value="'" onmousedown="event.preventDefault()" onClick="UI.insert(UI.focused,'\'')">
-      <input type="button" style="width:30;height:30" name="add_%"
-  value="%" onmousedown="event.preventDefault()" onClick="UI.insert(UI.focused,'%')" title="Sert a calculer
-  dans Z/nZ, for example (3 % 7)^6">  
-    </td>
-    <td>
-      <input type="button" style="width:30;height:30" name="add_∞"
-  value="∞" onmousedown="event.preventDefault()" onClick="UI.insert(UI.focused,'∞')" title="+∞. Note that infinity is unsigned complex infinity.">
-      <input type="button" style="width:30;height:30" name="add_0" value="0" onmousedown="event.preventDefault()" onClick="UI.insert(UI.focused,'0')">  
-      <input type="button" style="width:30;height:30" name="add_." value="." onmousedown="event.preventDefault()" onClick="UI.insert(UI.focused,'.')">  
-      <input type="button" style="width:30;height:30" name="add_+" value="+" onmousedown="event.preventDefault()" onClick="UI.insert(UI.focused,'+')">  
       <input type="button" style="width:30;height:30" name="add__" value="_" onClick ="UI.insert(UI.focused,'_')">  
     </td>
     <td>
-      <input type="button" style="width:30;height:30" name="add_!" value="!" onClick ="UI.insert(UI.focused,'!')">  
+      <input type="button" style="width:30;height:30" name="add_∞" value="∞" onmousedown="event.preventDefault()" onClick="UI.insert(UI.focused,'∞')" title="+∞. Note that infinity is unsigned complex infinity.">
+      <input type="button" style="width:30;height:30" name="add_%" value="%" onmousedown="event.preventDefault()" onClick="UI.insert(UI.focused,'%')" title="Sert a calculer dans Z/nZ, for example (3 % 7)^6">  
+      <input type="button" style="width:30;height:30" name="add_0" value="0" onmousedown="event.preventDefault()" onClick="UI.insert(UI.focused,'0')">  
+      <input type="button" style="width:30;height:30" name="add_." value="." onmousedown="event.preventDefault()" onClick="UI.insert(UI.focused,'.')">  
+      <input type="button" style="width:30;height:30" name="add_+" value="+" onmousedown="event.preventDefault()" onClick="UI.insert(UI.focused,'+')">  
+    </td>
+    <td>
       <input type="button" style="width:30;height:30" name="add_^" value="^" onClick ="UI.insert(UI.focused,'^')">  
+      <input type="button" style="width:30;height:30" name="add_!" value="!" onClick ="UI.insert(UI.focused,'!')">  
     </td>    
     <td>
       <input type="button" style="width:28;height:30" name="add_inv"
@@ -403,19 +409,23 @@ title="Show or hide the list of manuals">Manuals</button>
 <br>
   <span contextmenu="cmdmenu" title="F1: help on keyword before caret. Right-click (Firefox): commands menu">
  <b>Command :</b>
-  <button onclick="UI.eval_cmdline()" style="color:green" title="Eval commandline">
+ <button style="height:25px" onmousedown="event.preventDefault()" onClick="UI.completion(cmentree)" title="Short online help and examples for a command, or completion suggestions">?</button>
+&nbsp;&nbsp;
+<button onclick="UI.eval_cmdline()" style="color:green;height:25px" title="Eval commandline">
 ok</button>
-  <button 
+&nbsp;&nbsp;
+  <button style="height:25px" 
   onclick="if (document.getElementById('keyboard').style.display=='inline') document.getElementById('keyboard').style.display='none'; else document.getElementById('keyboard').style.display='inline';UI.focused.focus();"
   title="Show or hide scientific keyboard">keyboard</button>
-   <button onclick="cmentree.setValue('//'+cmentree.getValue()); cmentree.focus();" title="Comment">//</button>
- <button onmousedown="event.preventDefault()" onClick="UI.completion(cmentree)" title="Short online help and examples for a command, or completion suggestions">?</button>
-<button onclick="UI.addcurseur(String.fromCharCode(UI.paramname),0,-5,5,0.1); UI.paramname++;" title="Add a slider">Slider</button>
-<textarea name="entree" id="entree" size=60 ></textarea>
+&nbsp;&nbsp;
+   <button style="height:25px" onclick="cmentree.setValue('//'+cmentree.getValue()); cmentree.focus();" title="Comment">//</button>
+&nbsp;&nbsp;
+<button style="height:25px" onclick="UI.addcurseur(String.fromCharCode(UI.paramname),0,-5,5,0.1); UI.paramname++;" title="Add a slider">Slider</button>
+<textarea name="entree" id="entree" size=60></textarea>
 </span>
+<hr>
 
-
-<span id="help" style="display:none">
+<span id="help">
 A typical Xcas session will consist in entering commandlines that will
 appear in the history. Sometimes you will also edit an already entered
 command and reevaluate it.
@@ -555,8 +565,8 @@ The screen is divided in
     </td>
     <td> 
       <canvas id='canvas' width=0 height=0
-  onmousedown="UI.canvas_pushed=true;UI.canvas_lastx=event.clientX; UI.canvas_lasty=event.clientY;Module.print(UI.canvas_lastx);"
-  onmouseup="Module.print(event.clientX); UI.canvas_pushed=false;"
+  onmousedown="UI.canvas_pushed=true;UI.canvas_lastx=event.clientX; UI.canvas_lasty=event.clientY;"
+  onmouseup="UI.canvas_pushed=false;"
    >
       </canvas>
     </td>
@@ -1072,7 +1082,7 @@ cols="80" title="Console"></textarea>
   <script src="xcasmode.js"></script>
   <script src="matchbrackets.js"></script>
   <style type="text/css">
-  .CodeMirror {border: 1px solid black; }
+  .CodeMirror {border: 1px solid black; height:auto;}
   dt {font-family: monospace; color: #666;}
   </style>
   
@@ -1082,6 +1092,7 @@ cols="80" title="Console"></textarea>
   base_url:"http://www-fourier.ujf-grenoble.fr/%7eparisse/",
   usemathjax:false,
   prettyprint:true,
+  qa:false,
   focused:entree,
   usecm:true,
   histcount:0,
@@ -1103,15 +1114,22 @@ cols="80" title="Console"></textarea>
    if (isOpera) return 5;
    return 0;
   },
+  lowercase1: function(text){
+   var value=text;
+   if (value.length && value.charCodeAt(0)>64 && value.charCodeAt(0)<90)
+     value = value.substr(0,1).toLowerCase()+value.substr(1,value.length-1);
+   return value;
+  },
   caseval: function(text){
    var docaseval = Module.cwrap('_ZN4giac7casevalEPKc',  'string', ['string']);
    var value=text;
    var n=value.search(';');
    if (n<0 || n>=value.length)
      value='add_autosimplify('+value+')';
-    var s=docaseval(value);
-    // Module.print(text+ ' '+s);
-    return s;
+     var s,err;
+     try {s=docaseval(value); } catch(err){ }
+      // Module.print(text+ ' '+s);
+      return s;
   },
   ckenter: function(event,field){
     var key = event.keyCode;
@@ -1135,7 +1153,7 @@ cols="80" title="Console"></textarea>
      if (i>=start){
        var field=cur.firstChild;
        field=field.firstChild;
-       field=field.nextSibling;
+       field=UI.skip_buttons(field);
        var fs=field.innerHTML;
        if (fs.length>5){
          var fs1=fs.substr(0,5);
@@ -1184,7 +1202,8 @@ cols="80" title="Console"></textarea>
        }
        var pos=fs.search("<textarea");
        if (pos>=0 && pos<fs.length){
-         s += '+'+field.firstChild.value.replace('\n', ' ', 'g')+'&';
+         var tmp=field.firstChild.value.replace('\n',' ','g');
+         s += '+' + tmp.replace('&&',' and ','g') + '&';
          cur=cur.nextSibling;
          continue;
        }
@@ -1197,41 +1216,48 @@ cols="80" title="Console"></textarea>
    s=s.replace(/\"/g,'%22');
    return s;
   },
-  canvas_mousemove:function(event){
+  canvas_mousemove:function(event,no){
     if (UI.canvas_pushed){
-      Module.print(event.clientX);
+      // Module.print(event.clientX);
       if (UI.canvas_lastx!=event.clientX){
         if (event.clientX>UI.canvas_lastx)
-          UI.giac_renderer('r');
+          UI.giac_renderer('r'+no);
         else
-          UI.giac_renderer('l');
+          UI.giac_renderer('l'+no);
         UI.canvas_lastx=event.clientX;
       }
       if (UI.canvas_lasty!=event.clientY){
         if (event.clientY>UI.canvas_lasty)
-          UI.giac_renderer('d');
+          UI.giac_renderer('d'+no);
         else
-          UI.giac_renderer('u');
+          UI.giac_renderer('u'+no);
         UI.canvas_lasty=event.clientY;
       }
     }
   },
-  set_config:function(){
+  set_config_width:function(){
    var form=document.getElementById('config');
    var hw=form.history_width.value;
    document.getElementById('mathoutput').style.maxWidth=hw;
    document.getElementById('divoutput').style.maxHeight=form.history_height.value;
-   var s;
+   var w=form.outdiv_width.value;
+   if (w>hw-300) w=hw-300;
+   var hi=hw-w-200;
+   if (!UI.qa){ hi=hw-200; w=hi; }
+   s='input[type="number"] { width:40px;}\n .outdiv { width:'+w+'px; max-height: '+form.outdiv_height.value+'px;  overflow: auto;}\n.filenamecss {width:120px;height:20px}\n.historyinput {width:'+hi+'px;}';
    var st=document.getElementById('document_style');
+   st.innerHTML=s;
+  },
+  set_config:function(){
+   var form=document.getElementById('config');
+   if (form.qa.checked) UI.qa=true; else UI.qa=false;
+   UI.set_config_width();
+   var s;
    if (form.online_doc.checked)
      UI.docprefix=UI.base_url+'giac/doc/en/cascmd_en/';
    else
      UI.docprefix="file://"+form.doc_path.value;
    if (form.prettyprint.checked) UI.prettyprint=true; else UI.prettyprint=false;
-   var w=form.outdiv_width.value;
-   if (w>hw-300) w=hw-300;
-   s='input[type="number"] { width:40px;}\n .outdiv { width:'+w+'px; max-height: '+form.outdiv_height.value+'px;  overflow: auto;}\n.filenamecss {width:120px;height:20px}\n.historyinput {width:'+(hw-w-200)+'px;}';
-   st.innerHTML=s;
    UI.caseval("autosimplify("+form.autosimp_level.value+")");
    //Module.print(st.innerHTML);
    s='Digits:=';
@@ -1292,7 +1318,7 @@ cols="80" title="Console"></textarea>
   show_level_answers: function(level,b){
     var cur=level.firstChild;
     cur=cur.firstChild;
-    cur=cur.nextSibling; // skip buttons
+    cur=UI.skip_buttons(cur); 
     var s=cur.innerHTML;
     var pos=s.search("<textarea");
     if (pos<0 || pos>=s.length) return;
@@ -1319,10 +1345,13 @@ cols="80" title="Console"></textarea>
   },
   move_buttons:function(){
    var s='<tr onmouseenter="UI.switch_buttons(this,true)" onmouseleave="UI.switch_buttons(this,false)">';
-   s += '<td><button onclick=\'UI.moveup(this)\' title="move level up">↑</button>';
-   s += '<button onclick=\'UI.movedown(this)\' title="move level down">↓</button></td>';
+   s += '<td><button onclick=\'UI.moveup(this)\' title="move level up">↑</button></td>';
+   s += '<td><button onclick=\'UI.movedown(this)\' title="move level down">↓</button></td>';
    return s;
   },
+   skip_buttons:function(field){
+     return field.nextSibling.nextSibling;
+   },
   addplotfunc:function(){
   },
   paramname:97,
@@ -1336,10 +1365,10 @@ cols="80" title="Console"></textarea>
    s += '<input type="range" name="rangename" onclick="valname.value=value;UI.eval_below(form,form.name.value,value);" value='+value+' min='+mini+' max='+maxi+' step=' + step +'>';
    s += '<input type="number" name="maxname" value=\''+maxi+'\' step=\''+step+'\'>&nbsp;';
    s += '(step <input type="number" name="stepname" value=\''+step+'\' step=\''+step/100+'\'>)';
-   s += '&nbsp;<input type="button" value="--" onclick="valname.value -= 10*stepname.value;value=valname.value;UI.eval_below(form,form.name.value,value);">';
-   s += '&nbsp;<input type="button" value="-" onclick="valname.value -= stepname.value;value=valname.value;UI.eval_below(form,form.name.value,value);">';
-   s += '&nbsp;<input type="button" value="+" onclick="valname.value -= -stepname.value;value=valname.value;UI.eval_below(form,form.name.value,value);">';
-   s += '&nbsp;<input type="button" value="++" onclick="valname.value -= -10*stepname.value;value=valname.value;UI.eval_below(form,form.name.value,value);">';
+   s += '&nbsp;<input type="button" value="--" onclick="valname.value -= 10*stepname.value;UI.eval_below(form,form.name.value,valname.value);">';
+   s += '&nbsp;<input type="button" value="-" onclick="valname.value -= stepname.value;UI.eval_below(form,form.name.value,valname.value);">';
+   s += '&nbsp;<input type="button" value="+" onclick="valname.value -= -stepname.value;UI.eval_below(form,form.name.value,valname.value);">';
+   s += '&nbsp;<input type="button" value="++" onclick="valname.value -= -10*stepname.value;UI.eval_below(form,form.name.value,valname.value);">';
    s += '</form></td>';
    s += UI.erase_button();
    return s;
@@ -1367,12 +1396,24 @@ cols="80" title="Console"></textarea>
     filename += UI.svg_counter+".svg";
     saveAs(blob,filename);
   },
-  zoom: function(field,scale){
-    var prev=field.parentNode.previousSibling.firstChild;
-    var box = prev.viewBox.baseVal;
+   zoom: function(field,scale){
+   var prev=field.parentNode.previousSibling.lastChild;
+   var ps=prev.innerHTML;
+   if (ps.length>22 && ps.substr(0,17)==' <canvas id=\"gl3d'){
+     ps=ps.substr(18,7);
+     var pos=ps.search('"');
+     if (pos>0 && pos<7){
+       ps=ps.substr(0,pos);
+       if (scale>1) UI.giac_renderer('+'+ps); else UI.giac_renderer('-'+ps);
+       return;
+     }
+   }
+   if (prev.firstChild) prev=prev.firstChild;
+   // firstChild not required with all browsers
+   var box = prev.viewBox.baseVal;
     var w=box.width/1.2,h=box.height/1.2;
     var x=box.x+w/10,y=box.y+h/10;
-    // Module.print('current w/h '+w+','+h);
+    //Module.print('current w/h '+w+','+h);
     var cx=x+w/2,cy=y+h/2; // center
     w=scale*w; h=scale*h; // new scales
     // Module.print('new center'+cx+','+cy);
@@ -1381,16 +1422,23 @@ cols="80" title="Console"></textarea>
     cx=x+w; cy=y+h;
     // reeval commandline with gl_x=x..cx and gl_y=y..cy
     prefix='gl_x='+x+'..'+cx+';gl_y='+y+'..'+cy+';';
-    //Module.print(prefix);
-    UI.reeval(prev.parentNode.previousSibling.lastChild,prefix);
+   //Module.print(prev.parentNode.parentNode.previousSibling.innerHTML);
+   //Module.print(prefix);
+   if (prev.parentNode.previousSibling){
+     //Module.print(prev.parentNode.parentNode.firstChild.innerHTML);
+     UI.reeval(prev.parentNode.parentNode.firstChild,prefix);
+   }
+   else
+    UI.reeval(prev.parentNode.parentNode.previousSibling.firstChild,prefix);
   },
   eval_cmdline: function(){
   var value=cmentree.getValue();
   UI.eval_cmdline1(value,true);
   },
   eval_cmdline1:function(value,docaseval){
-  UI.set_locale();
-  var out;
+   UI.set_locale();
+   // value=UI.lowercase1(value);
+   var out;
   // suppress leading non ascii char
   var n=0;
   for (;n<value.length;n++){
@@ -1408,7 +1456,7 @@ cols="80" title="Console"></textarea>
   } else {
     if (docaseval){
       out=UI.caseval(value); 
-      if (out.substr(1,4)=='<svg'){
+      if (out.substr(1,4)=='<svg' || out.substr(0,5)=='gl3d '){
         s=out; out='Done_svg';
       }
     else {
@@ -1431,17 +1479,15 @@ cols="80" title="Console"></textarea>
   cmentree.execCommand('selectAll');
   //document.getElementById('canvas').focus();
   var mathoutput=document.getElementById('mathoutput');
-  mathoutput.innerHTML += add;
+  var tr=document.createElement("TABLE"); 
+  tr.innerHTML += add;
+  mathoutput.appendChild(tr.firstChild);
+  // mathoutput.innerHTML += add;
+  UI.render_canvas(mathoutput.lastChild);
   UI.scrollatend(mathoutput.parentNode);
   UI.link(0);
   if (UI.prettyprint && UI.usemathjax && UI.histcount>0)
     MathJax.Hub.Queue(["Typeset",MathJax.Hub,'"hist'+(UI.histcount-1)+'"']);
-  var l=mathoutput.lastChild;
-  l=l.firstChild;
-  l=l.firstChild;
-  l=l.nextSibling;
-  // l is the textarea element
-  // Module.print(l.innerHTML);
   },
   set_locale: function(){
   if (UI.langue==-1){
@@ -1451,6 +1497,8 @@ cols="80" title="Console"></textarea>
  },
   switch_buttons: function(field,onoff){
     var f=field.firstChild;
+    if (onoff) f.style.visibility='visible'; else f.style.visibility='hidden';
+    f=f.nextSibling;
     if (onoff) f.style.visibility='visible'; else f.style.visibility='hidden';
     f=field.lastChild;
     if (onoff) f.style.visibility='visible'; else f.style.visibility='hidden';
@@ -1470,7 +1518,7 @@ cols="80" title="Console"></textarea>
   //Module.print(name+':='+value);
   UI.caseval(name+':='+value);
   var cur=field.parentNode.parentNode.parentNode;
-  //cur=cur.nextSibling;
+  cur=cur.nextSibling;
   //Module.print(cur.innerHTML);
   for (;cur;){
    UI.eval_level(cur);
@@ -1497,7 +1545,7 @@ cols="80" title="Console"></textarea>
    UI.set_locale();
    var out=UI.caseval(text);
    var s=' ';
-   if (out.substr(1,4)=='<svg'){
+   if (out.substr(1,4)=='<svg' || out.substr(0,5)=='gl3d '){
      // Module.print(text+' -> Done');
      s=out; out='Done_svg';
    }
@@ -1513,6 +1561,23 @@ cols="80" title="Console"></textarea>
    s=UI.addinput(textin,out,s);
    return s;
   },
+  render_canvas:function(field){
+   // return; // does not work, 
+   var n=field.id;
+   if (n && n.length>5 && n.substr(0,5)=='gl3d_'){
+    Module.print(n);
+    var n3d=n.substr(5,n.length-5);
+   //Module.print(n3d);
+    //Module.canvas=document.getElementById(n);
+    UI.giac_renderer(n3d);
+    //Module.canvas=document.getElementById('canvas');
+    return;
+   }
+   var f=field.firstChild;
+   for (;f;f=f.nextSibling){
+     UI.render_canvas(f);
+   }
+  },
   reeval: function(field,prefix){
   //field=field.previousSibling;
   var s=field.value;
@@ -1520,6 +1585,7 @@ cols="80" title="Console"></textarea>
   par=par.parentNode;
   s=UI.eval(prefix+s,s);
   par.innerHTML=s;
+  UI.render_canvas(par);
   UI.link(0);
   if (UI.prettyprint && UI.usemathjax && UI.histcount>0)
     MathJax.Hub.Queue(["Typeset",MathJax.Hub,'"hist'+(UI.histcount-1)+'"']);
@@ -1534,7 +1600,7 @@ cols="80" title="Console"></textarea>
     if (pos>0 && pos<s.length){
       var level=field.firstChild;
       var cur=level.firstChild;
-      cur=cur.nextSibling;
+      cur=UI.skip_buttons(cur);
       //Module.print(cur.innerHTML);
        cur=cur.firstChild;
        // Module.print(cur.name.value+':='+cur.rangename.value);
@@ -1546,11 +1612,12 @@ cols="80" title="Console"></textarea>
   }
     var cur=field.firstChild;
     cur=cur.firstChild;
-    cur=cur.nextSibling;
+    cur=UI.skip_buttons(cur);
     cur=cur.firstChild;
     var s=cur.value;
     s=UI.eval(s,s);
     field.innerHTML=s;
+    UI.render_canvas(field);
     if (UI.prettyprint && UI.usemathjax )
       MathJax.Hub.Queue(["Typeset",MathJax.Hub,field]);
   },
@@ -1600,8 +1667,16 @@ addcomment: function(text){
   var pos=txt.selectionStart;
   cm.setCursor({line:0,ch:pos}); cm.refresh();
   },
+  count_newline: function(text){
+   var k=0,r=0;
+   for (;k<text.length;++k){
+     if (text.charCodeAt(k)==10)
+       ++r;
+   }
+   return r;
+  },
   addinput: function(textin,textout,mathmlout){
-  if (textout=='Done') document.getElementById('boutons_3d').style.display='inherit';;
+  if (textout.length>=12 && textout.substr(0,12)=='Done_graphic') document.getElementById('boutons_3d').style.display='inherit';
   if (textin.length > 2 && textin.substr(0,2)=='//') return UI.addcomment(textin);
          UI.show_history123();
 // document.getElementById('mathoutput').style.listStyleType = 'none';
@@ -1610,23 +1685,36 @@ addcomment: function(text){
     s += '<td colspan="2">'+UI.renderhelp(textout)+'</td><td>';
   else {
     var is_svg=mathmlout.substr(1,4)=='<svg';
-    s += '<td><textarea class="historyinput" ';
-    if (is_svg) s+='rows=8 style="font-size:large"';
-    else s += 'style="height:20px; font-size:large"';
+    var is_3d=mathmlout.substr(0,5)=='gl3d ';
+      if (UI.qa)
+      s += '<td>';
+    else
+      s += '<td colspan=2>';	
+    s += '<textarea class="historyinput" ';
+    if (is_svg && UI.qa) s+='rows=8 style="font-size:large"';
+    else s += 'style="height:'+(20+16*UI.count_newline(textin))+'px; font-size:large"';
     s += ' title="Shift-Enter: newline, Enter: eval" onkeypress="UI.ckenter(event,this)" onblur="UI.updatelevel(this);" onfocus="if (UI.usecm){var h=offsetHeight;var cm=CodeMirror.fromTextArea(this,{ matchBrackets: true}); UI.prepare_cm(this,h,cm); UI.set_focused(cm);} else UI.set_focused(this);" onselect="if (UI.getsel(this).length>0) UI.selection=UI.getsel(this);">'+textin+'</textarea>';
 // (navigator.userAgent.match(/Android/i) ||  navigator.userAgent.match(/webOS/i) || navigator.userAgent.match(/iPhone/i) || navigator.userAgent.match(/iPad/i) || navigator.userAgent.match(/iPod/i) || navigator.userAgent.match(/BlackBerry/i) || navigator.userAgent.match(/Windows Phone/i))
-    // version saut de ligne 
-    s += '</td>';
-    if (is_svg){
-      s += '<td>'+mathmlout.substr(1,mathmlout.length-2)+'</td>';
+    if (UI.qa) s += '</td>'; 
+    if (is_svg || is_3d){
+      if (UI.qa) s += '<td>'; else s+='<br>';
+      if (is_svg)
+        s += '<div style="text-align:center">'+mathmlout.substr(1,mathmlout.length-2)+'</div></td>';
+      else {
+	var n3d=mathmlout.substr(5,mathmlout.length-5);
+	// Module.print(n3d);
+	if (0)
+	s += '<div style="text-align:center"> 3d </div></td>';
+	else s += '<div style="text-align:center"> <canvas id="gl3d_'+n3d+'" onmousedown="UI.canvas_pushed=true;UI.canvas_lastx=event.clientX; UI.canvas_lasty=event.clientY;" onmouseup="UI.canvas_pushed=false;" onmousemove="UI.canvas_mousemove(event,'+n3d+')" width=400 height=250></canvas></div></td>';
+      }
       s += '<td><button onclick="UI.zoom(this,1.414)">out</button><br>';
       s += '<button onclick="UI.zoom(this.previousSibling,0.707)">in</button><br>';
-      s += '<button onclick="UI.savesvg(parentNode.previousSibling)">save</button>';
+      if (is_svg) s += '<button onclick="UI.savesvg(parentNode.previousSibling)">save</button>';
       s += '</td>';
     }
     else {
-      s += '<td style="color:blue; text-align:center">';
-      s += '<div title="Double click: see in text mode (useful for copy-paste)" class="outdiv" ondblclick="nextSibling.style.display=\'inherit\';this.nextSibling.select();UI.selection=nextSibling.value;this.style.display=\'none\';this.nextSibling.nextSibling.style.display=\'inherit\';" id="hist'+UI.histcount+'">';
+      if (UI.qa) s += '<td>';
+      s += '<div style="color:blue; text-align:center" title="Double click: see in text mode (useful for copy-paste)" class="outdiv" ondblclick="nextSibling.style.display=\'inherit\';this.nextSibling.select();UI.selection=nextSibling.value;this.style.display=\'none\';this.nextSibling.nextSibling.style.display=\'inherit\';" id="hist'+UI.histcount+'">';
       UI.histcount++;
       if (UI.prettyprint){
        if (UI.usemathjax)
@@ -1638,7 +1726,7 @@ addcomment: function(text){
       s += '<textarea class="outdiv" onfocus="UI.set_focused(this)" onselect="if (UI.getsel(this).length>0) UI.selection=UI.getsel(this);" style="display:none">'+textout+'</textarea>';
       s += '<button style="display:none" onclick="previousSibling.previousSibling.style.display=\'block\'; previousSibling.style.display=\'none\';this.style.display=\'none\'">cancel</button>';
       s += '</td>';
-      s += '<td>&nbsp;&nbsp;<button onclick=\'UI.insert(UI.focused,"evalf('+textin+')")\' title="Find approx. value" style="color:blue">~</button></td>';
+      s += '<td><button onclick=\'UI.insert(UI.focused,"evalf('+textin+')")\' title="Find approx. value" style="color:blue">~</button></td>';
     }
   }
   s += UI.erase_button();
@@ -1807,7 +1895,7 @@ moveCaret: function(field, charCount) {
 updatelevel: function(field){
   var pos=field.selectionStart;
   field.innerHTML=field.value;
-  if (pos<field.value.length)
+  if (pos>=0 && pos<field.value.length)
     field.setSelectionRange(pos,pos);
 },
   moveup: function(field){
@@ -1894,8 +1982,10 @@ insert: function(myField, myValue) {
   }
   cmentree=CodeMirror.fromTextArea(entree,{
     matchBrackets: true,
+    lineNumbers: true,
+    viewportMargin: Infinity
   });
-  cmentree.setSize(500,40);
+  // cmentree.setSize(window.innerWidth-20,40);
   cmentree.on("focus",function(cm){ UI.set_focused(cm); });
   cmentree.on("blur",function(cm) { if (cm.getSelection().length > 0){UI.selection=cm.getSelection();} });
   cmentree.setValue(entree.value);
@@ -1915,9 +2005,9 @@ insert: function(myField, myValue) {
     lineNumbers: true,
     matchBrackets: true,
   });
-  cmprog.setSize(400, 240);
+  //cmprog.setSize(400, 240);
   if (prog.value=='      ') cmprog.setValue(''); else cmprog.setValue(prog.value);
-  document.getElementById('canvas').onmousemove=function(event){ UI.canvas_mousemove(event);};
+  document.getElementById('canvas').onmousemove=function(event){ UI.canvas_mousemove(event,'');};
   document.getElementById('progform').style.display='none';
   document.getElementById('output').style.display='none';
   document.getElementById("config").reset();
@@ -1980,18 +2070,29 @@ insert: function(myField, myValue) {
 <script language="javascript">
 // En ajoutant async a la fin de script src=giac.js on accelere les chargements
 // de la page nue (cache), mais pas si il y a un lien
- window.onload = function(e){
+window.onload = function(e){
+  //UI.caseval('abc(x=0); [x, y]; z+1;');
+  var form=document.getElementById('config');
+  var hw=window.innerWidth-50;
+  if (hw>=1000){ UI.qa=true; form.qa.checked=true;}
+  form.history_width.value=hw;
+  form.outdiv_width.value=Math.floor(hw/2);
+  UI.set_config_width();
   var ua = window.navigator.userAgent;
   var old_ie = ua.indexOf('MSIE ');
   var new_ie = ua.indexOf('Trident/');
-  //if (window.chrome) UI.prettyprint=false;
+  if (window.chrome) UI.prettyprint=false;
   if ((old_ie > -1) || (new_ie > -1)) UI.isie=true;
   var bt=UI.browser_type();
   if (UI.isie || (bt!=1 && bt!=2)){
-     UI.usemathjax=true;
-     alert("Your browser does not support MathML, using MathJax for 2d rendering. Consider switching to Firefox for faster results and better rendering");
+    UI.usemathjax=true;
+    var alertmsg="Consider switching to Firefox for faster results and better rendering";
+    if (UI.isie) alertmsg="3d does not work with Internet Explorer. "+alertmsg;
+    alert(alertmsg);
   }
  document.getElementById('apropos').style.display='none';
+ document.getElementById('help').style.display='none';
+ document.getElementById('startup').style.display='none';
  console.log("window.onload");
  var hist=document.getElementById('mathoutput');
  var doexec=false;

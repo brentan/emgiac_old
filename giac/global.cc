@@ -754,11 +754,12 @@ extern "C" void Sleep(unsigned int miliSecond);
   }
 
   static int _angle_mode_=0;
-  bool angle_radian(GIAC_CONTEXT){
-    if (contextptr && contextptr->globalptr )
-      return contextptr->globalptr->_angle_mode_==0;
+  bool angle_radian(GIAC_CONTEXT)
+  {
+    if(contextptr && contextptr->globalptr)
+      return contextptr->globalptr->_angle_mode_ == 0;
     else
-      return _angle_mode_==0;
+      return _angle_mode_ == 0;
   }
 
   void angle_radian(bool b,GIAC_CONTEXT){
@@ -768,7 +769,40 @@ extern "C" void Sleep(unsigned int miliSecond);
       _angle_mode_=(b?0:1);
   }
 
-  int & angle_mode(GIAC_CONTEXT){
+  bool angle_degree(GIAC_CONTEXT)
+  {
+    if(contextptr && contextptr->globalptr)
+      return contextptr->globalptr->_angle_mode_ == 1;
+    else
+      return _angle_mode_ == 1;
+  }
+
+  int get_mode_set_radian(GIAC_CONTEXT)
+  {
+    int mode;
+    if(contextptr && contextptr->globalptr)
+    {
+      mode = contextptr->globalptr->_angle_mode_;
+      contextptr->globalptr->_angle_mode_ = 0;
+    }
+    else
+    {
+      mode = _angle_mode_;
+      _angle_mode_ = 0;
+    }
+    return mode;
+  }
+
+  void angle_mode(int b, GIAC_CONTEXT)
+  {
+    if(contextptr && contextptr->globalptr)
+      contextptr->globalptr->_angle_mode_ = b;
+    else
+      _angle_mode_ = b;
+  }
+
+  int & angle_mode(GIAC_CONTEXT)
+  {
     if (contextptr && contextptr->globalptr )
       return contextptr->globalptr->_angle_mode_;
     else
@@ -2571,7 +2605,7 @@ extern "C" void Sleep(unsigned int miliSecond);
     return path.empty()?false:is_file_available((path+name).c_str());
   }
 
-  static string browser_command(const string & orig_file){
+  string browser_command(const string & orig_file){
 #if defined __MINGW_H || defined NSPIRE
     return "";
 #else
@@ -2693,13 +2727,14 @@ extern "C" void Sleep(unsigned int miliSecond);
     }
     ++i;
     string browsersub=browser.substr(i,bs-i);
+    if (s[0]!='\'') s='\''+s+'\'';
     if (browsersub=="mozilla" || browsersub=="mozilla-bin" || browsersub=="firefox" ){
       s="if ! "+browser+" -remote \"openurl("+s+")\" ; then "+browser+" "+s+" & fi &";
     }
     else
       s=browser+" "+s+" &";
 #endif
-    if (debug_infolevel)
+    //if (debug_infolevel)
       CERR << "// Running command:"+ s<<endl;
     return s;
 #endif // __MINGW_H
@@ -2711,7 +2746,7 @@ extern "C" void Sleep(unsigned int miliSecond);
 #else
 #ifdef WIN32
     string res=file;
-    if (file.size()>4 && file.substr(0,4)!="http"){
+    if (file.size()>4 && file.substr(0,4)!="http" && file.substr(0,4)!="file"){
       if (res[0]!='/')
 	res=giac_aide_dir()+res;
       // Remove # trailing part of URL
@@ -4360,6 +4395,15 @@ unsigned int ConvertUTF8toUTF16 (
       size_t val = builtin_lexer_functions_[pos];
       unary_function_ptr * at_val = (unary_function_ptr *)val;
       g = at_val;
+      if (builtin_lexer_functions[pos]._FUNC_%2){
+#ifdef SMARTPTR64
+	unary_function_ptr tmp=*at_val;
+	tmp._ptr+=1;
+	g=tmp;
+#else
+	g._FUNC_ +=1;
+#endif // SMARTPTR64
+      }
       return true;
     }
 #else
@@ -4723,7 +4767,8 @@ unsigned int ConvertUTF8toUTF16 (
 #ifdef GIAC_HAS_STO_38
       const char * c=g._SYMBptr->sommet.ptr()->s;
 #else
-      const char * c=unlocalize(g._SYMBptr->sommet.ptr()->s).c_str();
+      string ss=unlocalize(g._SYMBptr->sommet.ptr()->s);
+      const char * c=ss.c_str();
 #endif
 #if 1
       if (dichotomic_search(do_not_autosimplify,sizeof(do_not_autosimplify)/sizeof(char*)-1,c)!=-1)
@@ -4972,9 +5017,9 @@ unsigned int ConvertUTF8toUTF16 (
 	check38=false;
       if (s.size()==1){
 #ifdef GIAC_HAS_STO_38
-	if (s[0]>='A' && s[0]<='Z'){
+	if (0 && s[0]>='a' && s[0]<='z'){
 	  index_status(contextptr)=1; 
-	  res=*tab_one_letter_idnt[s[0]-'A'];
+	  res=*tab_one_letter_idnt[s[0]-'a'];
 	  return T_SYMBOL;
 	}
 	if (check38 && s[0]>='a' && s[0]<='z' && calc_mode(contextptr)==38)
@@ -5041,6 +5086,17 @@ unsigned int ConvertUTF8toUTF16 (
 	  size_t val=builtin_lexer_functions_[pos];
 	  unary_function_ptr * at_val=(unary_function_ptr *)val;
 	  res=at_val;
+#ifdef GIAC_HAS_STO_38
+	  if (builtin_lexer_functions[pos]._FUNC_%2){
+#ifdef SMARTPTR64
+	    unary_function_ptr tmp=*at_val;
+	    tmp._ptr+=1;
+	    res=tmp;
+#else
+	    res._FUNC_ +=1;
+#endif // SMARTPTR64
+	  }
+#endif // GIAC_HAS_STO_38
 #else // keep this code, required for the nspire otherwise evalf(pi)=reboot
 	  res=gen(int(builtin_lexer_functions_[p.first-builtin_lexer_functions_begin()]+p.first->second.val));
 	  res=gen(*res._FUNCptr);

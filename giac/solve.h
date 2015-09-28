@@ -21,6 +21,8 @@
 
 #define GIAC_64VARS 
 // comment if you don't want the modular algorithm for gbasis with >15 var
+//#define GIAC_CHARDEGTYPE 
+// uncomment if you want degrees as unsigned char (8 bits instead of 15)
 
 #ifndef NO_NAMESPACE_GIAC
 namespace giac {
@@ -93,7 +95,7 @@ namespace giac {
   void sort_vectpoly(vectpoly::iterator it,vectpoly::iterator itend);
   void reduce(vectpoly & res,environment * env);
   void change_monomial_order(polynome & p,const gen & order);
-  vectpoly gbasis(const vectpoly & v,const gen & order,bool with_cocoa,bool with_f5,bool & rur,environment * env,GIAC_CONTEXT); // with_f5 is in fact modular_check
+  vectpoly gbasis(const vectpoly & v,const gen & order,bool with_cocoa,bool with_f5,bool & rur,environment * env,GIAC_CONTEXT,bool eliminate_flag); // with_f5 is in fact modular_check
   gen remove_equal(const gen & f);
   vecteur remove_equal(const_iterateur it,const_iterateur itend);
   vecteur gsolve(const vecteur & eq_orig,const vecteur & var,bool complexmode,int evalf_after,GIAC_CONTEXT);

@@ -10,14 +10,15 @@
 # --compression lzma/lzma-native,lzma/lzma-decoder.js,LZMA.decompress
 # lzma/lzma-native < file_to_compress > compressed_file
 # -s options are in emscripten src/settings.js
-PREC = -s PRECISE_I32_MUL=1 #-DGIAC_GGB 
-CXXFLAGS = $(PREC) -fno-exceptions -I. -I.. -DHAVE_CONFIG_H -DIN_GIAC -DGIAC_GENERIC_CONSTANTS -DNO_STDEXCEPT -Oz -s ALLOW_MEMORY_GROWTH=1 -s GL_UNSAFE_OPTS=0 # --bind -DEMCC_BIND --llvm-opts 2 -v
-CXXFLAGSNOASM = $(PREC) -fno-exceptions -I. -I.. -DHAVE_CONFIG_H -DIN_GIAC -DGIAC_GENERIC_CONSTANTS -DNO_STDEXCEPT -O1 -s ALLOW_MEMORY_GROWTH=1 -s GL_UNSAFE_OPTS=0 
+#PREC = -s PRECISE_I32_MUL=1 #-DGIAC_GGB 
+PREC = -s PRECISE_I64_MATH=1 #-DGIAC_GGB 
+CXXFLAGS = $(PREC)  -I. -I.. -DHAVE_CONFIG_H -DIN_GIAC -DGIAC_GENERIC_CONSTANTS -Oz -s ALLOW_MEMORY_GROWTH=1 -s GL_UNSAFE_OPTS=0  # -fno-exceptions -DNO_STDEXCEPT --bind -DEMCC_BIND --llvm-opts 2 -v
+CXXFLAGSNOASM = $(PREC) -fno-exceptions -DNO_STDEXCEPT -I. -I.. -DHAVE_CONFIG_H -DIN_GIAC -DGIAC_GENERIC_CONSTANTS -O1 -s ALLOW_MEMORY_GROWTH=1 -s GL_UNSAFE_OPTS=0 
 CFLAGS =  $(PREC) -I. -I.. -v  # -pg
 CPPFLAGS = $(CXXFLAGS)
-LDJS1FLAGS = $(PREC) -O1 -v -s EXPORTED_FUNCTIONS="['__ZN4giac7casevalEPKc','__ZN4giac13giac_rendererEPKc']" -s ALLOW_MEMORY_GROWTH=1 -s LEGACY_GL_EMULATION=1 -s GL_UNSAFE_OPTS=0 --memory-init-file 0 #--closure 1
+LDJS1FLAGS = $(PREC) -O1 -v -s EXPORTED_FUNCTIONS="['__ZN4giac7casevalEPKc','__ZN4giac13giac_rendererEPKc']" -s ALLOW_MEMORY_GROWTH=1 -s LEGACY_GL_EMULATION=1 -s GL_UNSAFE_OPTS=0 --memory-init-file 0 #-s DISABLE_EXCEPTION_CATCHING=0 #--closure 1
 LDJS2FLAGS = $(PREC) -O2 -v -s EXPORTED_FUNCTIONS="['__ZN4giac7casevalEPKc','__ZN4giac13giac_rendererEPKc']" -s ALLOW_MEMORY_GROWTH=1 -s LEGACY_GL_EMULATION=1 -s GL_UNSAFE_OPTS=0 --memory-init-file 0 #--closure 1
-LDJSFLAGS = $(PREC) -O3 -v -s EXPORTED_FUNCTIONS="['__ZN4giac7casevalEPKc','__ZN4giac13giac_rendererEPKc']" -s ALLOW_MEMORY_GROWTH=1 -s LEGACY_GL_EMULATION=1 -s GL_UNSAFE_OPTS=0 --memory-init-file 0 # -s DISABLE_EXCEPTION_CATCHING=0 # --bind -DEMCC_BIND -s USE_TYPED_ARRAYS=0 # -s TOTAL_MEMORY=24000000 
+LDJSFLAGS = $(PREC) -O3 -v -s EXPORTED_FUNCTIONS="['__ZN4giac7casevalEPKc','__ZN4giac13giac_rendererEPKc']" -s ALLOW_MEMORY_GROWTH=1 -s LEGACY_GL_EMULATION=1 -s GL_UNSAFE_OPTS=0 --memory-init-file 0 #-s DISABLE_EXCEPTION_CATCHING=0 # --bind -DEMCC_BIND -s USE_TYPED_ARRAYS=0 # -s TOTAL_MEMORY=24000000 
 CXX=emcc
 CC=emcc
 GIACOBJS = sym2poly.o gausspol.o threaded.o maple.o ti89.o mathml.o moyal.o misc.o permu.o quater.o desolve.o input_parser.o symbolic.o index.o modpoly.o modfactor.o ezgcd.o derive.o solve.o intg.o intgab.o risch.o lin.o series.o subst.o vecteur.o sparse.o csturm.o tex.o global.o ifactor.o alg_ext.o gauss.o isom.o help.o plot.o plot3d.o rpn.o prog.o pari.o cocoa.o TmpLESystemSolver.o TmpFGLM.o unary.o usual.o identificateur.o gen.o input_lexer.o tinymt32.o opengl.o
