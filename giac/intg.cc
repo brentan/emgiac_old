@@ -19,6 +19,7 @@
  *  along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 using namespace std;
+#include "emscripten.h"
 #include <stdexcept>
 #include "vector.h"
 #include <cmath>
@@ -4929,7 +4930,11 @@ namespace giac {
   // returns by default y[t1] or a vector of [t,y[t]]
   // if return_curve is true stop as soon as y is outside ymin,ymax
   // f is eitheir a prog (t,y) -> f(t,y) or a _VECT [f(t,y) t y]
-  gen odesolve(const gen & t0orig,const gen & t1orig,const gen & f,const gen & y0orig,double tstep,bool return_curve,double * ymin,double * ymax,int maxstep,GIAC_CONTEXT){
+#ifdef SWIFT_CALCS_OPTIONS
+  gen odesolve(const gen & t0orig,const gen & t1orig,const gen & f,const gen & y0orig,double tstep,bool tstep_passed,bool return_curve,double * ymin,double * ymax,int maxstep,GIAC_CONTEXT){ 
+#else
+  gen odesolve(const gen & t0orig,const gen & t1orig,const gen & f,const gen & y0orig,double tstep,bool return_curve,double * ymin,double * ymax,int maxstep,GIAC_CONTEXT){ 
+#endif
     bool iscomplex=false; 
     // switch to false if GSL is installed or true to force using giac code for real ode
     gen t0_e=evalf_double(t0orig.evalf(1,contextptr),1,contextptr);
@@ -5110,6 +5115,9 @@ namespace giac {
        if (err<=hoptimal) then time += h; y_init=RK5_final; h=min(hoptimal,t_final-t_current)
        else h=hoptimal
      */
+#ifdef SWIFT_CALCS_OPTIONS
+    double tstep_initial = tstep;
+#endif
     gen tolerance=epsilon(contextptr)>1e-12?epsilon(contextptr):1e-12;
     vecteur yt(dim+1),ytvar(yv);
     for (int i=0;i<dim;++i)
@@ -5198,8 +5206,15 @@ namespace giac {
 	yt[dim]=t_e;
 	temps += tstep;
 	tstep=abs(t1_e-t_e,contextptr)._DOUBLE_val;
-	if (hopt._DOUBLE_val<tstep)
-	  tstep=hopt._DOUBLE_val;
+#ifdef SWIFT_CALCS_OPTIONS
+        if (!is_inf(hopt) && ( hopt._DOUBLE_val<tstep))
+          tstep=hopt._DOUBLE_val;
+        if(tstep_passed && (tstep > tstep_initial)) 
+          tstep = tstep_initial;
+#else
+        if (hopt._DOUBLE_val<tstep)
+          tstep=hopt._DOUBLE_val;
+#endif
 	if (return_curve)
 	  resv.push_back(makevecteur(t_e,y_final5));
 	if (!iscomplex){
@@ -5230,6 +5245,7 @@ namespace giac {
   static gen odesolve(const vecteur & w,GIAC_CONTEXT){
     vecteur v(w);
     int vs=int(v.size());
+    bool tstep_defined = false;
     if (vs<3)
       return gendimerr(contextptr);
     // convert expression,[t,vars],[t0,init_values],t1
@@ -5261,10 +5277,11 @@ namespace giac {
       y0=v[3];
       gen t=readvar(v[1]);
       f=makevecteur(v[0],t,v[2]);
-      bool tminmax_defined,tstep_defined;
+      bool tminmax_defined;
       double tmin(-1e300),tmax(1e300);
       vstart=1;
       read_tmintmaxtstep(v,t,vstart,tmin,tmax,tstep,tminmax_defined,tstep_defined,contextptr);
+
       if (t0!=t1){
 	if (tstep==0)
 	  tstep=evalf_double(abs(t1-t0,contextptr),1,contextptr)._DOUBLE_val/30;
@@ -5303,7 +5320,11 @@ namespace giac {
       if (v[i]==at_curve)
 	curve=true;
     }
+#ifdef SWIFT_CALCS_OPTIONS
+    return odesolve(t0,t1,f,y0,tstep,tstep_defined,curve,ymin,ymax,maxstep,contextptr);
+#else
     return odesolve(t0,t1,f,y0,tstep,curve,ymin,ymax,maxstep,contextptr);
+#endif
   }
   // odesolve(t0..t1,f,y0) or odesolve(f(t,y),t,y,t0,y0,t1)
   gen _odesolve(const gen & args,GIAC_CONTEXT) {

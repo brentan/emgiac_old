@@ -1226,6 +1226,7 @@ namespace giac {
 #else
             res.push_back(pnt_attrib(symb_curve(gen(makevecteur(vars+cst_i*f,vars,xmin,i,showeq),_PNT__VECT),gen(chemin,_GROUP__VECT)),attributs.empty()?color:attributs,contextptr));
 #endif
+          }
 	  xmin=i;
 	  chemin.clear();
 	  continue;
@@ -10002,14 +10003,22 @@ namespace giac {
       dim3=(v[3]!=at_plan);
     vecteur res1v,resv;
     if (tmin<0){
+#ifdef SWIFT_CALCS_OPTIONS
+      gen res1=odesolve(t0,tmin,f,y0,tstep,false,curve,ymin,ymax,maxstep,contextptr);
+#else
       gen res1=odesolve(t0,tmin,f,y0,tstep,curve,ymin,ymax,maxstep,contextptr);
+#endif
       if (is_undef(res1)) return res1;
       res1v=*res1._VECTptr;
       std::reverse(res1v.begin(),res1v.end());
     }
     res1v.push_back(makevecteur(t0,y0));
     if (tmax>0){
+#ifdef SWIFT_CALCS_OPTIONS
+      gen res2=odesolve(t0,tmax,f,y0,tstep,false,curve,ymin,ymax,maxstep,contextptr);
+#else
       gen res2=odesolve(t0,tmax,f,y0,tstep,curve,ymin,ymax,maxstep,contextptr);
+#endif
       if (is_undef(res2)) return res2;
       resv=mergevecteur(res1v,*res2._VECTptr);
     }
