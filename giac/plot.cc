@@ -1220,8 +1220,12 @@ namespace giac {
 	if (yy.type!=_DOUBLE_){
 	  if (debug_infolevel)
 	    CERR << y << " not real at " << i << " " << yy << endl;
-	  if (!chemin.empty())
-	    res.push_back(pnt_attrib(symb_curve(gen(makevecteur(vars+cst_i*f,vars,xmin,i,showeq),_PNT__VECT),gen(chemin,_GROUP__VECT)),attributs.empty()?color:attributs,contextptr));
+          if (!chemin.empty()) {
+#ifdef SWIFT_CALCS_OPTIONS // Swift Calcs options to output 2d array of x y pairs, instead of points etc as we do our own plotting
+	    res.push_back(makevecteur(xmin,i,showeq));
+#else
+            res.push_back(pnt_attrib(symb_curve(gen(makevecteur(vars+cst_i*f,vars,xmin,i,showeq),_PNT__VECT),gen(chemin,_GROUP__VECT)),attributs.empty()?color:attributs,contextptr));
+#endif
 	  xmin=i;
 	  chemin.clear();
 	  continue;
@@ -1255,25 +1259,41 @@ namespace giac {
 	}
 	else
 	  joindre=false;
-	if (joindre)
-	  chemin.push_back(gen(i,j));
-	else {
+	if (joindre) {
+#ifdef SWIFT_CALCS_OPTIONS
+	  chemin.push_back(makevecteur(i,j));
+#else
+          chemin.push_back(gen(i,j));
+#endif
+        } else {
 	  if (!chemin.empty()){
 	    if (debug_infolevel){
 	      CERR << y << " step at " << i << " " << yy << endl;
 	      CERR << "curve " << chemin.size() << " " << chemin.front() << " .. " << chemin.back() << endl;
 	    }
-	    res.push_back(pnt_attrib(symb_curve(gen(makevecteur(vars+cst_i*f,vars,xmin,i,showeq),_PNT__VECT),gen(chemin,_GROUP__VECT)),attributs.empty()?color:attributs,contextptr));
+#ifdef SWIFT_CALCS_OPTIONS
+	    res.push_back(makevecteur(xmin,i,showeq));
+#else
+            res.push_back(pnt_attrib(symb_curve(gen(makevecteur(vars+cst_i*f,vars,xmin,i,showeq),_PNT__VECT),gen(chemin,_GROUP__VECT)),attributs.empty()?color:attributs,contextptr));
+#endif
 	  }
 	  xmin=i;
-	  chemin=vecteur(1,gen(i,j));
+#ifdef SWIFT_CALCS_OPTIONS
+	  chemin.push_back(makevecteur(i,j));
+#else
+          chemin=vecteur(1,gen(i,j));
+#endif
 	}
 	oldj=j;
       }
       if (!chemin.empty()){
 	if (debug_infolevel)
 	  CERR << "curve " << chemin.size() << " " << chemin.front() << " .. " << chemin.back() << endl;
-	res.push_back(pnt_attrib(symb_curve(gen(makevecteur(vars+cst_i*f,vars,xmin,xmax,showeq),_PNT__VECT),gen(chemin,_GROUP__VECT)),attributs.empty()?color:attributs,contextptr));
+#ifdef SWIFT_CALCS_OPTIONS
+	res.push_back(chemin);
+#else
+        res.push_back(pnt_attrib(symb_curve(gen(makevecteur(vars+cst_i*f,vars,xmin,xmax,showeq),_PNT__VECT),gen(chemin,_GROUP__VECT)),attributs.empty()?color:attributs,contextptr));
+#endif
       }
       leave(protect,localvar,newcontextptr);
 #ifndef WIN32
