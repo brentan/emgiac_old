@@ -7584,6 +7584,7 @@ namespace giac {
   const mksa_unit __pdl_unit={0.138254954376,1,1,-2,0,0,0,0,0};
   const mksa_unit __pk_unit={0.0088097675,3,0,0,0,0,0,0,0};
   const mksa_unit __psi_unit={6894.75729317,-1,1,-2,0,0,0,0,0};
+  const mksa_unit __ksi_unit={6894757.29317,-1,1,-2,0,0,0,0,0};
   const mksa_unit __pt_unit={0.000473176473,3,0,0,0,0,0,0,0};
   const mksa_unit __ptUK_unit={0.0005682615,3,0,0,0,0,0,0,0};
   const mksa_unit __qt_unit={0.000946359246,3,0,0,0,0,0,0,0};
@@ -7814,6 +7815,7 @@ namespace giac {
     &__phi_unit,
     &__pk_unit,
     &__psi_unit,
+    &__ksi_unit,
     &__pt_unit,
     &__ptUK_unit,
     &__qe_unit,
@@ -8009,6 +8011,7 @@ namespace giac {
     "_phi_",
     "_pk",
     "_psi",
+    "_ksi",
     "_pt",
     "_ptUK",
     "_qe_",
@@ -8163,6 +8166,7 @@ namespace giac {
   gen _pdl_unit(mksa_register("_pdl",&__pdl_unit));
   gen _pk_unit(mksa_register("_pk",&__pk_unit));
   gen _psi_unit(mksa_register("_psi",&__psi_unit));
+  gen _ksi_unit(mksa_register("_ksi",&__ksi_unit));
   gen _pt_unit(mksa_register("_pt",&__pt_unit));
   gen _ptUK_unit(mksa_register("_ptUK",&__ptUK_unit));
   gen _liqpt_unit(mksa_register("_liqpt",&__liqpt_unit));

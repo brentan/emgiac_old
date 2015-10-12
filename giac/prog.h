@@ -734,6 +734,7 @@ namespace giac {
   extern const mksa_unit __pdl_unit;
   extern const mksa_unit __pk_unit;
   extern const mksa_unit __psi_unit;
+  extern const mksa_unit __ksi_unit;
   extern const mksa_unit __pt_unit;
   extern const mksa_unit __ptUK_unit;
   extern const mksa_unit __liqpt_unit;
@@ -901,6 +902,7 @@ namespace giac {
   extern gen _pdl_unit;
   extern gen _pk_unit;
   extern gen _psi_unit;
+  extern gen _ksi_unit;
   extern gen _pt_unit;
   extern gen _qt_unit;
   extern gen _R_unit;
