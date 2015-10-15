@@ -809,6 +809,7 @@ extern "C" void Sleep(unsigned int miliSecond);
   }
 
   #ifdef SWIFT_CALCS_OPTIONS
+
     static bool _mksareduce_mode_=false;
     bool & mksareduce_mode(GIAC_CONTEXT){
       if (contextptr && contextptr->globalptr )

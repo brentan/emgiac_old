@@ -477,6 +477,9 @@
 {"debug_infolevel",13,9,0,*((ulonglong *) at_debug_infolevel)},
 {"debut_enregistrement",13,126,0,*((ulonglong *) at_debut_enregistrement)},
 {"decrement",13,9,0,*((ulonglong *) at_decrement)| 1},
+#ifdef SWIFT_CALCS_OPTIONS
+	{"default_units",13,9,0,*((ulonglong *) at_default_units)},
+#endif
 {"degree",13,9,0,*((ulonglong *) at_degree)},
 {"delcols",13,9,0,*((ulonglong *) at_delcols)},
 {"delrows",13,9,0,*((ulonglong *) at_delrows)},
@@ -1225,6 +1228,9 @@
 {"seqsolve",13,9,0,*((ulonglong *) at_seqsolve)| 1},
 {"series",13,9,0,*((ulonglong *) at_series)},
 {"set_language",13,9,0,*((ulonglong *) at_set_language)},
+#ifdef SWIFT_CALCS_OPTIONS
+	{"set_units",13,9,0,*((ulonglong *) at_set_units)},
+#endif
 {"shift",13,9,0,*((ulonglong *) at_shift)},
 {"shift_phase",13,9,0,*((ulonglong *) at_shift_phase)},
 {"show_language",13,9,0,*((ulonglong *) at_show_language)},

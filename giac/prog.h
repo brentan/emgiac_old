@@ -303,6 +303,8 @@ namespace giac {
   extern const unary_function_ptr * const  at_angle_radian;
 
   #ifdef SWIFT_CALCS_OPTIONS
+    gen _set_units(const gen & args,GIAC_CONTEXT);
+    extern const unary_function_ptr * const  at_set_units;
     gen _mksareduce_mode(const gen & args,GIAC_CONTEXT);
     extern const unary_function_ptr * const  at_mksareduce_mode;
     gen _mksavariable_mode(const gen & args,GIAC_CONTEXT);
@@ -613,6 +615,7 @@ namespace giac {
     gen mksa_reduce_base(const gen & g,GIAC_CONTEXT);
     gen mksa_remove_base(const gen & g,GIAC_CONTEXT);
     gen mksa_to_var(const gen & g,GIAC_CONTEXT);
+    gen default_units(const gen & g,GIAC_CONTEXT);
   #endif
   gen chk_not_unit(const gen & g);
   gen find_or_make_symbol(const std::string & s,bool check38,GIAC_CONTEXT);
@@ -731,6 +734,7 @@ namespace giac {
   extern const mksa_unit __ozUK_unit;
   extern const mksa_unit __P_unit;
   extern const mksa_unit __pc_unit;
+  extern const mksa_unit __pcf_unit;
   extern const mksa_unit __pdl_unit;
   extern const mksa_unit __pk_unit;
   extern const mksa_unit __psi_unit;
@@ -899,6 +903,7 @@ namespace giac {
   extern gen _ozUK_unit;
   extern gen _P_unit;
   extern gen _pc_unit;
+  extern gen _pcf_unit;
   extern gen _pdl_unit;
   extern gen _pk_unit;
   extern gen _psi_unit;

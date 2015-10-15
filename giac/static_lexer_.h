@@ -430,6 +430,9 @@
 *((size_t *) at_debug_infolevel),
 *((size_t *) at_debut_enregistrement),
 *((size_t *) at_decrement),
+#ifdef SWIFT_CALCS_OPTIONS
+	*((size_t *) at_default_units),
+#endif
 *((size_t *) at_degree),
 *((size_t *) at_delcols),
 *((size_t *) at_delrows),
@@ -1076,6 +1079,9 @@
 *((size_t *) at_seqplot),
 *((size_t *) at_seqsolve),
 *((size_t *) at_series),
+#ifdef SWIFT_CALCS_OPTIONS
+	*((size_t *) at_set_units),
+#endif
 *((size_t *) at_shift),
 *((size_t *) at_shift_phase),
 *((size_t *) at_show_language),

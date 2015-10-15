@@ -7581,6 +7581,7 @@ namespace giac {
   const mksa_unit __ozfl_unit={2.95735295625e-5,3,0,0,0,0,0,0,0};
   const mksa_unit __ozt_unit={0.0311034768,0,1,0,0,0,0,0,0};
   const mksa_unit __pc_unit={3.08567818585e16,1,0,0,0,0,0,0,0};
+  const mksa_unit __pcf_unit={16.01846337396,-3,1,0,0,0,0,0,0};
   const mksa_unit __pdl_unit={0.138254954376,1,1,-2,0,0,0,0,0};
   const mksa_unit __pk_unit={0.0088097675,3,0,0,0,0,0,0,0};
   const mksa_unit __psi_unit={6894.75729317,-1,1,-2,0,0,0,0,0};
@@ -7811,6 +7812,7 @@ namespace giac {
     &__ozfl_unit,
     &__ozt_unit,
     &__pc_unit,
+    &__pcf_unit,
     &__pdl_unit,
     &__phi_unit,
     &__pk_unit,
@@ -8163,6 +8165,7 @@ namespace giac {
   gen _ozUK_unit(mksa_register("_ozUK",&__ozUK_unit));
   gen _P_unit(mksa_register("_P",&__P_unit));
   gen _pc_unit(mksa_register("_pc",&__pc_unit));
+  gen _pcf_unit(mksa_register("_pcf",&__pcf_unit));
   gen _pdl_unit(mksa_register("_pdl",&__pdl_unit));
   gen _pk_unit(mksa_register("_pk",&__pk_unit));
   gen _psi_unit(mksa_register("_psi",&__psi_unit));
@@ -8591,6 +8594,63 @@ namespace giac {
     static const char _mksa_remove_s []="mksa_remove";
     static define_unary_function_eval (__mksa_remove,&mksa_remove_base,_mksa_remove_s);
     define_unary_function_ptr5( at_mksa_remove ,alias_at_mksa_remove,&__mksa_remove,0,true);
+
+
+    // Set the default return units for various dimensions
+    static gen _default_unit_ = _m_unit;
+    gen & default_unit(){
+      return _default_unit_;
+    }
+    void default_unit(gen g){
+      _default_unit_=g;
+    }
+
+    gen set_units(const gen & g,GIAC_CONTEXT){
+      if ( g.type==_STRNG &&  g.subtype==-1) return g;
+      if (!g.is_symb_of_sommet(at_unit)) return default_unit();
+      vecteur & v=*g._SYMBptr->feuille._VECTptr;
+      default_unit(v[1]);
+      return v[1];
+    }
+    static const char _set_units_s []="set_units";
+    static define_unary_function_eval (__set_units,&set_units,_set_units_s);
+    define_unary_function_ptr5( at_set_units ,alias_at_set_units ,&__set_units,0,true);
+//BRENTAN: This works for length right now.  Need to add in other base units, and then an array of 'usual' units.  Then update usimplify to use these expressions instead of mksa
+//BRENTAN: Need to look at mksa_convert and update that function to a 'default_convert' so that we dont get 1 -> .0254 -> .99999 issues
+    gen default_units(const gen & g,GIAC_CONTEXT){
+      if (g.type==_VECT)
+        return apply(g,default_units,contextptr);
+      vecteur v(mksa_convert(g,contextptr));
+      if (is_undef(v)) return v;
+      gen res1=v[0];
+      gen res=plus_one;
+      int s=int(v.size());
+      if (s>2) 
+        res = res * unitpow(_lb_unit,v[2]);
+      if (s>1) {
+        res = res * unitpow(default_unit(),v[1]);
+        res1 = res1 * pow(inv(mksa_remove_base(default_unit(),contextptr),contextptr),v[1],contextptr);
+      }
+      if (s>3)
+        res = res * unitpow(_s_unit,v[3]);
+      if (s>4)
+        res = res * unitpow(_A_unit,v[4]);
+      if (s>5) 
+        res = res * unitpow(_R_unit,v[5]);
+      if (s>6)
+        res = res * unitpow(_mol_unit,v[6]);
+      if (s>7)
+        res = res * unitpow(_cd_unit,v[7]);
+      if (s>8)
+        res = res * unitpow(_E_unit,v[8]);
+      if (is_one(res))
+        return res1;
+      else
+        return symbolic(at_unit,makevecteur(res1,res));
+    }
+    static const char _default_units_s []="default_units";
+    static define_unary_function_eval (__default_units,&default_units,_default_units_s);
+    define_unary_function_ptr5( at_default_units ,alias_at_default_units,&__default_units,0,true);
 
   #endif
   gen mksa_reduce(const gen & g,GIAC_CONTEXT){

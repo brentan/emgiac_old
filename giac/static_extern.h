@@ -906,6 +906,7 @@ extern const unary_function_ptr * const  at_mksa;
 	extern const unary_function_ptr * const  at_mksa_base;
 	extern const unary_function_ptr * const  at_mksa_remove;
 	extern const unary_function_ptr * const  at_mksa_var;
+	extern const unary_function_ptr * const  at_default_units;
 #endif
 extern const unary_function_ptr * const  at_modgcd;
 extern const unary_function_ptr * const  at_modgcd_cachesize;
