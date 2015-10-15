@@ -157,10 +157,14 @@ namespace giac {
       gen coeff=it->coeff;
       if (is_undef(coeff)){
 	remains=pow(x,it->exponent,context0); // ok
+#ifdef SWIFT_CALCS_OPTIONS
+  return res; // NOT SURE IF THIS IS OK...I DONT WANT ORDER_SIZE IN THE OUTPUT, BUT IS THIS IMPORTANT SOMEWHERE INTERNALLY?
+#else
 	if (with_order_size)
 	  return res+remains*order_size(x,context0);
 	else
 	  return res;
+#endif
       }
       coeff=spol12gen(coeff,x);
       res = res + coeff * pow(x,it->exponent,context0); // ok
