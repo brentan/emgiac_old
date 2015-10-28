@@ -392,6 +392,7 @@
 {"circle",13,9,0,*((ulonglong *) at_circle)| 1},
 {"circumcircle",13,9,0,*((ulonglong *) at_circumcircle)},
 {"classes",13,9,0,*((ulonglong *) at_classes)},
+{"clear_usual_units",13,9,0,*((ulonglong *) at_clear_usual_units)},
 {"click",13,9,0,*((ulonglong *) at_click)| 1},
 {"close",13,9,0,*((ulonglong *) at_close)| 1},
 {"coeff",13,9,0,*((ulonglong *) at_coeff)},

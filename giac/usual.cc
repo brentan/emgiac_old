@@ -341,7 +341,7 @@ namespace giac {
 
   gen ln(const gen & e_in,GIAC_CONTEXT){
     #ifdef SWIFT_CALCS_OPTIONS
-      gen e = _usimplify(e_in, contextptr);
+      gen e = _usimplify_base(e_in, contextptr);
     #else
       gen e = e_in;
     #endif
@@ -471,7 +471,7 @@ namespace giac {
 
   gen log10(const gen & e_in,GIAC_CONTEXT){
     #ifdef SWIFT_CALCS_OPTIONS
-      gen e = _usimplify(e_in, contextptr);
+      gen e = _usimplify_base(e_in, contextptr);
     #else
       gen e = e_in;
     #endif
@@ -541,7 +541,7 @@ namespace giac {
 
   gen alog10(const gen & e_in,GIAC_CONTEXT){
     #ifdef SWIFT_CALCS_OPTIONS
-      gen e = _usimplify(e_in, contextptr);
+      gen e = _usimplify_base(e_in, contextptr);
     #else
       gen e = e_in;
     #endif
@@ -572,7 +572,7 @@ namespace giac {
   }
   gen atan(const gen & e_in,GIAC_CONTEXT){
     #ifdef SWIFT_CALCS_OPTIONS
-      gen e0 = _usimplify(e_in, contextptr);
+      gen e0 = _usimplify_base(e_in, contextptr);
     #else
       gen e0 = e_in;
     #endif
@@ -807,7 +807,7 @@ namespace giac {
 
   gen exp(const gen & e_in,GIAC_CONTEXT){
     #ifdef SWIFT_CALCS_OPTIONS
-      gen e0 = _usimplify(e_in, contextptr);
+      gen e0 = _usimplify_base(e_in, contextptr);
     #else
       gen e0 = e_in;
     #endif
@@ -1189,7 +1189,7 @@ namespace giac {
 
   gen sqrt(const gen & e_in,GIAC_CONTEXT){
     #ifdef SWIFT_CALCS_OPTIONS
-      gen e = _usimplify(e_in, contextptr);
+      gen e = _usimplify_base(e_in, contextptr);
     #else
       gen e = e_in;
     #endif
@@ -1388,7 +1388,7 @@ namespace giac {
   }
   gen cos(const gen & e_in,GIAC_CONTEXT){
     #ifdef SWIFT_CALCS_OPTIONS
-      gen e0 = _usimplify(e_in, contextptr);
+      gen e0 = _usimplify_base(e_in, contextptr);
     #else
       gen e0 = e_in;
     #endif
@@ -1627,7 +1627,7 @@ namespace giac {
   }
   gen sin(const gen & e_in,GIAC_CONTEXT){
     #ifdef SWIFT_CALCS_OPTIONS
-      gen e0 = _usimplify(e_in, contextptr);
+      gen e0 = _usimplify_base(e_in, contextptr);
     #else
       gen e0 = e_in;
     #endif
@@ -1862,7 +1862,7 @@ namespace giac {
   }
   gen tan(const gen & e_in,GIAC_CONTEXT){
     #ifdef SWIFT_CALCS_OPTIONS
-      gen e0 = _usimplify(e_in, contextptr);
+      gen e0 = _usimplify_base(e_in, contextptr);
     #else
       gen e0 = e_in;
     #endif
@@ -2038,7 +2038,7 @@ namespace giac {
   }
   gen asin(const gen & e_in,GIAC_CONTEXT){
     #ifdef SWIFT_CALCS_OPTIONS
-      gen e0 = _usimplify(e_in, contextptr);
+      gen e0 = _usimplify_base(e_in, contextptr);
     #else
       gen e0 = e_in;
     #endif
@@ -2275,7 +2275,7 @@ namespace giac {
   }
   gen acos(const gen & e_in,GIAC_CONTEXT){
     #ifdef SWIFT_CALCS_OPTIONS
-      gen e0 = _usimplify(e_in, contextptr);
+      gen e0 = _usimplify_base(e_in, contextptr);
     #else
       gen e0 = e_in;
     #endif
@@ -2401,7 +2401,7 @@ namespace giac {
   }
   gen sinh(const gen & e_in,GIAC_CONTEXT){
     #ifdef SWIFT_CALCS_OPTIONS
-      gen e0 = _usimplify(e_in, contextptr);
+      gen e0 = _usimplify_base(e_in, contextptr);
     #else
       gen e0 = e_in;
     #endif
@@ -2471,7 +2471,7 @@ namespace giac {
   }
   gen cosh(const gen & e_in,GIAC_CONTEXT){
     #ifdef SWIFT_CALCS_OPTIONS
-      gen e0 = _usimplify(e_in, contextptr);
+      gen e0 = _usimplify_base(e_in, contextptr);
     #else
       gen e0 = e_in;
     #endif
@@ -2540,7 +2540,7 @@ namespace giac {
   // static symbolic symb_tanh(const gen & e){ return symbolic(at_tanh,e);  }
   gen tanh(const gen & e_in,GIAC_CONTEXT){
     #ifdef SWIFT_CALCS_OPTIONS
-      gen e0 = _usimplify(e_in, contextptr);
+      gen e0 = _usimplify_base(e_in, contextptr);
     #else
       gen e0 = e_in;
     #endif
@@ -2618,7 +2618,7 @@ namespace giac {
   }
   gen asinh(const gen & e_in,GIAC_CONTEXT){
     #ifdef SWIFT_CALCS_OPTIONS
-      gen e0 = _usimplify(e_in, contextptr);
+      gen e0 = _usimplify_base(e_in, contextptr);
     #else
       gen e0 = e_in;
     #endif
@@ -2672,7 +2672,7 @@ namespace giac {
   }
   gen acosh(const gen & e_in,GIAC_CONTEXT){
     #ifdef SWIFT_CALCS_OPTIONS
-      gen e0 = _usimplify(e_in, contextptr);
+      gen e0 = _usimplify_base(e_in, contextptr);
     #else
       gen e0 = e_in;
     #endif
@@ -2725,7 +2725,7 @@ namespace giac {
   // static symbolic symb_atanh(const gen & e){  return symbolic(at_atanh,e);}
   gen atanh(const gen & e_in,GIAC_CONTEXT){
     #ifdef SWIFT_CALCS_OPTIONS
-      gen e0 = _usimplify(e_in, contextptr);
+      gen e0 = _usimplify_base(e_in, contextptr);
     #else
       gen e0 = e_in;
     #endif

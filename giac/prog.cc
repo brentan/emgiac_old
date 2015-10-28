@@ -7480,18 +7480,7 @@ namespace giac {
   const mksa_unit __V_unit={1,2,1,-3,-1,0,0,0,0};
   const mksa_unit __W_unit={1,2,1,-3,0,0,0,0,0};
   const mksa_unit __Wb_unit={1,2,1,-2,-1,0,0,0,0};
-  vecteur & usual_units(){
-    static vecteur * usual_units_ptr=0;
-    if (!usual_units_ptr){
-      usual_units_ptr=new vecteur;
-      *usual_units_ptr=mergevecteur(
-				   mergevecteur(makevecteur(_C_unit,_F_unit,_Gy_unit,_H_unit,_Hz_unit,_J_unit,_mho_unit),
-						makevecteur(_N_unit,_Ohm_unit,_Pa_unit,_rad_unit,_S_unit,_Sv_unit,_T_unit)),
-				   makevecteur(_V_unit,_W_unit,_Wb_unit)
-				   );
-    }
-    return *usual_units_ptr;
-  }
+
   const mksa_unit __Angstrom_unit={1e-10,1,0,0,0,0,0,0,0};
   const mksa_unit __Btu_unit={1055.05585262,2,1,-2,0,0,0,0,0};
   const mksa_unit __Curie_unit={3.7e10,0,0,-1,0,0,0,0,0};
@@ -8212,26 +8201,92 @@ namespace giac {
   gen _tepcC_unit(mksa_register("_tepcC",&__tepcC_unit));
   // mean PRG for HFC in kg C unit
   gen _HFCC_unit(mksa_register("_HFCC",&__HFCC_unit));
+
+
+  // Set 'usual' units
+  //static vecteur * usual_units_ptr = new vecteur;
+  static vecteur * usual_units_ptr = new vecteur(mergevecteur(
+    mergevecteur(
+      makevecteur(_N_unit,_Ohm_unit,_Pa_unit,_J_unit,_T_unit),
+      makevecteur(_C_unit,_F_unit,_H_unit,_Hz_unit)),
+     makevecteur(_V_unit,_W_unit,_Wb_unit)
+    ));
+  vecteur & usual_units() {
+    return *usual_units_ptr;
+  }
+  void reset_usual_units() {
+    usual_units_ptr = new vecteur();
+  }
+  void add_usual_unit(gen g) {
+    usual_units_ptr->push_back(g);
+  }
 #endif
 
   static vecteur mksa_unit2vecteur(const mksa_unit * tmp){
     vecteur v;
     if (tmp->K==0 && tmp->mol==0 && tmp->cd==0){
       if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==0){
-	v.push_back(tmp->coeff);
+        v.push_back(tmp->coeff);
       }
       else {
-	v.reserve(5);
-	v.push_back(tmp->coeff);
-	v.push_back(tmp->m);
-	v.push_back(tmp->kg);
-	v.push_back(tmp->s);
-	v.push_back(tmp->A);
+        v.reserve(5);
+        v.push_back(tmp->coeff);
+        v.push_back(tmp->m);
+        v.push_back(tmp->kg);
+        v.push_back(tmp->s);
+        v.push_back(tmp->A);
       }
     }
     else {
       v.reserve(9);
       v.push_back(tmp->coeff);
+      v.push_back(tmp->m);
+      v.push_back(tmp->kg);
+      v.push_back(tmp->s);
+      v.push_back(tmp->A);
+      v.push_back(tmp->K);
+      v.push_back(tmp->mol);
+      v.push_back(tmp->cd);
+      v.push_back(tmp->E);
+    }
+    return v;
+  }
+  static vecteur default_unit_unit2vecteur(const mksa_unit * tmp){
+    vecteur v;
+    unit_system defaults = default_unit();
+    double coeff = tmp->coeff;
+    if(tmp->m != 0) 
+      coeff = coeff / std::pow(defaults.m,tmp->m);
+    if(tmp->kg != 0) 
+      coeff = coeff / std::pow(defaults.kg,tmp->kg);
+    if(tmp->s != 0) 
+      coeff = coeff / std::pow(defaults.s,tmp->s);
+    if(tmp->A != 0) 
+      coeff = coeff / std::pow(defaults.A,tmp->A);
+    if(tmp->E != 0) 
+      coeff = coeff / std::pow(defaults.E,tmp->E);
+    if(tmp->K != 0) 
+      coeff = coeff / std::pow(defaults.K,tmp->K);
+    if(tmp->mol != 0) 
+      coeff = coeff / std::pow(defaults.mol,tmp->mol);
+    if(tmp->cd != 0) 
+      coeff = coeff / std::pow(defaults.cd,tmp->cd);
+    if (tmp->K==0 && tmp->mol==0 && tmp->cd==0){
+      if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==0){
+        v.push_back(coeff);
+      }
+      else {
+        v.reserve(5);
+        v.push_back(coeff); 
+        v.push_back(tmp->m);
+        v.push_back(tmp->kg);
+        v.push_back(tmp->s);
+        v.push_back(tmp->A);
+      }
+    }
+    else {
+      v.reserve(9);
+      v.push_back(coeff);
       v.push_back(tmp->m);
       v.push_back(tmp->kg);
       v.push_back(tmp->s);
@@ -8252,7 +8307,16 @@ namespace giac {
   };
 
   // return a vector of powers in MKSA system
-  vecteur mksa_convert(const identificateur & g,GIAC_CONTEXT){
+  struct unit_convert_out {
+        double coeff;
+        const mksa_unit * mksa_vector;
+        vecteur unit;
+  };
+  unit_convert_out unit_convert_routine(const identificateur & g, bool mksa, GIAC_CONTEXT) {
+    unit_convert_out output;
+    output.coeff = 1.0;
+    mksa_unit blank_unit={0,0,0,0,0,0,0,0,0};
+    output.mksa_vector = &blank_unit;
     string s=g.print(contextptr);
     // Find prefix in unit
     int exposant=0;
@@ -8268,16 +8332,19 @@ namespace giac {
       --l;
       s=s.substr(1,l);
     }
-    else
-      return makevecteur(g);
+    else {
+      output.unit = makevecteur(g);
+      return output;
+    }
     gen res=plus_one;
+    double res_d = 1;
 #ifdef USTL
     ustl::map<const char *, const mksa_unit *,ltstr>::const_iterator it=unit_conversion_map().find(s.c_str()),itend=unit_conversion_map().end();
 #else
     std::map<const char *, const mksa_unit *,ltstr>::const_iterator it=unit_conversion_map().find(s.c_str()),itend=unit_conversion_map().end();
 #endif
     int nchar=1;
-    if (it==itend && l>1){
+    if ((1e-6 > it->second->coeff) && l>1){
       switch (s[0]){
       case 'Y':
 	exposant=24;
@@ -8347,6 +8414,7 @@ namespace giac {
     if (exposant!=0){
       s=s.substr(nchar,l-nchar);
       res=std::pow(10.0,double(exposant));
+      res_d = std::pow(10.0, double(exposant));
 #ifdef USTL
       ustl::pair<const char * const * const,const char * const * const> pp=ustl::equal_range(unitname_tab,unitname_tab_end,("_"+s).c_str(),mksa_tri3());
 #else
@@ -8356,28 +8424,55 @@ namespace giac {
 	mksa_register_unit(*pp.first,unitptr_tab[pp.first-unitname_tab]);
       it=unit_conversion_map().find(s.c_str());
     }
-    if (it==itend)
-      return makevecteur(res*find_or_make_symbol("_"+s,false,contextptr));
-    vecteur v=mksa_unit2vecteur(it->second);
+    if (it==itend) {
+      output.unit = makevecteur(res*find_or_make_symbol("_"+s,false,contextptr));
+      return output;
+    }
+    vecteur v;
+    if(mksa)
+        v = mksa_unit2vecteur(it->second);
+    else
+        v = default_unit_unit2vecteur(it->second);
     v[0]=res*v[0];
-    return v;
+    res_d=res_d * it->second->coeff;
+    output.coeff = res_d;
+    output.mksa_vector = it->second;
+    output.unit = v;
+    return output;
+  }
+  vecteur mksa_convert(const identificateur & g,GIAC_CONTEXT){
+    unit_convert_out output = unit_convert_routine(g, true, contextptr);
+    return output.unit;
+  }
+  double mksa_convert_coeff(const identificateur & g,GIAC_CONTEXT){
+    unit_convert_out output = unit_convert_routine(g, true, contextptr);
+    return output.coeff;
+  }
+  const mksa_unit * mksa_convert_unit(const identificateur & g,GIAC_CONTEXT){
+    unit_convert_out output = unit_convert_routine(g, true, contextptr);
+    return output.mksa_vector;
+  }
+  vecteur unit_convert(const identificateur & g, bool mksa, GIAC_CONTEXT){
+    unit_convert_out output = unit_convert_routine(g, mksa, contextptr);
+    return output.unit;
   }
 
-  vecteur mksa_convert(const gen & g,GIAC_CONTEXT){
+
+  vecteur unit_convert(const gen & g, bool mksa, GIAC_CONTEXT){
     if (g.type==_IDNT)
-      return mksa_convert(*g._IDNTptr,contextptr);
+      return unit_convert(*g._IDNTptr, mksa, contextptr);
     if (g.type!=_SYMB)
       return makevecteur(g);
     if (g.is_symb_of_sommet(at_unit)){
       vecteur & v=*g._SYMBptr->feuille._VECTptr;
-      vecteur res0=mksa_convert(v[1],contextptr);
-      vecteur res1=mksa_convert(v[0],contextptr);
+      vecteur res0=unit_convert(v[1], mksa, contextptr);
+      vecteur res1=unit_convert(v[0], mksa, contextptr);
       vecteur res=addvecteur(res0,res1);
       res.front()=res0.front()*res1.front();
       return res;
     }
     if (g._SYMBptr->sommet==at_inv){
-      vecteur res(mksa_convert(g._SYMBptr->feuille,contextptr));
+      vecteur res(unit_convert(g._SYMBptr->feuille, mksa, contextptr));
       res[0]=inv(res[0],contextptr);
       int s=int(res.size());
       for (int i=1;i<s;++i)
@@ -8388,7 +8483,7 @@ namespace giac {
       gen & f=g._SYMBptr->feuille;
       if (f.type!=_VECT||f._VECTptr->size()!=2)
 	return vecteur(1,gensizeerr(contextptr));
-      vecteur res(mksa_convert(f._VECTptr->front(),contextptr));
+      vecteur res(unit_convert(f._VECTptr->front(), mksa, contextptr));
       gen e=f._VECTptr->back();
       res[0]=pow(res[0],e,contextptr);
       int s=int(res.size());
@@ -8399,12 +8494,12 @@ namespace giac {
     if (g._SYMBptr->sommet==at_prod){
       gen & f=g._SYMBptr->feuille;
       if (f.type!=_VECT)
-	      return mksa_convert(f,contextptr);
+	      return unit_convert(f, mksa, contextptr);
       vecteur & v=*f._VECTptr;
       vecteur res(makevecteur(plus_one));
       const_iterateur it=v.begin(),itend=v.end();
       for (;it!=itend;++it){
-      	vecteur tmp(mksa_convert(*it,contextptr));
+      	vecteur tmp(unit_convert(*it, mksa, contextptr));
       	res[0]=res[0]*tmp[0];
       	iterateur it=res.begin()+1,itend=res.end(),jt=tmp.begin()+1,jtend=tmp.end();
       	for (;it!=itend && jt!=jtend;++it,++jt)
@@ -8418,23 +8513,27 @@ namespace giac {
       if (g._SYMBptr->sommet==at_plus) {
         gen & f=g._SYMBptr->feuille;
         if (f.type!=_VECT)
-          return mksa_convert(f,contextptr);
+          return unit_convert(f, mksa, contextptr);
         vecteur res(makevecteur(zero));
         for (unsigned i=0;i<f._VECTptr->size();++i){
-          vecteur tmp(mksa_convert((*f._VECTptr)[i],contextptr));
+          vecteur tmp(unit_convert((*f._VECTptr)[i], mksa, contextptr));
           res[0]=res[0] + tmp[0];
         }
         return res;
       }
       if (g._SYMBptr->sommet==at_neg) {
-        vecteur res(mksa_convert(g._SYMBptr->feuille,contextptr));
-        int s=int(res.size());
-        for (int i=0;i<s;++i)
-          res[i]=-res[i];
+        vecteur res(unit_convert(g._SYMBptr->feuille, mksa, contextptr));
+        res[0]= -1 * res[0];
+        //int s=int(res.size());
+        //for (int i=0;i<s;++i)
+        //  res[i]=-res[i];
         return res;
       }
     #endif
     return makevecteur(g);
+  }
+  vecteur mksa_convert(const gen & g, GIAC_CONTEXT){
+    return unit_convert(g, true, contextptr);
   }
 
   gen unitpow(const gen & g,const gen & exponent_){
@@ -8595,64 +8694,196 @@ namespace giac {
     static define_unary_function_eval (__mksa_remove,&mksa_remove_base,_mksa_remove_s);
     define_unary_function_ptr5( at_mksa_remove ,alias_at_mksa_remove,&__mksa_remove,0,true);
 
-
-    // Set the default return units for various dimensions
-    static gen _default_unit_ = _m_unit;
-    gen & default_unit(){
-      return _default_unit_;
-    }
-    void default_unit(gen g){
-      _default_unit_=g;
-    }
-
-    gen set_units(const gen & g,GIAC_CONTEXT){
-      if ( g.type==_STRNG &&  g.subtype==-1) return g;
-      if (!g.is_symb_of_sommet(at_unit)) return default_unit();
-      vecteur & v=*g._SYMBptr->feuille._VECTptr;
-      default_unit(v[1]);
-      return v[1];
-    }
-    static const char _set_units_s []="set_units";
-    static define_unary_function_eval (__set_units,&set_units,_set_units_s);
-    define_unary_function_ptr5( at_set_units ,alias_at_set_units ,&__set_units,0,true);
-//BRENTAN: This works for length right now.  Need to add in other base units, and then an array of 'usual' units.  Then update usimplify to use these expressions instead of mksa
-//BRENTAN: Need to look at mksa_convert and update that function to a 'default_convert' so that we dont get 1 -> .0254 -> .99999 issues
-    gen default_units(const gen & g,GIAC_CONTEXT){
-      if (g.type==_VECT)
-        return apply(g,default_units,contextptr);
-      vecteur v(mksa_convert(g,contextptr));
-      if (is_undef(v)) return v;
-      gen res1=v[0];
-      gen res=plus_one;
-      int s=int(v.size());
-      if (s>2) 
-        res = res * unitpow(_lb_unit,v[2]);
-      if (s>1) {
-        res = res * unitpow(default_unit(),v[1]);
-        res1 = res1 * pow(inv(mksa_remove_base(default_unit(),contextptr),contextptr),v[1],contextptr);
-      }
-      if (s>3)
-        res = res * unitpow(_s_unit,v[3]);
-      if (s>4)
-        res = res * unitpow(_A_unit,v[4]);
-      if (s>5) 
-        res = res * unitpow(_R_unit,v[5]);
-      if (s>6)
-        res = res * unitpow(_mol_unit,v[6]);
-      if (s>7)
-        res = res * unitpow(_cd_unit,v[7]);
-      if (s>8)
-        res = res * unitpow(_E_unit,v[8]);
-      if (is_one(res))
-        return res1;
-      else
-        return symbolic(at_unit,makevecteur(res1,res));
-    }
-    static const char _default_units_s []="default_units";
-    static define_unary_function_eval (__default_units,&default_units,_default_units_s);
-    define_unary_function_ptr5( at_default_units ,alias_at_default_units,&__default_units,0,true);
-
   #endif
+
+  // Set the default return units for various dimensions
+  static unit_system _default_unit_ = {1,1,1,1,1,1,1,1, _m_unit, _kg_unit, _s_unit, _A_unit, _K_unit, _mol_unit, _cd_unit, _E_unit};
+  unit_system & default_unit(){
+    return _default_unit_;
+  }
+  gen default_unit(int index) {
+      switch(index) {
+        case 1:
+          return _default_unit_.m_base;
+        case 2:
+          return _default_unit_.kg_base;
+        case 3:
+          return _default_unit_.s_base;
+        case 4:
+          return _default_unit_.A_base;
+        case 5:
+          return _default_unit_.K_base;
+        case 6:
+          return _default_unit_.mol_base;
+        case 7:
+          return _default_unit_.cd_base;
+        case 8:
+          return _default_unit_.E_base;
+      }
+      return zero;
+  }
+  void default_unit(gen g, double d, int index) {
+    switch(index) {
+      case 1:
+        _default_unit_.m = d;
+        _default_unit_.m_base = g;
+        break;
+      case 2:
+        _default_unit_.kg = d;
+        _default_unit_.kg_base = g;
+        break;
+      case 3:
+        _default_unit_.s = d;
+        _default_unit_.s_base = g;
+        break;
+      case 4:
+        _default_unit_.A = d;
+        _default_unit_.A_base = g;
+        break;
+      case 5:
+        _default_unit_.K = d;
+        _default_unit_.K_base = g;
+        break;
+      case 6:
+        _default_unit_.mol = d;
+        _default_unit_.mol_base = g;
+        break;
+      case 7:
+        _default_unit_.cd = d;
+        _default_unit_.cd_base = g;
+        break;
+      case 8:
+        _default_unit_.E = d;
+        _default_unit_.E_base = g;
+        break;
+    }  
+  }
+
+  gen set_units(const gen & g,GIAC_CONTEXT) {  
+    if ( g.type==_STRNG &&  g.subtype==-1) return g;
+    if (g.type==_IDNT) {
+      const mksa_unit * tmp = mksa_convert_unit(*g._IDNTptr,contextptr);
+      bool base_unit = false;
+      int index;
+      if (tmp->m==1 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==0 && tmp->K==0 && tmp->mol==0 && tmp->cd==0) {
+        base_unit = true;
+        index = 1;
+      } else if (tmp->m==0 && tmp->kg==1 && tmp->s==0 && tmp->A==0 && tmp->E==0 && tmp->K==0 && tmp->mol==0 && tmp->cd==0) {
+        base_unit = true;
+        index = 2;
+      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==1 && tmp->A==0 && tmp->E==0 && tmp->K==0 && tmp->mol==0 && tmp->cd==0) {
+        base_unit = true;
+        index = 3;
+      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==1 && tmp->E==0 && tmp->K==0 && tmp->mol==0 && tmp->cd==0) {
+        base_unit = true;
+        index = 4;
+      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==0 && tmp->K==1 && tmp->mol==0 && tmp->cd==0) {
+        base_unit = true;
+        index = 5;
+      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==0 && tmp->K==0 && tmp->mol==1 && tmp->cd==0) {
+        base_unit = true;
+        index = 6;
+      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==0 && tmp->K==0 && tmp->mol==0 && tmp->cd==1) {
+        base_unit = true;
+        index = 7;
+      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==1 && tmp->K==0 && tmp->mol==0 && tmp->cd==0) {
+        base_unit = true;
+        index = 8;
+      } 
+      if(base_unit) 
+        default_unit(g, mksa_convert_coeff(*g._IDNTptr,contextptr), index);
+      else 
+        add_usual_unit(g);
+    } else if (g.is_symb_of_sommet(at_unit)) {
+      vecteur & v=*g._SYMBptr->feuille._VECTptr;
+      return set_units(v[1], contextptr);
+    }  
+    vecteur v = makevecteur(_default_unit_.m_base, _default_unit_.kg_base, _default_unit_.s_base, _default_unit_.A_base, _default_unit_.K_base, _default_unit_.mol_base, _default_unit_.cd_base, _default_unit_.E_base);
+    const_iterateur it=usual_units().begin(),itend=usual_units().end();
+    for (;it!=itend;++it)
+      v.push_back(*it);
+    return v;
+  }
+  static const char _set_units_s []="set_units";
+  static define_unary_function_eval (__set_units,&set_units,_set_units_s);
+  define_unary_function_ptr5( at_set_units ,alias_at_set_units ,&__set_units,0,true);
+
+  // Wipe the usual units vector
+  gen clear_usual_units(const gen & g,GIAC_CONTEXT){
+    reset_usual_units();
+    return set_units(zero, contextptr);
+  }
+  static const char _clear_usual_units_s []="clear_usual_units";
+  static define_unary_function_eval (__clear_usual_units,&clear_usual_units,_clear_usual_units_s);
+  define_unary_function_ptr5( at_clear_usual_units ,alias_at_clear_usual_units,&__clear_usual_units,0,true);
+
+  gen default_units(const gen & g,GIAC_CONTEXT){ //mksa_reduce, but instead for the default units
+    if (g.type==_VECT)
+      return apply(g,default_units,contextptr);
+    vecteur v(unit_convert(g, false, contextptr));
+    if (is_undef(v)) return v;
+    gen res1=v[0];
+    gen num = plus_one;
+    gen den = plus_one;
+    int s=int(v.size());
+    if (s>2) {
+      if(is_greater(0, v[2], contextptr))
+        den = den * unitpow(default_unit(2),-1*v[2]);
+      else
+        num = num * unitpow(default_unit(2),v[2]);
+    }
+    if (s>1) {
+      if(is_greater(0, v[1], contextptr))
+        den = den * unitpow(default_unit(1),-1*v[1]);
+      else
+        num = num * unitpow(default_unit(1),v[1]);
+    }
+    if (s>3) {
+      if(is_greater(0, v[3], contextptr))
+        den = den * unitpow(default_unit(3),-1*v[3]);
+      else
+        num = num * unitpow(default_unit(3),v[3]);
+    }
+    if (s>4) {
+      if(is_greater(0, v[4], contextptr))
+        den = den * unitpow(default_unit(4),-1*v[4]);
+      else
+        num = num * unitpow(default_unit(4),v[4]);
+    }
+    if (s>5) {
+      if(is_greater(0, v[5], contextptr))
+        den = den * unitpow(default_unit(5),-1*v[5]);
+      else
+        num = num * unitpow(default_unit(5),v[5]);
+    }
+    if (s>6) {
+      if(is_greater(0, v[6], contextptr))
+        den = den * unitpow(default_unit(6),-1*v[6]);
+      else
+        num = num * unitpow(default_unit(6),v[6]);
+    }
+    if (s>7) {
+      if(is_greater(0, v[7], contextptr))
+        den = den * unitpow(default_unit(7),-1*v[7]);
+      else
+        num = num * unitpow(default_unit(7),v[7]);
+    }
+    if (s>8) {
+      if(is_greater(0, v[8], contextptr))
+        den = den * unitpow(default_unit(8),-1*v[8]);
+      else
+        num = num * unitpow(default_unit(8),v[8]);
+    }
+    gen res = num / den;
+    if (is_one(res))
+      return res1;
+    else
+      return symbolic(at_unit,makevecteur(res1,res));
+  }
+  static const char _default_units_s []="default_units";
+  static define_unary_function_eval (__default_units,&default_units,_default_units_s);
+  define_unary_function_ptr5( at_default_units ,alias_at_default_units,&__default_units,0,true);
+
   gen mksa_reduce(const gen & g,GIAC_CONTEXT){
     if (g.type==_VECT)
       return apply(g,mksa_reduce,contextptr);
@@ -8690,7 +8921,7 @@ namespace giac {
     if ( g.type==_STRNG &&  g.subtype==-1) return  g;
     if (g.type==_VECT && g.subtype==_SEQ__VECT && g._VECTptr->size()==2){
       vecteur & v=*g._VECTptr;
-      return v.back()*mksa_reduce(v.front()/v.back(),contextptr);
+      return v.back()*default_units(v.front()/v.back(),contextptr);
     }
     return gensizeerr(contextptr);
   }
@@ -8698,78 +8929,342 @@ namespace giac {
   static define_unary_function_eval (__ufactor,&_ufactor,_ufactor_s);
   define_unary_function_ptr5( at_ufactor ,alias_at_ufactor,&__ufactor,0,true);
   
+  // Will simply look to see if passed unit is really of dimension 0 (_m/_in, etc), useful for cos() etc where we need to remove units if possible
+  gen _usimplify_base(const gen & g,GIAC_CONTEXT) {
+    if ( g.type==_STRNG &&  g.subtype==-1) return g;
+    if (g.type==_VECT)
+      return apply(g,_usimplify_base,contextptr);
+    if (!g.is_symb_of_sommet(at_unit)) 
+      return g;
+    vecteur v = unit_convert(g, true, contextptr);
+    if (is_undef(v)) return v;
+    int ss=int(v.size());
+    bool all_zero = true;
+    for (int i=1;i<ss;++i) {
+      if(is_greater(abs(v[i], contextptr), 1e-6, contextptr)) {
+        all_zero = false;
+        break;
+      }
+    }
+    if(all_zero) return v[0];
+    return g;
+  }
+
+  vecteur combine_units_routine(const gen & g, const gen pow, GIAC_CONTEXT) {
+    vecteur v;
+    if (g.type==_IDNT) {
+      vecteur v = mksa_convert(*g._IDNTptr, contextptr);
+      int l = int(v.size());
+      for(int i=1; i<l; ++i)
+        v[i] = v[i] * pow;
+      for(int i=l; i<9; ++i)
+        v.push_back(zero);
+      v.push_back(pow);
+      v[0] = *g._IDNTptr;
+      return v;
+    }
+    if (g.type!=_SYMB)
+      return v;
+    if (g._SYMBptr->sommet==at_inv) 
+      return combine_units_routine(g._SYMBptr->feuille, minus_one * pow, contextptr);
+    if (g._SYMBptr->sommet==at_pow) {
+      gen & f=g._SYMBptr->feuille;
+      if (f.type!=_VECT||f._VECTptr->size()!=2)
+        return vecteur(1,gensizeerr(contextptr));
+      return combine_units_routine(f._VECTptr->front(), pow * f._VECTptr->back(), contextptr);
+    }
+    if (g._SYMBptr->sommet==at_prod) {
+      gen & f=g._SYMBptr->feuille;
+      if (f.type!=_VECT)
+        return combine_units_routine(f, pow, contextptr);
+      vecteur & vv=*f._VECTptr;
+      const_iterateur it=vv.begin(),itend=vv.end();
+      for (;it!=itend;++it){
+        v.push_back(combine_units_routine(*it, pow, contextptr));
+      }
+      return v;
+    }
+    return v;
+  }
+  // will take an input and combine like units, so that _m^2/_in becomes _m, etc.  In case of same type of unit but different base, first instance is used
+  gen combine_units(const gen & g, GIAC_CONTEXT) {
+    if (g.type!=_SYMB)
+      return g;
+    if (g.is_symb_of_sommet(at_unit)){
+      vecteur & vv=*g._SYMBptr->feuille._VECTptr;
+      vecteur v = combine_units_routine(vv[1], plus_one, contextptr);
+      int l=int(v.size());
+      if(l < 2) return g;
+      // v is an array of unit vectors, where element 0 is the unit, and elements 1-9 are the mksa_unit vector for each dimension
+      gen coeff = vv[0];
+      vecteur output_units;
+      const_iterateur it=v.begin(),itend=v.end();
+      // First unit is automatically included
+      output_units.push_back(*it);
+      ++it;
+      for (;it!=itend;++it) {
+        // Check for match with something already in the output array
+        gen frac = zero;
+        l = int(output_units.size());
+        for(int j=0; j<l; j++) {
+          for(int i=1; i<9; i++) {
+            if(is_greater(abs(output_units[j][i], contextptr), 1e-6, contextptr) && is_greater(abs((*it)[i], contextptr), 1e-6, contextptr)) {
+              if(is_zero(frac)) frac = (*it)[i] / output_units[j][i];
+              else if(is_greater(abs(frac - (*it)[i] / output_units[j][i], contextptr), 1e-6, contextptr)) {
+                frac = zero;
+                break;
+              }
+            } else if(is_greater(abs(output_units[j][i], contextptr), 1e-6, contextptr)) {
+              frac = zero;
+              break;
+            } else if(is_greater(abs((*it)[i], contextptr), 1e-6, contextptr)) {
+              frac = zero;
+              break;
+            }
+          }
+          if(!is_zero(frac)) { //Matches already added unit 
+            vecteur output_unit = gen2vecteur(output_units[j]);
+            output_unit[9] = output_unit[9] + (*it)[9];
+            output_units[j] = output_unit;
+            coeff = coeff * pow(_usimplify_base(symbolic(at_unit,makevecteur(1,output_units[j][0] / (*it)[0])), contextptr), -1*(*it)[9], contextptr);
+            break;
+          }
+        }
+        if(is_zero(frac)) 
+          output_units.push_back(*it);
+      }
+      l = int(output_units.size());
+      gen out = plus_one;
+      for(int j=0; j<l; j++) {
+        if (is_one(output_units[j][9]))
+          out = out * output_units[j][0];
+        else if(is_minus_one(output_units[j][9]))
+          out = out * inv(output_units[j][0],contextptr);
+        else if(is_greater(output_units[j][9], zero, contextptr))
+          out = out * pow(output_units[j][0], output_units[j][9], contextptr);
+        else
+          out = out * inv(pow(output_units[j][0], -1*output_units[j][9], contextptr), contextptr);
+      }
+      return symbolic(at_unit,makevecteur(coeff, out));
+    }
+    return g;
+  }
+
   gen _usimplify(const gen & g,GIAC_CONTEXT){
     if ( g.type==_STRNG &&  g.subtype==-1) return  g;
     if (g.type==_VECT)
       return apply(g,_usimplify,contextptr);
-    if (!g.is_symb_of_sommet(at_unit))
+    if (!g.is_symb_of_sommet(at_unit)) {
+      if (g.type!=_SYMB)
+        return g;
+      if (g._SYMBptr->sommet==at_inv)
+        return inv(_usimplify(g._SYMBptr->feuille, contextptr),contextptr);
+      if (g._SYMBptr->sommet==at_pow) {
+        gen & f=g._SYMBptr->feuille;
+        if (f.type!=_VECT||f._VECTptr->size()!=2)
+          return vecteur(1,gensizeerr(contextptr));
+        return pow(_usimplify(f._VECTptr->front(), contextptr), f._VECTptr->back(), contextptr);
+      }
+      if (g._SYMBptr->sommet==at_prod){
+        gen & f=g._SYMBptr->feuille;
+        if (f.type!=_VECT)
+          return _usimplify(f, contextptr);
+        vecteur & v=*f._VECTptr;
+        gen out = plus_one;
+        const_iterateur it=v.begin(),itend=v.end();
+        for (;it!=itend;++it){
+          out = out * _usimplify(*it, contextptr);
+        }
+        return out;
+      }
+      #ifdef SWIFT_CALCS_OPTIONS
+        if (g._SYMBptr->sommet==at_plus) {
+          gen & f=g._SYMBptr->feuille;
+          if (f.type!=_VECT)
+            return _usimplify(f, contextptr);
+          gen out = zero;
+          for (unsigned i=0;i<f._VECTptr->size();++i){
+            out = out + _usimplify((*f._VECTptr)[i], contextptr);
+          }
+          return out;
+        }
+        if (g._SYMBptr->sommet==at_neg) 
+          return -1*_usimplify(g._SYMBptr->feuille, contextptr);
+      #endif
       return g;
-    vecteur v=mksa_convert(g,contextptr);
+    }
+    vecteur v = unit_convert(g, false, contextptr);
     if (is_undef(v)) return v;
     gen res1=v[0];
-    int s=int(v.size());
-    if (s>5)
-      return g;
-    for (int i=s;i<5;++i)
+    int ss=int(v.size());
+    for (int i=ss;i<9;++i)
       v.push_back(zero);
-    // look first if it's a mksa
-    int pos=0;
-    for (int i=1;i<5;++i){
-      if (v[i]==zero)
-	continue;
-      if (pos){
-	pos=0;
-	break;
-      }
-      pos=i;
-    }
-    if (pos)
-      return mksa_reduce(g,contextptr);
+    // Test if this unit has the same dimensions as a 'usual' unit (proper or inverse)
     v[0]=plus_one;
     const_iterateur it=usual_units().begin(),itend=usual_units().end();
     for (;it!=itend;++it){
       string s=it->print(contextptr);
-      gen tmp=mksa_unit2vecteur(unit_conversion_map()[s.substr(1,s.size()-1).c_str()]);
-      if (tmp==v)
-	return _ufactor(gen(makevecteur(g,symbolic(at_unit,makevecteur(1,*it))),_SEQ__VECT),contextptr);
+      vecteur tmp;
+      if(1e-6 > unit_conversion_map()[s.substr(1,s.size()-1).c_str()]->coeff)
+        tmp=mksa_unit2vecteur(unit_conversion_map()[s.substr(2,s.size()-2).c_str()]); 
+      else  
+        tmp=mksa_unit2vecteur(unit_conversion_map()[s.substr(1,s.size()-1).c_str()]); 
+      vecteur tmp_i;
+      ss=int(tmp.size());
+      for (int i=ss;i<9;++i)
+        tmp.push_back(zero);
+      tmp_i.push_back(plus_one);
+      for (int i = 1;i < 9;++i)
+        tmp_i.push_back(tmp[i] * minus_one);
+      tmp[0]=plus_one;  
+      if (tmp==v) // If a 'usual unit' matches the unit dimension of the unit being simplified, convert to the 'usual_unit'
+        return _ufactor(gen(makevecteur(g,symbolic(at_unit,makevecteur(1,*it))),_SEQ__VECT),contextptr);
+      else if(tmp_i==v && (*it != _Hz_unit) && (*it != _Bq_unit)) // Ignore 1/s units, as that will convert 1_s to 1/_Hz, which is annoying
+        return _ufactor(gen(makevecteur(g,symbolic(at_unit,makevecteur(1,inv(*it,contextptr)))),_SEQ__VECT),contextptr); 
     }
-    // count non-zero in v, if ==2 return mksa
+    // count fundamental units specified in the unit
     int count=0;
     for (it=v.begin()+1,itend=v.end();it!=itend;++it){
-      if (!is_zero(*it))
-	++count;
+      if (!is_greater(1e-6,abs(*it,contextptr),contextptr))
+	      ++count;
     }
-    if (count<=2) 
-      return mksa_reduce(g,contextptr);
+    // Next see if we are a single fundamental unit (any dimension), and if so just return as default units
+    if (count<=1) // If we are a <=1 fundamental (m, s), return default units for fundamental
+      return default_units(g,contextptr); 
+    // Still no luck, see if we are a product/quotient of a fundamental unit and a 'usual' unit of dimension 1: 
     it=usual_units().begin(); itend=usual_units().end();
+    int pos=0;
     for (;it!=itend;++it){
+      if((*it == _Hz_unit) || (*it == _Bq_unit)) continue; // Ignore Hz (1/s).  Will turn things like 'L/s' into 'm^3*Hz'.  Not helpful.
       string s=it->print(contextptr);
-      gen tmp=mksa_unit2vecteur(unit_conversion_map()[s.substr(1,s.size()-1).c_str()]);
-      vecteur w(*tmp._VECTptr);
+      vecteur tmp;
+      if(1e-6 > unit_conversion_map()[s.substr(1,s.size()-1).c_str()]->coeff)
+        tmp=mksa_unit2vecteur(unit_conversion_map()[s.substr(2,s.size()-2).c_str()]); 
+      else  
+        tmp=mksa_unit2vecteur(unit_conversion_map()[s.substr(1,s.size()-1).c_str()]); 
+      ss=int(tmp.size());
+      for (int i=ss;i<9;++i)
+        tmp.push_back(zero);
       for (int j=0;j<2;j++){
-	vecteur vw;
-	if (j)
-	  vw=addvecteur(v,w);
-	else
-	  vw=subvecteur(v,w);
-	for (int i=1;i<5;++i){
-	  if (is_greater(1e-6,abs(vw[i],contextptr),contextptr))
-	    continue;
-	  if (pos){
-	    pos=0;
-	    break;
-	  }
-	  pos=i;
-	}
-	if (pos){
-	  if (j)
-	    return _ufactor(gen(makevecteur(g,symbolic(at_unit,makevecteur(1,unitpow(*it,-1)))),_SEQ__VECT),contextptr);
-	  else
-	    return _ufactor(gen(makevecteur(g,symbolic(at_unit,makevecteur(1,*it))),_SEQ__VECT),contextptr);
-	}
+        vecteur vw;
+        if (j)
+          vw=addvecteur(v,tmp);
+        else
+          vw=subvecteur(v,tmp);
+        for (int i=1;i<9;++i){
+          if (is_greater(1e-6,abs(vw[i],contextptr),contextptr))
+            continue;
+          if (pos) {
+            pos=0;
+            break;
+          }
+          pos=i;
+        }
+        if (pos && is_greater(1+1e-6,abs(vw[pos],contextptr),contextptr) && is_greater(abs(vw[pos],contextptr),1-1e-6,contextptr)) { // If a combination of a usual unit of dimension 1 and a fundamental unit (usual*base, usual/base, 1/usual/base, base/usual) then return that:
+          if (j)
+            return _ufactor(gen(makevecteur(g,symbolic(at_unit,makevecteur(1,inv(*it,contextptr)))),_SEQ__VECT),contextptr);
+          else
+            return _ufactor(gen(makevecteur(g,symbolic(at_unit,makevecteur(1,*it))),_SEQ__VECT),contextptr);
+        }
       }
     }
-    return g;
+    // Next see if we are a combo of 2 fundamental units, and if so just return as product/quotient of 2 default units
+    if (count<=2) // If we are a combo of <=2 fundamentals (m/s), return default units for both fundamentals
+      return default_units(g,contextptr); 
+    // Still no luck, see if we are a product/quotient of two 'usual' units:
+    it=usual_units().begin(); itend=usual_units().end();
+    const_iterateur it2;
+    for (;it!=itend;++it){
+      string s=it->print(contextptr);
+      vecteur tmp;
+      if(1e-6 > unit_conversion_map()[s.substr(1,s.size()-1).c_str()]->coeff)
+        tmp=mksa_unit2vecteur(unit_conversion_map()[s.substr(2,s.size()-2).c_str()]); 
+      else  
+        tmp=mksa_unit2vecteur(unit_conversion_map()[s.substr(1,s.size()-1).c_str()]); 
+      ss=int(tmp.size());
+      for (int i=ss;i<9;++i)
+        tmp.push_back(zero);
+      it2=usual_units().begin();
+      for (;it2!=itend;++it2){
+        if(it == it2) continue;
+        string s2=it2->print(contextptr);
+        vecteur tmp2;
+        if(1e-6 > unit_conversion_map()[s2.substr(1,s2.size()-1).c_str()]->coeff)
+          tmp2=mksa_unit2vecteur(unit_conversion_map()[s2.substr(2,s2.size()-2).c_str()]); 
+        else  
+          tmp2=mksa_unit2vecteur(unit_conversion_map()[s2.substr(1,s2.size()-1).c_str()]); 
+        ss=int(tmp2.size());
+        for (int i=ss;i<9;++i)
+          tmp2.push_back(zero);
+        for (int j=0;j<4;j++){
+          vecteur vw;
+          if (j == 0) 
+            vw=addvecteur(v, addvecteur(tmp,tmp2));
+          else if(j == 1)
+            vw=subvecteur(v, addvecteur(tmp,tmp2));
+          else if(j == 2)
+            vw=addvecteur(v, subvecteur(tmp,tmp2));
+          else
+            vw=subvecteur(v, subvecteur(tmp,tmp2));
+          pos = 0;
+          for (int i=1;i<9;++i){
+            if (is_greater(1e-6,abs(vw[i],contextptr),contextptr))
+              continue;
+            pos=1;
+            break;
+          }
+          if (pos == 0){ // If a combination of a usual unit and a usual unit (usual*usual, usual/usual, 1/usual/usual, usual/usual) then return that:
+            if (j == 0) 
+              return _ufactor(gen(makevecteur(g,symbolic(at_unit,makevecteur(1,inv(*it, contextptr))) * symbolic(at_unit,makevecteur(1,inv(*it2, contextptr)))),_SEQ__VECT),contextptr);
+            else if(j == 1) 
+              return _ufactor(gen(makevecteur(g,symbolic(at_unit,makevecteur(1,*it)) * symbolic(at_unit,makevecteur(1,*it2))),_SEQ__VECT),contextptr);
+            else if(j == 2)
+              return _ufactor(gen(makevecteur(g,symbolic(at_unit,makevecteur(1,inv(*it, contextptr))) * symbolic(at_unit,makevecteur(1,*it2))),_SEQ__VECT),contextptr);
+            else
+              return _ufactor(gen(makevecteur(g,symbolic(at_unit,makevecteur(1,*it)) * symbolic(at_unit,makevecteur(1,inv(*it2, contextptr)))),_SEQ__VECT),contextptr);
+          }
+        }
+      }
+    }
+    // Still no luck, see if we are a product/quotient of a fundamental unit and a 'usual' unit of dimension >1:
+    it=usual_units().begin(); itend=usual_units().end();
+    pos=0;
+    for (;it!=itend;++it){
+      if((*it == _Hz_unit) || (*it == _Bq_unit)) continue; // Ignore Hz (1/s).  Will turn things like 'L/s' into 'm^3*Hz'.  Not helpful.
+      string s=it->print(contextptr);
+      vecteur tmp;
+      if(1e-6 > unit_conversion_map()[s.substr(1,s.size()-1).c_str()]->coeff)
+        tmp=mksa_unit2vecteur(unit_conversion_map()[s.substr(2,s.size()-2).c_str()]); 
+      else  
+        tmp=mksa_unit2vecteur(unit_conversion_map()[s.substr(1,s.size()-1).c_str()]); 
+      ss=int(tmp.size());
+      for (int i=ss;i<9;++i)
+        tmp.push_back(zero);
+      for (int j=0;j<2;j++){
+        vecteur vw;
+        if (j)
+          vw=addvecteur(v,tmp);
+        else
+          vw=subvecteur(v,tmp);
+        for (int i=1;i<9;++i){
+          if (is_greater(1e-6,abs(vw[i],contextptr),contextptr))
+            continue;
+          if (pos) {
+            pos=0;
+            break;
+          }
+          pos=i;
+        }
+        if (pos){ // If a combination of a usual unit and a fundamental unit (usual*base, usual/base, 1/usual/base, base/usual) then return that:
+          if (j)
+            return _ufactor(gen(makevecteur(g,symbolic(at_unit,makevecteur(1,inv(*it,contextptr)))),_SEQ__VECT),contextptr);
+          else
+            return _ufactor(gen(makevecteur(g,symbolic(at_unit,makevecteur(1,*it))),_SEQ__VECT),contextptr);
+        }
+      }
+    }
+    // If all else fails, return combine_units(g) to ensure we collect like units
+    return combine_units(g, contextptr);
   }
   static const char _usimplify_s []="usimplify";
   static define_unary_function_eval (__usimplify,&_usimplify,_usimplify_s);

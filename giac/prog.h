@@ -590,6 +590,25 @@ namespace giac {
     float cd;
     float E;
   };
+  struct unit_system {
+    double m;
+    double kg;
+    double s;
+    double A;
+    double K;
+    double mol;
+    double cd;
+    double E;
+    gen m_base;
+    gen kg_base;
+    gen s_base;
+    gen A_base;
+    gen K_base;
+    gen mol_base;
+    gen cd_base;
+    gen E_base;
+  };
+  unit_system & default_unit();
   extern const mksa_unit * const unitptr_tab[]; // table of units alpha-sorted
   extern const unsigned unitptr_tab_length;
   extern const char * const unitname_tab[];
@@ -611,6 +630,7 @@ namespace giac {
   // Unit management
   gen unitpow(const gen & g,const gen & exponent);
   gen mksa_reduce(const gen & g,GIAC_CONTEXT);
+  gen clear_usual_units(const gen & g, GIAC_CONTEXT);
   #ifdef SWIFT_CALCS_OPTIONS
     gen mksa_reduce_base(const gen & g,GIAC_CONTEXT);
     gen mksa_remove_base(const gen & g,GIAC_CONTEXT);
@@ -626,6 +646,7 @@ namespace giac {
   vecteur mksa_convert(const gen & g,GIAC_CONTEXT);
   gen _ufactor(const gen & g,GIAC_CONTEXT);
   gen _usimplify(const gen & g,GIAC_CONTEXT);
+  gen _usimplify_base(const gen & g,GIAC_CONTEXT);
 
   extern const mksa_unit __m_unit;
   extern const mksa_unit __kg_unit;

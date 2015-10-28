@@ -3763,7 +3763,7 @@ namespace giac {
 
   gen abs(const gen & a_in,GIAC_CONTEXT){ 
     #ifdef SWIFT_CALCS_OPTIONS
-      gen a = _usimplify(a_in, contextptr);
+      gen a = _usimplify_base(a_in, contextptr);
     #else
       gen a = a_in;
     #endif

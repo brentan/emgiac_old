@@ -355,6 +355,7 @@
 *((size_t *) at_circle),
 *((size_t *) at_circumcircle),
 *((size_t *) at_classes),
+*((size_t *) at_clear_usual_units),
 *((size_t *) at_click),
 *((size_t *) at_close),
 *((size_t *) at_coeff),
