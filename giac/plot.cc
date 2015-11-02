@@ -1222,7 +1222,7 @@ namespace giac {
 	    CERR << y << " not real at " << i << " " << yy << endl;
           if (!chemin.empty()) {
 #ifdef SWIFT_CALCS_OPTIONS // Swift Calcs options to output 2d array of x y pairs, instead of points etc as we do our own plotting
-	    res.push_back(makevecteur(xmin,i,showeq));
+	    res.push_back(makevecteur(i,plus_inf));
 #else
             res.push_back(pnt_attrib(symb_curve(gen(makevecteur(vars+cst_i*f,vars,xmin,i,showeq),_PNT__VECT),gen(chemin,_GROUP__VECT)),attributs.empty()?color:attributs,contextptr));
 #endif
@@ -1237,8 +1237,12 @@ namespace giac {
 	if (j<function_ymin)
 	  function_ymin=j;
 	if (i!=xmin){
-	  if (fabs(oldj-j)>(function_ymax-function_ymin)/5){ // try middle-pnt
-	    if (debug_infolevel)
+#ifdef SWIFT_CALCS_OPTIONS
+	  if ((fabs(oldj-j)>(function_ymax-function_ymin)/5) || ((oldj * j) < 0)) { // try middle-pnt
+#else
+    if (fabs(oldj-j)>(function_ymax-function_ymin)/5) { // try middle-pnt
+#endif
+      if (debug_infolevel)
 	      CERR << y << " checking step at " << i << " " << yy << endl;
 	    local_sto_double_increment(-step/2,*vars._IDNTptr,newcontextptr);
 	    // vars._IDNTptr->localvalue->back()._DOUBLE_val -= step/2;
@@ -1273,7 +1277,15 @@ namespace giac {
 	      CERR << "curve " << chemin.size() << " " << chemin.front() << " .. " << chemin.back() << endl;
 	    }
 #ifdef SWIFT_CALCS_OPTIONS
-	    res.push_back(makevecteur(xmin,i,showeq));
+            if(oldj < 0)
+              chemin.push_back(makevecteur(i - step, function_ymin));
+            else
+              chemin.push_back(makevecteur(i - step, function_ymax));
+	    chemin.push_back(makevecteur(i - step/2,plus_inf));
+            if(j < 0)
+              chemin.push_back(makevecteur(i, function_ymin));
+            else
+              chemin.push_back(makevecteur(i, function_ymax));
 #else
             res.push_back(pnt_attrib(symb_curve(gen(makevecteur(vars+cst_i*f,vars,xmin,i,showeq),_PNT__VECT),gen(chemin,_GROUP__VECT)),attributs.empty()?color:attributs,contextptr));
 #endif
@@ -1291,7 +1303,7 @@ namespace giac {
 	if (debug_infolevel)
 	  CERR << "curve " << chemin.size() << " " << chemin.front() << " .. " << chemin.back() << endl;
 #ifdef SWIFT_CALCS_OPTIONS
-	res.push_back(chemin);
+	res = mergevecteur(res, chemin);
 #else
         res.push_back(pnt_attrib(symb_curve(gen(makevecteur(vars+cst_i*f,vars,xmin,xmax,showeq),_PNT__VECT),gen(chemin,_GROUP__VECT)),attributs.empty()?color:attributs,contextptr));
 #endif
