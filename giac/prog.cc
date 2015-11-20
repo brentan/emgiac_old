@@ -30,7 +30,7 @@ using namespace std;
 #include "prog.h"
 #include "identificateur.h"
 #include "symbolic.h"
-#include "identificateur.h"
+#include "emscripten.h"
 #include "usual.h"
 #include "sym2poly.h"
 #include "subst.h"
@@ -8874,11 +8874,14 @@ namespace giac {
       else
         num = num * unitpow(default_unit(8),v[8]);
     }
-    gen res = num / den;
-    if (is_one(res))
+    if(is_one(num) && is_one(den))
       return res1;
+    else if(is_one(num))
+      return res1 / symbolic(at_unit,makevecteur(plus_one, den));
+    else if(is_one(den))
+      return symbolic(at_unit,makevecteur(res1,num));
     else
-      return symbolic(at_unit,makevecteur(res1,res));
+      return symbolic(at_unit,makevecteur(res1, num/den ));
   }
   static const char _default_units_s []="default_units";
   static define_unary_function_eval (__default_units,&default_units,_default_units_s);

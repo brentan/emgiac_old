@@ -36,6 +36,7 @@ using namespace std;
 #include "rpn.h"
 #include "plot.h"
 #include "giacintl.h"
+#include "emscripten.h"
 
 #ifndef NO_NAMESPACE_GIAC
 namespace giac {
@@ -765,6 +766,7 @@ namespace giac {
     #ifdef SWIFT_CALCS_OPTIONS
       if(giac::unit_mode) {
         string s = e;
+        //if(s.compare(string("_")) == 0)
         s.erase(0,1);
         return s;
       }
@@ -1341,17 +1343,10 @@ namespace giac {
       if((opstring.length() == 0) && (l == 2)) {
         s = gen2tex((*(feu._VECTptr))[0],contextptr);
         s += " \\Unit{";
-        if(l == 1)
-          return s+"}";
         giac::unit_mode = true;
-        for (int i=1;;++i){
-          s += gen2tex((*(feu._VECTptr))[i],contextptr);
-          if (i==l-1) {
-            giac::unit_mode = false;
-            return s+"}";
-          }
-          s += ',';
-        }
+        s += gen2tex((*(feu._VECTptr))[1],contextptr);
+        giac::unit_mode = false;
+        return s+"}";
       } else {
         s = opstring +"\\left(";
         for (int i=0;;++i){
