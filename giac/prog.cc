@@ -30,7 +30,6 @@ using namespace std;
 #include "prog.h"
 #include "identificateur.h"
 #include "symbolic.h"
-#include "emscripten.h"
 #include "usual.h"
 #include "sym2poly.h"
 #include "subst.h"

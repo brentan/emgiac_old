@@ -8179,7 +8179,7 @@ namespace giac {
       return fis_exactly_zero(a._FLOAT_val);
     case _SYMB:
       if(a._SYMBptr->sommet == at_unit) 
-        return is_zero(a._SYMBptr->feuille[0]);
+        return is_exactly_zero(a._SYMBptr->feuille[0]);
     case _POLY:
       return a._POLYptr->coord.empty();
     case _FRAC:
