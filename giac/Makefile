@@ -10,14 +10,14 @@
 # --compression lzma/lzma-native,lzma/lzma-decoder.js,LZMA.decompress
 # lzma/lzma-native < file_to_compress > compressed_file
 # -s options are in emscripten src/settings.js
-VERSION = 1_36
-PREC = -s PRECISE_I32_MUL=1 #-DGIAC_GGB 
+VERSION = 1_37
+PREC = -s PRECISE_I64_MATH=1 #-DGIAC_GGB 
 CXXFLAGS = $(PREC) -fno-exceptions -I. -I.. -DHAVE_CONFIG_H -DIN_GIAC -DGIAC_GENERIC_CONSTANTS -DNO_STDEXCEPT -O0 -s ALLOW_MEMORY_GROWTH=1 # -s GL_UNSAFE_OPTS=0 # --llvm-opts 2 -v
 CXXFLAGSNOASM = $(PREC) -fno-exceptions -I. -I.. -DHAVE_CONFIG_H -DIN_GIAC -DGIAC_GENERIC_CONSTANTS -DNO_STDEXCEPT -O1 -s ALLOW_MEMORY_GROWTH=1 # -s GL_UNSAFE_OPTS=0 
 CFLAGS =  $(PREC) -I. -I.. -v  # -pg
 CPPFLAGS = $(CXXFLAGS)
 LDJS2FLAGS = $(PREC) -O2 -v -s EXPORTED_FUNCTIONS="['__ZN4giac7casevalEPKc']" -s ALLOW_MEMORY_GROWTH=1 -s LEGACY_GL_EMULATION=1 -s GL_UNSAFE_OPTS=0 --memory-init-file 0 #--closure 1
-LDJSFLAGS = $(PREC) -O3 -v -s EXPORTED_FUNCTIONS="['__ZN4giac7casevalEPKc']" -s ALLOW_MEMORY_GROWTH=1 --memory-init-file 0 #-s LEGACY_GL_EMULATION=1 -s GL_UNSAFE_OPTS=0 # -s USE_TYPED_ARRAYS=0 # -s TOTAL_MEMORY=24000000 
+LDJSFLAGS = $(PREC) -O0 -v -s EXPORTED_FUNCTIONS="['__ZN4giac7casevalEPKc']" -s ALLOW_MEMORY_GROWTH=1 --memory-init-file 0 #-s LEGACY_GL_EMULATION=1 -s GL_UNSAFE_OPTS=0 # -s USE_TYPED_ARRAYS=0 # -s TOTAL_MEMORY=24000000 
 LDJSFLAGS_FAST = $(PREC) -O0 -v -s EXPORTED_FUNCTIONS="['__ZN4giac7casevalEPKc']" -s ALLOW_MEMORY_GROWTH=1 --memory-init-file 0 #-s LEGACY_GL_EMULATION=1 -s GL_UNSAFE_OPTS=0 # -s USE_TYPED_ARRAYS=0 # -s TOTAL_MEMORY=24000000 
 CXX=emcc
 CC=emcc
