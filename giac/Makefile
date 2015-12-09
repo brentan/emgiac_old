@@ -17,7 +17,7 @@ CXXFLAGSNOASM = $(PREC) -fno-exceptions -I. -I.. -DHAVE_CONFIG_H -DIN_GIAC -DGIA
 CFLAGS =  $(PREC) -I. -I.. -v  # -pg
 CPPFLAGS = $(CXXFLAGS)
 LDJS2FLAGS = $(PREC) -O2 -v -s EXPORTED_FUNCTIONS="['__ZN4giac7casevalEPKc']" -s ALLOW_MEMORY_GROWTH=1 -s LEGACY_GL_EMULATION=1 -s GL_UNSAFE_OPTS=0 --memory-init-file 0 #--closure 1
-LDJSFLAGS = $(PREC) -O0 -v -s EXPORTED_FUNCTIONS="['__ZN4giac7casevalEPKc']" -s ALLOW_MEMORY_GROWTH=1 --memory-init-file 0 #-s LEGACY_GL_EMULATION=1 -s GL_UNSAFE_OPTS=0 # -s USE_TYPED_ARRAYS=0 # -s TOTAL_MEMORY=24000000 
+LDJSFLAGS = $(PREC) -O3 -v -s EXPORTED_FUNCTIONS="['__ZN4giac7casevalEPKc']" -s ALLOW_MEMORY_GROWTH=1 --memory-init-file 0 #-s LEGACY_GL_EMULATION=1 -s GL_UNSAFE_OPTS=0 # -s USE_TYPED_ARRAYS=0 # -s TOTAL_MEMORY=24000000 
 LDJSFLAGS_FAST = $(PREC) -O0 -v -s EXPORTED_FUNCTIONS="['__ZN4giac7casevalEPKc']" -s ALLOW_MEMORY_GROWTH=1 --memory-init-file 0 #-s LEGACY_GL_EMULATION=1 -s GL_UNSAFE_OPTS=0 # -s USE_TYPED_ARRAYS=0 # -s TOTAL_MEMORY=24000000 
 CXX=emcc
 CC=emcc
@@ -45,6 +45,11 @@ giac_fast:	$(GIACOBJS)
 	rm -rf ../../swift_calcs/public/libraries/giac*.js
 	#cp giac$(VERSION).js ../../swift_calcs/public/libraries
 	cp giac$(VERSION).js ../../../giac
+giac_chrome:	$(GIACOBJS) 
+	$(CXX) $(LDJSFLAGS_FAST) $(GIACOBJS) $(LIBS) -o giac_chrome$(VERSION).js --closure 1 #>& log
+	rm -rf ../../swift_calcs/public/libraries/giac_chrome*.js
+	cp giac_chrome$(VERSION).js ../../swift_calcs/public/libraries
+	cp giac_chrome$(VERSION).js ../../../giac
 giac:	$(GIACOBJS) 
 	$(CXX) $(LDJS2FLAGS) $(GIACOBJS) $(LIBS) -o giac.js #--closure 1 
 #	/bin/cp giacggb.js giac.js
