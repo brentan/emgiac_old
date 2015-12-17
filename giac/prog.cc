@@ -8458,6 +8458,7 @@ namespace giac {
 
 
   vecteur unit_convert(const gen & g, bool mksa, GIAC_CONTEXT){
+
     if (g.type==_IDNT)
       return unit_convert(*g._IDNTptr, mksa, contextptr);
     if (g.type!=_SYMB)
@@ -8493,7 +8494,7 @@ namespace giac {
     if (g._SYMBptr->sommet==at_prod){
       gen & f=g._SYMBptr->feuille;
       if (f.type!=_VECT)
-	      return unit_convert(f, mksa, contextptr);
+	return unit_convert(f, mksa, contextptr);
       vecteur & v=*f._VECTptr;
       vecteur res(makevecteur(plus_one));
       const_iterateur it=v.begin(),itend=v.end();
@@ -8516,6 +8517,18 @@ namespace giac {
         vecteur res(makevecteur(zero));
         for (unsigned i=0;i<f._VECTptr->size();++i){
           vecteur tmp(unit_convert((*f._VECTptr)[i], mksa, contextptr));
+          int s=int(tmp.size());
+          for (int j=s;j<9;++j)
+            tmp.push_back(zero);
+          if(i == 0) {
+            // First loop, seed res with tmp
+            for (int j=1;j<9;++j)
+              res.push_back(tmp[j]);
+          } else {
+            // Second+ loop, make sure unit dimensions match, if not just return the input directly (we don't throw an error as there could be variable in the input, like 'x + 1_in')
+            if(mksa_reduce(evalf((*f._VECTptr)[0]/(*f._VECTptr)[i],1,contextptr),contextptr).is_symb_of_sommet(at_unit))
+              return makevecteur(g);
+          }
           res[0]=res[0] + tmp[0];
         }
         return res;
@@ -8523,9 +8536,6 @@ namespace giac {
       if (g._SYMBptr->sommet==at_neg) {
         vecteur res(unit_convert(g._SYMBptr->feuille, mksa, contextptr));
         res[0]= -1 * res[0];
-        //int s=int(res.size());
-        //for (int i=0;i<s;++i)
-        //  res[i]=-res[i];
         return res;
       }
     #endif

@@ -10,7 +10,7 @@
 # --compression lzma/lzma-native,lzma/lzma-decoder.js,LZMA.decompress
 # lzma/lzma-native < file_to_compress > compressed_file
 # -s options are in emscripten src/settings.js
-VERSION = 1_37
+VERSION = 1_39
 PREC = -s PRECISE_I64_MATH=1 #-DGIAC_GGB 
 CXXFLAGS = $(PREC) -fno-exceptions -I. -I.. -DHAVE_CONFIG_H -DIN_GIAC -DGIAC_GENERIC_CONSTANTS -DNO_STDEXCEPT -O0 -s ALLOW_MEMORY_GROWTH=1 # -s GL_UNSAFE_OPTS=0 # --llvm-opts 2 -v
 CXXFLAGSNOASM = $(PREC) -fno-exceptions -I. -I.. -DHAVE_CONFIG_H -DIN_GIAC -DGIAC_GENERIC_CONSTANTS -DNO_STDEXCEPT -O1 -s ALLOW_MEMORY_GROWTH=1 # -s GL_UNSAFE_OPTS=0 
@@ -46,10 +46,10 @@ giac_fast:	$(GIACOBJS)
 	#cp giac$(VERSION).js ../../swift_calcs/public/libraries
 	cp giac$(VERSION).js ../../../giac
 giac_chrome:	$(GIACOBJS) 
-	$(CXX) $(LDJSFLAGS_FAST) $(GIACOBJS) $(LIBS) -o giac_chrome$(VERSION).js --closure 1 #>& log
-	rm -rf ../../swift_calcs/public/libraries/giac_chrome*.js
-	cp giac_chrome$(VERSION).js ../../swift_calcs/public/libraries
-	cp giac_chrome$(VERSION).js ../../../giac
+	$(CXX) $(LDJSFLAGS_FAST) $(GIACOBJS) $(LIBS) -o chrome_giac$(VERSION).js --closure 1 #>& log
+	rm -rf ../../swift_calcs/public/libraries/chrome_giac*.js
+	cp chrome_giac$(VERSION).js ../../swift_calcs/public/libraries
+	cp chrome_giac$(VERSION).js ../../../giac
 giac:	$(GIACOBJS) 
 	$(CXX) $(LDJS2FLAGS) $(GIACOBJS) $(LIBS) -o giac.js #--closure 1 
 #	/bin/cp giacggb.js giac.js
