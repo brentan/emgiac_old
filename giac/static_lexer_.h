@@ -290,6 +290,7 @@
 *((size_t *) at_assign),
 *((size_t *) at_assume),
 *((size_t *) at_atan),
+*((size_t *) at_atan2),
 *((size_t *) at_atan2acos),
 *((size_t *) at_atan2asin),
 *((size_t *) at_atanh),

@@ -61,6 +61,7 @@ namespace giac {
   gen log10(const gen & e,GIAC_CONTEXT);
   gen alog10(const gen & e,GIAC_CONTEXT);
   gen atan(const gen & e0,GIAC_CONTEXT);
+  gen _atan2(const gen & g,GIAC_CONTEXT);
   gen exp(const gen & e0,GIAC_CONTEXT);
 
   // convert a gen to a string, format=0 (normal), 1 (tex)
@@ -93,6 +94,7 @@ namespace giac {
   extern const unary_function_ptr * const  at_log10 ;
   extern const unary_function_ptr * const  at_alog10 ;
   extern const unary_function_ptr * const  at_atan ;
+  extern const unary_function_ptr * const  at_atan2 ;
 
   // e = +/- simpl*doubl^d
   void zint2simpldoublpos(const gen & e,gen & simpl,gen & doubl,bool & pos,int d,GIAC_CONTEXT);

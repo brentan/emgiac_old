@@ -301,6 +301,7 @@
 {"assign",13,9,0,*((ulonglong *) at_assign)},
 {"assume",13,9,0,*((ulonglong *) at_assume)| 1},
 {"atan",13,9,0,*((ulonglong *) at_atan)},
+{"atan2",13,9,0,*((ulonglong *) at_atan2)},
 {"atan2acos",13,9,0,*((ulonglong *) at_atan2acos)},
 {"atan2asin",13,9,0,*((ulonglong *) at_atan2asin)},
 {"atanh",13,9,0,*((ulonglong *) at_atanh)},

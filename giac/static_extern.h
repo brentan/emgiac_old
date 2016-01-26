@@ -304,6 +304,7 @@ extern const unary_function_ptr * const  at_asinh;
 extern const unary_function_ptr * const  at_assign;
 extern const unary_function_ptr * const  at_assume;
 extern const unary_function_ptr * const  at_atan;
+extern const unary_function_ptr * const  at_atan2;
 extern const unary_function_ptr * const  at_atan2acos;
 extern const unary_function_ptr * const  at_atan2asin;
 extern const unary_function_ptr * const  at_atanh;
