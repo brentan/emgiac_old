@@ -696,7 +696,7 @@ namespace giac {
     if (is_equal(e))
       return apply_to_equal(e,atan,contextptr);
     vecteur v1(loptab(e,sincostan_tab));
-    if (v1.size()>1){
+    if ((series_flags(contextptr)&8)==0 && v1.size()>1){
       gen e1=ratnormal(_trigtan(e,contextptr));
       if (loptab(e1,sincostan_tab).size()<=1)
 	return atan(e1,contextptr);
@@ -1225,7 +1225,11 @@ namespace giac {
 	return sqrt(a,contextptr);
       if ( has_i(a) || has_i(b) )
 	return pow(e,plus_one_half,contextptr);
-      gen rho=sqrt(a*a+b*b,contextptr);
+      gen rho=pow(a,2,contextptr)+pow(b,2,contextptr);
+      rho=ratnormal(rho);
+      if (abs_calc_mode(contextptr)==38 && !lvarfracpow(rho).empty())
+	return pow(e,plus_one_half,contextptr);
+      rho=sqrt(rho,contextptr);
       if (abs_calc_mode(contextptr)==38 && rho.type!=_FRAC && rho.type>=_IDNT){
 	rho=evalf(rho,1,contextptr);
 	if (rho.type>=_IDNT)
@@ -3028,9 +3032,9 @@ namespace giac {
       return (ckmatrix(value) && is_numericm(*value._VECTptr)) || (value.type==_VECT && is_numericv(*value._VECTptr));
     case 'V':
       return false; // remove if V0..V9 is allowed
-      value=evalf(value,1,context0);
-      value.subtype=0;
-      return value.type==_VECT && is_numericv(*value._VECTptr);
+      //value=evalf(value,1,context0);
+      //value.subtype=0;
+      //return value.type==_VECT && is_numericv(*value._VECTptr);
     case 'Z':
       value=evalf(value,1,context0);
       return value.type==_DOUBLE_ || value.type==_FLOAT_ || value.type==_CPLX;
@@ -3039,23 +3043,14 @@ namespace giac {
   }
 
 #ifdef GIAC_HAS_STO_38
-  int do_sto_38(const gen & value,const char * name_space,const char * idname,gen indice,gen & error,GIAC_CONTEXT);
-  int do_rcl_38(gen & value,const char * name_space,const char * idname,gen indice,bool at_of,GIAC_CONTEXT);
-  int do_is_known_name_38(const char * name_space,const char * idname);
-  int (*sto_38)(const gen & value,const char * name_space,const char * idname,gen indice,gen & error,GIAC_CONTEXT)=do_sto_38;
-  int (*rcl_38)(gen & value,const char * name_space,const char * idname,gen indice,bool at_of,GIAC_CONTEXT)=do_rcl_38;
-  int (*is_known_name_38)(const char * name_space,const char * idname)=do_is_known_name_38;
-  gen do_of_pointer_38(const void * appptr,const void * varptr,const gen & args);
-  gen (*of_pointer_38)(const void * appptr,const void * varptr,const gen & args)=do_of_pointer_38;
-  // extern gen_op_context interactive_op_tab_38[];
-  gen_op_context * interactive_op_tab = 0; //&interactive_op_tab_38[0];
+  bool do_storcl_38(gen & value,const char * name_space,const char * idname,gen indice,bool at_of,GIAC_CONTEXT, gen const *sto,bool OnlyLocal);
+  bool (*storcl_38)(gen & value,const char * name_space,const char * idname,gen indice,bool at_of,GIAC_CONTEXT, gen const *sto,bool OnlyLocal)=do_storcl_38;
 #else
-  int (*sto_38)(const gen & value,const char * name_space,const char * idname,gen indice,gen & error,GIAC_CONTEXT)=0;
-  int (*rcl_38)(gen & value,const char * name_space,const char * idname,gen indice,bool at_of,GIAC_CONTEXT)=0;
-  int (*is_known_name_38)(const char * name_space,const char * idname)=0;
-  gen (*of_pointer_38)(const void * appptr,const void * varptr,const gen & args)=0;
-  gen_op_context * interactive_op_tab = 0;
+  bool (*storcl_38)(gen & value,const char * name_space,const char * idname,gen indice,bool at_of,GIAC_CONTEXT, gen const *sto,bool OnlyLocal)=0;
 #endif
+  gen_op_context * interactive_op_tab = 0;
+  int (*is_known_name_38)(const char * name_space,const char * idname)=0; // Not used anymore!
+  gen (*of_pointer_38)(const void * appptr,const void * varptr,const gen & args)=0;
 
   // store a in b
 #ifdef HAVE_SIGNAL_H_OLD
@@ -3207,8 +3202,9 @@ namespace giac {
 	gen a1,bb,error;
 	if (!check_binary(b._SYMBptr->feuille,a1,bb))
 	  return a1;
-	if (sto_38 && !is_local(b,contextptr) && abs_calc_mode(contextptr)==38 && a1.type==_IDNT && bb.type==_IDNT && sto_38(a,a1._IDNTptr->id_name,bb._IDNTptr->id_name,0,error,contextptr)){
-	  return is_undef(error)?error:a;
+        gen ret;
+	if (storcl_38 && abs_calc_mode(contextptr)==38 && a1.type==_IDNT && bb.type==_IDNT && storcl_38(ret,a1._IDNTptr->id_name,bb._IDNTptr->id_name,undef,false,contextptr,&a,false)){
+	  return ret;
 	}
 #ifndef RTOS_THREADX
 #if !defined BESTA_OS && !defined NSPIRE
@@ -3315,8 +3311,8 @@ namespace giac {
 	ans=symbolic(at_parameter,makesequence(b,debut,fin,aa,saut));
       } // end parameter
       if (abs_calc_mode(contextptr)==38){
-	if (sto_38 && !is_local(b,contextptr) && sto_38(aa,0,b._IDNTptr->id_name,0,error,contextptr) )
-	  return is_undef(error)?error:ans;
+	if (storcl_38 && storcl_38(ans,0,b._IDNTptr->id_name,undef,false,contextptr,&aa,false) )
+	  return ans;
       }
       if (b._IDNTptr->quoted)
 	*b._IDNTptr->quoted |= 2; // set dirty bit
@@ -3422,8 +3418,9 @@ namespace giac {
       gen destination=b._SYMBptr->feuille._VECTptr->front(),error; // variable name
       // if (sto_38 && destination.is_symb_of_sommet(at_double_deux_points) && destination._SYMBptr->feuille.type==_VECT && destination._SYMBptr->feuille._VECTptr->size()==2 &&destination._SYMBptr->feuille._VECTptr->front().type==_IDNT && destination._SYMBptr->feuille._VECTptr->back().type==_IDNT && sto_38(a,destination._SYMBptr->feuille._VECTptr->front()._IDNTptr->id_name,destination._SYMBptr->feuille._VECTptr->back()._IDNTptr->id_name,b,error,contextptr))	
       // return is_undef(error)?error:a;
-      if (sto_38 && destination.type==_IDNT && sto_38(a,0,destination._IDNTptr->id_name,b,error,contextptr))
-	return is_undef(error)?error:a;
+      gen ret;
+      if (storcl_38 && destination.type==_IDNT && storcl_38(ret,0,destination._IDNTptr->id_name,b,true,contextptr,&a,false))
+        return ret;
       if (destination.type==_IDNT && destination._IDNTptr->quoted)
 	*destination._IDNTptr->quoted |= 2; // set dirty bit
       gen valeur;
@@ -4285,14 +4282,16 @@ namespace giac {
 	  return chkmod(zero,a);
 	if (a.is_symb_of_sommet(at_neg) && b==a._SYMBptr->feuille)
 	  return chkmod(zero,b);
-	return new_ref_symbolic(symbolic(at_plus,args));
+	if (!b.is_symb_of_sommet(at_program))
+	  return new_ref_symbolic(symbolic(at_plus,args));
       }
       if (idnt_symb_int(a) && plus_idnt_symb(b)){
 	if (b.is_symb_of_sommet(at_neg) && a==b._SYMBptr->feuille)
 	  return chkmod(zero,a);
 	if (a.is_symb_of_sommet(at_neg) && b==a._SYMBptr->feuille)
 	  return chkmod(zero,b);
-	return new_ref_symbolic(symbolic(at_plus,args));
+	if (!a.is_symb_of_sommet(at_program))
+	  return new_ref_symbolic(symbolic(at_plus,args));
       }
       return operator_plus(a,b,contextptr);
     }
@@ -4326,8 +4325,10 @@ namespace giac {
 	}
 	if (is_zero(vptr->v.back(),contextptr))
 	  vptr->v.pop_back();
-	if (vptr->v.size()==1)
+	if (vptr->v.size()==1){
 	  sum=vptr->v.front();
+	  delete vptr;
+	}
 	else
 	  sum=symbolic(at_plus,gen(vptr,_SEQ__VECT));
 	if (it==itend)
@@ -4811,13 +4812,14 @@ namespace giac {
   }
   // Find the best interpretation of a(b) either as a function of or as a product (implicit *)
 
-  static void warn_implicit(const gen & a,const gen &b,GIAC_CONTEXT){
-#if 1 // ndef GIAC_HAS_STO_38
+  static bool warn_implicit(const gen & a,const gen &b,GIAC_CONTEXT){
+    if (abs_calc_mode(contextptr)==38)
+      return false;
     if (contains(lidnt(b),i__IDNT_e))
       *logptr(contextptr) << gettext("Implicit multiplication does not work with complex numbers.")<<endl;
     else
       *logptr(contextptr) << gettext("Warning : using implicit multiplication for (") << a.print(contextptr) << ")(" << b.print(contextptr) << ')' << endl;
-#endif
+    return true;
   }
   gen check_symb_of(const gen& a,const gen & b0,GIAC_CONTEXT){
     if ( (a.type<_IDNT || a.type==_FLOAT_) && b0.type==_VECT && b0._VECTptr->empty())
@@ -4826,10 +4828,16 @@ namespace giac {
     if (b0.type==_VECT && b0.subtype==_SEQ__VECT && b0._VECTptr->size()==1)
       b=b0._VECTptr->front();
     if (a.type<_IDNT || a.type==_FLOAT_){
-      warn_implicit(a,b,contextptr);
+      if (!warn_implicit(a,b,contextptr))
+	return gensizeerr("Invalid implicit multiplication for ("+ a.print(contextptr)+")(" + b.print(contextptr)+')');
       return a*b;
     }
     vecteur va(lvar(a));
+    if (va.empty()){
+      if (abs_calc_mode(contextptr)==38)
+	return gensizeerr("Invalid implicit multiplication for ("+ a.print(contextptr)+")(" + b.print(contextptr)+')');
+      *logptr(contextptr) << "Warning, input parsed as a constant function " << a << " applied to " << b << endl;
+    }
     if (!va.empty() && calc_mode(contextptr)==38){
       // check names in va
       bool implicit=false;
@@ -4850,7 +4858,8 @@ namespace giac {
 	  implicit=true;
       }
       if (implicit){
-	warn_implicit(a,b,contextptr);
+	if (!warn_implicit(a,b,contextptr))
+	  return gensizeerr("Invalid implicit multiplication for ("+ a.print(contextptr)+")(" + b.print(contextptr)+')');
 	return a*b;
       }
     }
@@ -4858,7 +4867,8 @@ namespace giac {
     vecteur vab(lvar(makevecteur(a,b)));
     if (vab.size()==va.size()+vb.size())
       return symb_of(a,b);
-    warn_implicit(a,b,contextptr);
+    if (!warn_implicit(a,b,contextptr))
+      return gensizeerr("Invalid implicit multiplication for ("+ a.print(contextptr)+")(" + b.print(contextptr)+')');
     return a*b;
   }
   symbolic symb_of(const gen & a,const gen & b){
@@ -4926,22 +4936,16 @@ namespace giac {
       )
       b=b.eval(eval_level(contextptr),contextptr);
     */
-    if (rcl_38){
+    if (storcl_38){
       if (qf.type==_IDNT){
-#if 0
-	if (strlen(qf._IDNTptr->id_name)==2 && qf._IDNTptr->id_name[0]=='U' && qf._IDNTptr->id_name[1]>='0' && qf._IDNTptr->id_name[1]<='9'){
-	  gensizeerr(gettext("Not implemented"),value);
-	  return value;
-	}
-#endif
-	if (rcl_38(value,0,qf._IDNTptr->id_name,b,true,contextptr)){
+	if (storcl_38(value,0,qf._IDNTptr->id_name,b,true,contextptr,NULL,false)){
 	  return value;
 	}
       }
       if (qf.is_symb_of_sommet(at_double_deux_points)){
 	f=qf._SYMBptr->feuille;
 	if (f.type==_VECT && (*f._VECTptr)[0].type==_IDNT && (*f._VECTptr)[1].type==_IDNT){
-	  if (rcl_38(value,(*f._VECTptr)[0]._IDNTptr->id_name,(*f._VECTptr)[1]._IDNTptr->id_name,b,true,contextptr)){
+	  if (storcl_38(value,(*f._VECTptr)[0]._IDNTptr->id_name,(*f._VECTptr)[1]._IDNTptr->id_name,b,true,contextptr,NULL,false)){
 	    return value;
 	  }
 	}
@@ -5042,10 +5046,10 @@ namespace giac {
     vecteur & v=*args._VECTptr;
     if (v.size()!=2)
       return gensizeerr(contextptr);
-    if (rcl_38){
+    if (storcl_38){
       if (v.front().type==_IDNT){
 	gen value;
-	if (rcl_38(value,0,v.front()._IDNTptr->id_name,v.back(),false,contextptr)){
+	if (storcl_38(value,0,v.front()._IDNTptr->id_name,v.back(),false,contextptr,NULL,false)){ //CdB v.back() is actually never used because the at_of paramter is false. Is that intended?
 	  return value;
 	}
       }
@@ -5053,7 +5057,7 @@ namespace giac {
 	gen & f=v.front()._SYMBptr->feuille;
 	if (f[0].type==_IDNT && f[1].type==_IDNT){
 	  gen value;
-	  if (rcl_38(value,f[0]._IDNTptr->id_name,f[1]._IDNTptr->id_name,v.back(),false,contextptr)){
+	  if (storcl_38(value,f[0]._IDNTptr->id_name,f[1]._IDNTptr->id_name,v.back(),false,contextptr,NULL,false)){ //CdB v.back() is actually never used because the at_of paramter is false. Is that intended?
 	    return value;
 	  }
 	}
@@ -5067,7 +5071,7 @@ namespace giac {
 	return it->second;
       // if (a.subtype==_SPARSE_MATRIX)
 	return 0;
-      return symb_at(makevecteur(v.front(),b));
+	//return symb_at(makevecteur(v.front(),b));
     }
     return a.operator_at(b,contextptr);
   }
@@ -6458,6 +6462,10 @@ namespace giac {
     gen b=double_is_int(b_orig,contextptr);
     if (a.type!=_INT_ || b.type!=_INT_)
       return Gamma(a+1,contextptr)/Gamma(b+1,contextptr)/Gamma(a-b+1,contextptr);
+    if (a.val<0 || b.val<0){
+      *logptr(contextptr) << "comb with negative argument " << a << "," << b <<endl;
+      //return gensizeerr(contextptr);
+    }
     return comb((unsigned long int) a.val,(unsigned long int) b.val);
   }
   gen _comb(const gen & args,GIAC_CONTEXT){
@@ -6842,6 +6850,8 @@ namespace giac {
 	return is_strictly_positive(rg,context0); // ok
       return true;
     }
+    if (g.type==_FRAC)
+      return true;
     if (g.type==_SYMB)
       return need_parenthesis(g._SYMBptr->sommet);
     if (g.type!=_FUNC)
@@ -6849,7 +6859,7 @@ namespace giac {
     unary_function_ptr & u=*g._FUNCptr;
     if (u==at_pow || u==at_division || u==at_prod)
       return false;
-    if (u==at_neg || u==at_minus || u==at_and || u==at_et || u==at_ou || u==at_oufr || u==at_xor || u==at_same || u==at_equal || u==at_equal2 || u==at_superieur_egal || u==at_superieur_strict || u==at_inferieur_egal || u==at_inferieur_strict)
+    if (u==at_neg || u==at_inv || u==at_minus || u==at_and || u==at_et || u==at_ou || u==at_oufr || u==at_xor || u==at_same || u==at_equal || u==at_equal2 || u==at_superieur_egal || u==at_superieur_strict || u==at_inferieur_egal || u==at_inferieur_strict)
       return true;
     if (!u.ptr()->printsommet)
       return false;
@@ -7052,9 +7062,9 @@ namespace giac {
   static gen taylor_Gamma (const gen & lim_point,const int ordre,const unary_function_ptr & f, int direction,gen & shift_coeff,GIAC_CONTEXT){
     if (ordre<0){
       return 0; // statically handled now
-      limit_tractable_functions().push_back(at_Gamma);
-      limit_tractable_replace().push_back(Gamma_replace);
-      return 1;
+      //limit_tractable_functions().push_back(at_Gamma);
+      //limit_tractable_replace().push_back(Gamma_replace);
+      //return 1;
     }
     shift_coeff=0;
     if (!is_integer(lim_point) || is_strictly_positive(lim_point,contextptr))
@@ -7095,7 +7105,7 @@ namespace giac {
 	gen res=upper_incomplete_gammad(s._DOUBLE_val,z._DOUBLE_val,regu);
 	if (res==-1){
 	  return regu?1:Gamma(s._DOUBLE_val,contextptr)-lower_incomplete_gamma(s._DOUBLE_val,z._DOUBLE_val,regu,contextptr);
-	  return gensizeerr(contextptr);
+	  //return gensizeerr(contextptr);
 	}
 	return res;
       }
@@ -7498,9 +7508,9 @@ namespace giac {
   static gen taylor_Psi (const gen & lim_point,const int ordre,const unary_function_ptr & f, int direction,gen & shift_coeff,GIAC_CONTEXT){
     if (ordre<0){
       return 0; // statically handled now
-      limit_tractable_functions().push_back(at_Psi);
-      limit_tractable_replace().push_back(Psi_replace);
-      return 1;
+      //limit_tractable_functions().push_back(at_Psi);
+      //limit_tractable_replace().push_back(Psi_replace);
+      //return 1;
     }
     shift_coeff=0;
     if (!is_integer(lim_point) || is_strictly_positive(lim_point,contextptr))
@@ -8114,9 +8124,9 @@ namespace giac {
   static gen taylor_erf (const gen & lim_point,const int ordre,const unary_function_ptr & f, int direction,gen & shift_coeff,GIAC_CONTEXT){
     if (ordre<0){
       return 0; // statically handled now
-      limit_tractable_functions().push_back(at_erf);
-      limit_tractable_replace().push_back(erf_replace);
-      return 1;
+      //limit_tractable_functions().push_back(at_erf);
+      //limit_tractable_replace().push_back(erf_replace);
+      //return 1;
     }
     shift_coeff=0;
     return taylor(lim_point,ordre,f,0,shift_coeff,contextptr);
@@ -8346,6 +8356,7 @@ namespace giac {
 #else
     return symbolic(at_erf,x);
 #endif
+#if 0
     gen e=x.evalf(1,contextptr);
 #ifdef HAVE_LIBGSL
     if (e.type==_DOUBLE_)
@@ -8366,6 +8377,7 @@ namespace giac {
     return 1-2*symbolic(at_UTPN,x*plus_sqrt2);
 #else
     return symbolic(at_erf,x);
+#endif
 #endif
   }
   gen _erf(const gen & args,GIAC_CONTEXT){
@@ -8942,9 +8954,9 @@ namespace giac {
   static gen taylor_Ci(const gen & lim_point,const int ordre,const unary_function_ptr & f, int direction,gen & shift_coeff,GIAC_CONTEXT){
     if (ordre<0){
       return 0; // statically handled now
-      limit_tractable_functions().push_back(at_Ci);
-      limit_tractable_replace().push_back(Ci_replace);
-      return 1;
+      //limit_tractable_functions().push_back(at_Ci);
+      //limit_tractable_replace().push_back(Ci_replace);
+      //return 1;
     }
     shift_coeff=0;
     if (!is_inf(lim_point))
@@ -9083,9 +9095,9 @@ namespace giac {
   static gen taylor_Ei(const gen & lim_point,const int ordre,const unary_function_ptr & f, int direction,gen & shift_coeff,GIAC_CONTEXT){
     if (ordre<0){
       return 0; // statically handled now
-      limit_tractable_functions().push_back(at_Ei);
-      limit_tractable_replace().push_back(Ei_replace);
-      return 1;
+      //limit_tractable_functions().push_back(at_Ei);
+      //limit_tractable_replace().push_back(Ei_replace);
+      //return 1;
     }
     shift_coeff=0;
     if (!is_inf(lim_point))

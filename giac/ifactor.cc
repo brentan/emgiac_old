@@ -4,16 +4,6 @@
 #define GIAC_MPQS // define if you want to use giac for sieving 
 #endif
 
-// Thanks to Jason Papadopoulos, author of msieve
-#ifdef BESTA_OS
-#define PREFETCH(addr) /* nothing */
-#elif defined(__GNUC__) && __GNUC__ >= 3
-	#define PREFETCH(addr) __builtin_prefetch(addr) 
-#elif defined(_MSC_VER) && _MSC_VER >= 1400
-	#define PREFETCH(addr) PreFetchCacheLine(PF_TEMPORAL_LEVEL_1, addr)
-#else
-	#define PREFETCH(addr) /* nothing */
-#endif
 
 
 #include "path.h"
@@ -826,7 +816,7 @@ namespace giac {
 	slice[lpit->pos] -= 16;
     }
 #endif
-    unsigned cl;
+    unsigned cl=0;
     if (debug_infolevel>6)
       cl=clock();
     if (debug_infolevel>8)
@@ -1166,7 +1156,7 @@ namespace giac {
   }
 #endif
 
-#if (defined __i386__ || defined __x86_64__) && !defined PIC && !defined _I386_ && !defined __APPLE__ && !defined VISUALC
+#if (defined __i386__ || defined __x86_64__) && !defined PIC && !defined _I386_ && !defined __APPLE__ && !defined VISUALC && !defined(FIR_LINUX)
   #define _I386_
 #endif
 
@@ -1978,7 +1968,7 @@ namespace giac {
 	break;
     }
     vector<unsigned> crible;
-    int jp;
+    int jp=0;
     if (basis.size()<B){
 #ifdef PRIME_SIEVE
       fill_crible(crible,int(2.5*B*std::log(B)));
@@ -3036,6 +3026,20 @@ namespace giac {
 	if (m > maxiter ){
 	  if (debug_infolevel)	  
 	    *logptr(contextptr) << clock() << gettext(" Pollard-rho failure, ntries ") << m << endl;
+	  mpz_clear(alloc5);
+	  mpz_clear(alloc4);
+	  mpz_clear(alloc3);
+	  mpz_clear(alloc2);
+	  mpz_clear(alloc1);
+	  mpz_clear(tmpq);
+	  mpz_clear(x);
+	  mpz_clear(x1);
+	  mpz_clear(x2);
+	  mpz_clear(x2k);
+	  mpz_clear(y);
+	  mpz_clear(y1);
+	  mpz_clear(p);
+	  mpz_clear(q);
 	  return -1;
 	}
 	// p=irem(p*(x1-x),n,q);
@@ -3134,8 +3138,23 @@ namespace giac {
 	mpz_tdiv_r(x,x2k,*n._ZINTptr);
 #endif
 	m += 1;
-	if (m > maxiter )
+	if (m > maxiter ){
+	  mpz_clear(alloc5);
+	  mpz_clear(alloc4);
+	  mpz_clear(alloc3);
+	  mpz_clear(alloc2);
+	  mpz_clear(alloc1);
+	  mpz_clear(tmpq);
+	  mpz_clear(x);
+	  mpz_clear(x1);
+	  mpz_clear(x2);
+	  mpz_clear(x2k);
+	  mpz_clear(y);
+	  mpz_clear(y1);
+	  mpz_clear(p);
+	  mpz_clear(q);
 	  return -1;
+	}
 	// p=irem(x1-x,n,q);
 	mpz_sub(q,x1,x);
 #if 0 // def USE_GMP_REPLACEMENTS

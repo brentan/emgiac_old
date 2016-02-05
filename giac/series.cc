@@ -495,8 +495,8 @@ namespace giac {
     if (c_max!=plus_inf)
       final_seq.push_back(monome(undef, c_max));
     return true;
-    COUT << final_seq.back().coeff << endl;
-    return true;
+    //COUT << final_seq.back().coeff << endl;
+    //return true;
   }
 
   sparse_poly1 spmul(const sparse_poly1 & a,const sparse_poly1 &b,GIAC_CONTEXT){
@@ -1442,8 +1442,8 @@ namespace giac {
 	  }
 	  lvx_s.push_back(p);
 	  continue;
-	  invalidserieserr(gettext("taylor of sum not implemented"));
-	  return false;
+	  //invalidserieserr(gettext("taylor of sum not implemented"));
+	  //return false;
 	}
 	if (temp__SYMB.sommet==at_euler_mac_laurin){
 	  if (nargs!=5){
@@ -2053,19 +2053,41 @@ namespace giac {
     return ln_expand0_(e,contextptr);
   }
 
+  static gen exp_series_(const gen & e0,GIAC_CONTEXT){
+    vecteur v=lop(e0,at_ln);
+    if (v.size()==1 && is_integer(v.front()._SYMBptr->feuille)){
+      gen a,b;
+      if (is_linear_wrt(e0,v.front(),a,b,contextptr))
+	return exp(b,contextptr)*pow(v.front()._SYMBptr->feuille,a,contextptr);
+    }
+    return exp(e0,contextptr);
+  }
+
   static gen remove_lnexp(const gen & e,GIAC_CONTEXT){
     vector<const unary_function_ptr *> v(1,at_ln);
+    v.push_back(at_exp);
     vector< gen_op_context > w(1,&ln_expand_);
+    w.push_back(&exp_series_);
     return subst(e,v,w,false,contextptr);
   }
 
   gen limit_symbolic_preprocess(const gen & e0,const identificateur & x,const gen & lim_point,int direction,GIAC_CONTEXT){
     // FIXME: add support for int and sum
     gen e=factorial2gamma(e0,contextptr);
+    gen first_try=subst(e,x,lim_point,false,contextptr);
+    first_try=simplifier(first_try,contextptr);
+    if (!contains(lidnt(first_try),unsigned_inf)){
+      gen chknum;
+      bool hasnum=has_evalf(first_try,chknum,1,contextptr);
+      first_try=recursive_ratnormal(first_try,contextptr);
+      gen chk=recursive_normal(first_try,contextptr);
+      if (hasnum && !is_undef(chk) && abs(chk-chknum,contextptr)>1e-10 && abs(1-chk/chknum,contextptr)>1e-10)
+	e=_simplify(e,contextptr);
+    }
     // Find functions depending of x in e which are in the list
     // If their argument tends to +/-infinity, replace these functions
     vecteur v=rlvarx(e,x);
-    int vs=int(v.size()),pos1,pos2;
+    int vs=int(v.size()),pos1,pos2=0;
     vecteur v1,v2;
     for (int i=0;i<vs;++i){
       if (v[i].type==_SYMB){
@@ -2278,15 +2300,23 @@ namespace giac {
       if (!contains(lidnt(first_try),unsigned_inf)){
 	if (has_num_coeff(first_try))
 	  return first_try;
+	gen chknum;
+	bool hasnum=has_evalf(first_try,chknum,1,contextptr);
 	first_try=recursive_ratnormal(first_try,contextptr);
 	gen chk=recursive_normal(first_try,contextptr);
-	/*
-	if (!lop(chk,at_rootof).empty())
-	  chk=ratnormal(first_try);
-	*/
-	if (!is_undef(chk) && !contains(lidnt(chk),unsigned_inf)){
-	  chk=first_try;
-	  return taille(chk,100)<taille(first_try,100)?chk:first_try;
+	if (hasnum && !is_undef(chk) && abs(chk-chknum,contextptr)>1e-10 && abs(1-chk/chknum,contextptr)>1e-10){
+	  chk=undef;
+	  e=_simplify(e,contextptr);
+	}
+	if (!is_undef(chk)){
+	  /*
+	    if (!lop(chk,at_rootof).empty())
+	    chk=ratnormal(first_try);
+	  */
+	  if (!is_undef(chk) && !contains(lidnt(chk),unsigned_inf)){
+	    chk=first_try;
+	    return taille(chk,100)<taille(first_try,100)?chk:first_try;
+	  }
 	}
       }
       if (lim_point==unsigned_inf){
@@ -2775,14 +2805,14 @@ namespace giac {
 
   // Main limit entry point
   gen limit(const gen & e,const identificateur & x,const gen & lim_point,int direction,GIAC_CONTEXT){
-    // Insert here code for cleaning limit remember
-    // int save_inside_limit=inside_limit(contextptr);
-    // inside_limit(1,contextptr);
-    // sincosinf.clear();
     if (is_undef(lim_point))
       return lim_point;
+    // Insert here code for cleaning limit remember
+    int save_series_flags=series_flags(contextptr);
+    series_flags(save_series_flags | 8,contextptr);
+    // sincosinf.clear();
     gen l=in_limit(exact(e,contextptr),x,exact(lim_point,contextptr),direction,contextptr);
-    // inside_limit(save_inside_limit,contextptr);
+    series_flags(save_series_flags,contextptr);
     // vecteur sincosinfsub(sincosinf.size(),undef);
     // l=eval(subst(l,sincosinf,sincosinfsub));
     return l;
@@ -2973,11 +3003,14 @@ namespace giac {
 
   // Main series entry point
   gen series(const gen & e,const identificateur & x,const gen & lim_point,int ordre,int direction,GIAC_CONTEXT){
+    int save_series_flags=series_flags(contextptr);
+    series_flags(save_series_flags | 8,contextptr);
     if (has_op(e,*at_surd) || has_op(e,*at_NTHROOT)){
       vecteur subst1,subst2;
       surd2pow(e,subst1,subst2,contextptr);
       gen g=subst(e,subst1,subst2,false,contextptr);
       g=series(g,x,lim_point,ordre,direction,contextptr);
+      series_flags(save_series_flags,contextptr);
       return subst(g,subst2,subst1,false,contextptr);
     }
     if (e.type==_VECT){
@@ -2986,9 +3019,11 @@ namespace giac {
       for (int i=0;i<l;++i){
 	res[i]=in_series(_pow2exp(tan2sincos(res[i],contextptr),contextptr),x,lim_point,ordre,direction,contextptr);
       }
+      series_flags(save_series_flags,contextptr);
       return res;
     }
     gen res=in_series(_pow2exp(tan2sincos(e,contextptr),contextptr),x,lim_point,ordre,direction,contextptr);
+    series_flags(save_series_flags,contextptr);
     return res;
   }
 
@@ -3016,7 +3051,7 @@ namespace giac {
     if (x.type==_VECT && l.type==_VECT){
       vecteur &v=*x._VECTptr;
       gen h(identificateur(" h"));
-      vecteur w=addvecteur(*l._VECTptr,multvecteur(h,subvecteur(v,*l._VECTptr)));
+      vecteur w=addvecteur(*l._VECTptr,multvecteur(h,v));
       gen newe=subst(e,v,w,false,contextptr);
       sparse_poly1 res=series__SPOL1(newe,*h._IDNTptr,zero,ordre,direction,contextptr);
       poly_truncate(res,ordre,contextptr);
@@ -3024,7 +3059,8 @@ namespace giac {
 	res.pop_back();
       // order term has been removed
       gen remains;
-      return sparse_poly12gen(res,1,remains,false);
+      gen r=sparse_poly12gen(res,1,remains,false);
+      return subst(r,v,subvecteur(v,*l._VECTptr),false,contextptr);
     }
     if (x.type!=_IDNT){
       identificateur xx("x");

@@ -87,12 +87,7 @@ using namespace std;
 #endif // visualc || besta_os
 
 #ifdef BESTA_OS
-#ifdef BESTA_WIN32_TARGET
-#include <Windows.h>
-#else
-#include <bestafir.h>
 #include <stdlib.h>
-#endif // besta_win32_target
 #endif // besta_os
 
 #include <stdio.h>
@@ -1528,7 +1523,7 @@ extern "C" void Sleep(unsigned int miliSecond);
   const char cas_suffixe[]=".cas";
 #if defined RTOS_THREADX || defined BESTA_OS
 #ifdef BESTA_OS
-  int LIST_SIZE_LIMIT = 10000 ;
+  int LIST_SIZE_LIMIT = 100000 ;
   int FACTORIAL_SIZE_LIMIT = 1000 ;
 #else
   int LIST_SIZE_LIMIT = 1000 ;
@@ -1545,7 +1540,7 @@ extern "C" void Sleep(unsigned int miliSecond);
   int HENSEL_QUADRATIC_POWER=25;
   int KARAMUL_SIZE=17;
   int INT_KARAMUL_SIZE=300;
-  int FFTMUL_SIZE=1500; 
+  int FFTMUL_SIZE=10000; 
   int MAX_ALG_EXT_ORDER_SIZE = 4;
   int MAX_COMMON_ALG_EXT_ORDER_SIZE = 16;
   int TRY_FU_UPRIME=5;
@@ -1574,7 +1569,7 @@ extern "C" void Sleep(unsigned int miliSecond);
   int HENSEL_QUADRATIC_POWER=25;
   int KARAMUL_SIZE=17;
   int INT_KARAMUL_SIZE=300;
-  int FFTMUL_SIZE=1500; 
+  int FFTMUL_SIZE=10000; 
   int MAX_ALG_EXT_ORDER_SIZE = 6;
 #ifdef EMCC
   int MAX_COMMON_ALG_EXT_ORDER_SIZE = 16;
@@ -2838,22 +2833,16 @@ extern "C" void Sleep(unsigned int miliSecond);
     switch (i){
     case 1:
       return "fr/";
-      break;
     case 2:
       return "en/";
-      break;
     case 3:
       return "es/";
-      break;
     case 4:
       return "el/";
-      break;
     case 5:
       return "pt/";
-      break;
     case 6:
       return "it/";
-      break;
       /*
     case 7:
       return "tr/";
@@ -2861,7 +2850,6 @@ extern "C" void Sleep(unsigned int miliSecond);
       */
     case 8:
       return "zh/";
-      break;
       /*
     case 9:
       return "de/";
@@ -3792,7 +3780,7 @@ _prog_eval_level_val(1), _eval_level(DEFAULT_EVAL_LEVEL), _rand_seed(123457),_ma
   double giac_floor(double d){
     double maxdouble=longlong(1)<<30;
     if (d>=maxdouble || d<=-maxdouble)
-      return d;
+      return std::floor(d);
     if (d>0)
       return int(d);
     double k=int(d);
@@ -4126,8 +4114,8 @@ unsigned int ConvertUTF8toUTF16 (
     }
 
     unsigned int j = ConvertUTF8toUTF16 (
-      (const UTF8*) line,((line + n) < line) ? (const UTF8*)~0u : (const UTF8*)(line + n),
-      (UTF16*)wline, (UTF16*)~0u,
+      (const UTF8*) line,((line + n) < line) ? (const UTF8*)~0 : (const UTF8*)(line + n),
+      (UTF16*)wline, (UTF16*)~0,
       lenientConversion);
 
     if (wline) wline[j] = 0;
@@ -4239,7 +4227,7 @@ unsigned int ConvertUTF8toUTF16 (
     }
 
     unsigned int j = ConvertUTF16toUTF8(
-      (UTF16*)wline, ((wline + n) < wline) ? (const UTF16*)~0u : (const UTF16*)(wline + n),
+      (UTF16*)wline, ((wline + n) < wline) ? (const UTF16*)~0 : (const UTF16*)(wline + n),
       (UTF8*)line, (UTF8*)-1,
       lenientConversion);
 
@@ -4368,7 +4356,7 @@ unsigned int ConvertUTF8toUTF16 (
     // fprintf(f,"%s",s.c_str());
     writefunc(s.c_str(),1,s.size(),f);
     return true;
-    return false;
+    //return false;
   }
 
 
@@ -4725,6 +4713,10 @@ unsigned int ConvertUTF8toUTF16 (
     "normal",
     "op",
     "partfrac",
+    "plotfield",
+    "plotfunc",
+    "plotparam",
+    "plotpolar",
     "pow2exp",
     "powexpand",
     "propfrac",
@@ -4909,7 +4901,7 @@ unsigned int ConvertUTF8toUTF16 (
 #else
       istrstream f(
 #endif
-		   "# enter couples\n# giac_keyword translation\n# for example, to define integration as a translation for integrate \nintegrate integration\neven est_pair\nodd est_impair\n# geometry\nbarycenter barycentre\nisobarycenter isobarycentre\nmidpoint milieu\nline_segments aretes\nmedian_line mediane\nhalf_line demi_droite\nparallel parallele\nperpendicular perpendiculaire\ncommon_perpendicular perpendiculaire_commune\nenvelope enveloppe\nequilateral_triangle triangle_equilateral\nisosceles_triangle triangle_isocele\nright_triangle triangle_rectangle\nlocus lieu\ncircle cercle\nconic conique\nreduced_conic conique_reduite\nquadric quadrique\nreduced_quadric quadrique_reduite\nhyperbola hyperbole\ncylinder cylindre\nhalf_cone demi_cone\nline droite\nplane plan\nparabola parabole\nrhombus losange\nsquare carre\nhexagon hexagone\npyramid pyramide\nquadrilateral quadrilatere\nparallelogram parallelogramme\northocenter orthocentre\nexbisector exbissectrice\nparallelepiped parallelepipede\npolyhedron polyedre\ntetrahedron tetraedre\ncentered_tetrahedron tetraedre_centre\ncentered_cube cube_centre\noctahedron octaedre\ndodecahedron dodecaedre\nicosahedron icosaedre\nbisector bissectrice\nperpen_bisector mediatrice\naffix affixe\naltitude hauteur\ncircumcircle circonscrit\nexcircle exinscrit\nincircle inscrit\nis_prime est_premier\nis_equilateral est_equilateral\nis_rectangle est_rectangle\nis_parallel est_parallele\nis_perpendicular est_perpendiculaire\nis_orthogonal est_orthogonal\nis_collinear est_aligne\nis_concyclic est_cocyclique\nis_element est_element\nis_included est_inclus\nis_coplanar est_coplanaire\nis_isosceles est_isocele\nis_square est_carre\nis_rhombus est_losange\nis_parallelogram est_parallelogramme\nis_conjugate est_conjugue\nis_harmonic_line_bundle est_faisceau_droite\nis_harmonic_circle_bundle est_faisceau_cercle\nis_inside est_dans\narea aire\nperimeter perimetre\ndistance longueur\ndistance2 longueur2\nareaat aireen\nslopeat penteen\nangleat angleen\nperimeterat perimetreen\ndistanceat distanceen\nareaatraw aireenbrut\nslopeatraw penteenbrut\nangleatraw angleenbrut\nperimeteratraw perimetreenbrut\ndistanceatraw distanceenbrut\nextract_measure extraire_mesure\ncoordinates coordonnees\nabscissa abscisse\nordinate ordonnee\ncenter centre\nradius rayon\npowerpc puissance\nvertices sommets\npolygon polygone\nisopolygon isopolygone\nopen_polygon polygone_ouvert\nhomothety homothetie\nsimilarity similitude\n# affinity affinite\nreflection symetrie\nreciprocation polaire_reciproque\nscalar_product produit_scalaire\n# solid_line ligne_trait_plein\n# dash_line ligne_tiret\n# dashdot_line ligne_tiret_point\n# dashdotdot_line ligne_tiret_pointpoint\n# cap_flat_line ligne_chapeau_plat\n# cap_round_line ligne_chapeau_rond\n# cap_square_line ligne_chapeau_carre\n# line_width_1 ligne_epaisseur_1\n# line_width_2 ligne_epaisseur_2\n# line_width_3 ligne_epaisseur_3\n# line_width_4 ligne_epaisseur_4\n# line_width_5 ligne_epaisseur_5\n# line_width_6 ligne_epaisseur_6\n# line_width_7 ligne_epaisseur_7\n# line_width_8 ligne_epaisseur_8\n# rhombus_point point_losange\n# plus_point point_plus\n# square_point point_carre\n# cross_point point_croix\n# triangle_point point_triangle\n# star_point point_etoile\n# invisible_point point_invisible\n# point_width_1 point_epaisseur_1\n# point_width_2 point_epaisseur_2\n# point_width_3 point_epaisseur_3\n# point_width_4 point_epaisseur_4\n# point_width_5 point_epaisseur_5\n# point_width_6 point_epaisseur_6\n# point_width_7 point_epaisseur_7\n# point_width_8 point_epaisseur_8\ncross_ratio birapport\nradical_axis axe_radical\npolar polaire\npolar_point point_polaire\npolar_coordinates coordonnees_polaires\nrectangular_coordinates coordonnees_rectangulaires\nharmonic_conjugate conj_harmonique\nharmonic_division div_harmonique\ndivision_point point_div\n# harmonic_division_point point_division_harmonique\ndisplay affichage\nvertices_abc sommets_abc\nvertices_abca sommets_abca\nline_inter inter_droite\nsingle_inter inter_unique\ncolor couleur\nlegend legende\nis_harmonic est_harmonique\nbar_plot diagramme_batons\nbarplot diagrammebatons\nhistogram histogramme\nprism prisme\nis_cospherical est_cospherique\ndot_paper papier_pointe\ngrid_paper papier_quadrille\nline_paper papier_ligne\ntriangle_paper papier_triangule\nvector vecteur\nplotarea tracer_aire\nplotproba graphe_probabiliste\nmult_c_conjugate mult_conjugue_C\nmult_conjugate mult_conjugue\ncanonical_form forme_canonique\ntrue vrai\nfalse faux\n#or ou\n#and et\n#not non\nibpu integrer_par_parties_u\nibpdv integrer_par_parties_dv\nwhen quand\nslope pente\ntablefunc table_fonction\ntableseq table_suite\nfsolve resoudre_numerique\ninput saisir\nprint afficher\nassume supposons\nabout domaine\nbreakpoint point_arret\nwatch montrer\nrmwatch ne_plus_montrer\nrmbreakpoint suppr_point_arret\nrand alea\nInputStr saisir_chaine\nfilled rempli\nhidden_name nom_cache\nblack noir\nwhite blanc\nred rouge\nblue bleu\nyellow jaune\ngreen vert\nOx_2d_unit_vector vecteur_unitaire_Ox_2d\nOy_2d_unit_vector vecteur_unitaire_Oy_2d\nOx_3d_unit_vector vecteur_unitaire_Ox_3d\nOy_3d_unit_vector vecteur_unitaire_Oy_3d\nOz_3d_unit_vector vecteur_unitaire_Oz_3d\nframe_2d repere_2d\nframe_3d repere_3d\n# areaplot tracer_aire\nrsolve resoudre_recurrence\nassume supposons\nrealproot racines\nbounded_function fonction_bornee\nsort trier\ncumulated_frequencies frequences_cumulees\nfrequencies frequences\nnormald loi_normale\nregroup regrouper\nosculating_circle cercle_osculateur\ncurvature courbure\nevolute developpee\n");
+		   "# enter couples\n# giac_keyword translation\n# for example, to define integration as a translation for integrate \nintegrate integration\neven est_pair\nodd est_impair\n# geometry\nbarycenter barycentre\nisobarycenter isobarycentre\nmidpoint milieu\nline_segments aretes\nmedian_line mediane\nhalf_line demi_droite\nparallel parallele\nperpendicular perpendiculaire\ncommon_perpendicular perpendiculaire_commune\nenvelope enveloppe\nequilateral_triangle triangle_equilateral\nisosceles_triangle triangle_isocele\nright_triangle triangle_rectangle\nlocus lieu\ncircle cercle\nconic conique\nreduced_conic conique_reduite\nquadric quadrique\nreduced_quadric quadrique_reduite\nhyperbola hyperbole\ncylinder cylindre\nhalf_cone demi_cone\nline droite\nplane plan\nparabola parabole\nrhombus losange\nsquare carre\nhexagon hexagone\npyramid pyramide\nquadrilateral quadrilatere\nparallelogram parallelogramme\northocenter orthocentre\nexbisector exbissectrice\nparallelepiped parallelepipede\npolyhedron polyedre\ntetrahedron tetraedre\ncentered_tetrahedron tetraedre_centre\ncentered_cube cube_centre\noctahedron octaedre\ndodecahedron dodecaedre\nicosahedron icosaedre\nbisector bissectrice\nperpen_bisector mediatrice\naffix affixe\naltitude hauteur\ncircumcircle circonscrit\nexcircle exinscrit\nincircle inscrit\nis_prime est_premier\nis_equilateral est_equilateral\nis_rectangle est_rectangle\nis_parallel est_parallele\nis_perpendicular est_perpendiculaire\nis_orthogonal est_orthogonal\nis_collinear est_aligne\nis_concyclic est_cocyclique\nis_element est_element\nis_included est_inclus\nis_coplanar est_coplanaire\nis_isosceles est_isocele\nis_square est_carre\nis_rhombus est_losange\nis_parallelogram est_parallelogramme\nis_conjugate est_conjugue\nis_harmonic_line_bundle est_faisceau_droite\nis_harmonic_circle_bundle est_faisceau_cercle\nis_inside est_dans\narea aire\nperimeter perimetre\ndistance longueur\ndistance2 longueur2\nareaat aireen\nslopeat penteen\nangleat angleen\nperimeterat perimetreen\ndistanceat distanceen\nareaatraw aireenbrut\nslopeatraw penteenbrut\nangleatraw angleenbrut\nperimeteratraw perimetreenbrut\ndistanceatraw distanceenbrut\nextract_measure extraire_mesure\ncoordinates coordonnees\nabscissa abscisse\nordinate ordonnee\ncenter centre\nradius rayon\npowerpc puissance\nvertices sommets\npolygon polygone\nisopolygon isopolygone\nopen_polygon polygone_ouvert\nhomothety homothetie\nsimilarity similitude\n# affinity affinite\nreflection symetrie\nreciprocation polaire_reciproque\nscalar_product produit_scalaire\n# solid_line ligne_trait_plein\n# dash_line ligne_tiret\n# dashdot_line ligne_tiret_point\n# dashdotdot_line ligne_tiret_pointpoint\n# cap_flat_line ligne_chapeau_plat\n# cap_round_line ligne_chapeau_rond\n# cap_square_line ligne_chapeau_carre\n# line_width_1 ligne_epaisseur_1\n# line_width_2 ligne_epaisseur_2\n# line_width_3 ligne_epaisseur_3\n# line_width_4 ligne_epaisseur_4\n# line_width_5 ligne_epaisseur_5\n# line_width_6 ligne_epaisseur_6\n# line_width_7 ligne_epaisseur_7\n# line_width_8 ligne_epaisseur_8\n# rhombus_point point_losange\n# plus_point point_plus\n# square_point point_carre\n# cross_point point_croix\n# triangle_point point_triangle\n# star_point point_etoile\n# invisible_point point_invisible\ncross_ratio birapport\nradical_axis axe_radical\npolar polaire\npolar_point point_polaire\npolar_coordinates coordonnees_polaires\nrectangular_coordinates coordonnees_rectangulaires\nharmonic_conjugate conj_harmonique\nharmonic_division div_harmonique\ndivision_point point_div\n# harmonic_division_point point_division_harmonique\ndisplay affichage\nvertices_abc sommets_abc\nvertices_abca sommets_abca\nline_inter inter_droite\nsingle_inter inter_unique\ncolor couleur\nlegend legende\nis_harmonic est_harmonique\nbar_plot diagramme_batons\nbarplot diagrammebatons\nhistogram histogramme\nprism prisme\nis_cospherical est_cospherique\ndot_paper papier_pointe\ngrid_paper papier_quadrille\nline_paper papier_ligne\ntriangle_paper papier_triangule\nvector vecteur\nplotarea tracer_aire\nplotproba graphe_probabiliste\nmult_c_conjugate mult_conjugue_C\nmult_conjugate mult_conjugue\ncanonical_form forme_canonique\nibpu integrer_par_parties_u\nibpdv integrer_par_parties_dv\nwhen quand\nslope pente\ntablefunc table_fonction\ntableseq table_suite\nfsolve resoudre_numerique\ninput saisir\nprint afficher\nassume supposons\nabout domaine\nbreakpoint point_arret\nwatch montrer\nrmwatch ne_plus_montrer\nrmbreakpoint suppr_point_arret\nrand alea\nInputStr saisir_chaine\nOx_2d_unit_vector vecteur_unitaire_Ox_2d\nOy_2d_unit_vector vecteur_unitaire_Oy_2d\nOx_3d_unit_vector vecteur_unitaire_Ox_3d\nOy_3d_unit_vector vecteur_unitaire_Oy_3d\nOz_3d_unit_vector vecteur_unitaire_Oz_3d\nframe_2d repere_2d\nframe_3d repere_3d\nrsolve resoudre_recurrence\nassume supposons\ncumulated_frequencies frequences_cumulees\nfrequencies frequences\nnormald loi_normale\nregroup regrouper\nosculating_circle cercle_osculateur\ncurvature courbure\nevolute developpee\nsort trier\n");
 	    in_update_lexer_localization(f,1,v,lexer_map,back_lexer_map,contextptr);
 	  }
 	  else

@@ -90,7 +90,7 @@ namespace giac {
     pthread_mutex_unlock(&rootof_mutex);
   }
 #else
-  static int rootof_trylock(){ return true; }
+  static int rootof_trylock(){ return 0; }
   static void rootof_unlock(){ } 
 
 #endif
@@ -158,8 +158,11 @@ namespace giac {
     int maxdigits=1000;
     if (c.size()<w.size()-1)
       maxdigits=50;
+#ifndef HAVE_LIBMPFR
+    maxdigits=14;
+#endif
     gen borne=100;
-    for (int ndigits=14;ndigits<1000;ndigits*=2){
+    for (int ndigits=14;ndigits<=maxdigits;ndigits*=2){
       gen R1=conj(_evalf(makesequence(r1,ndigits),contextptr),contextptr);
       for (int i=0;i<int(c.size());++i){
 	gen r2=c[i];
@@ -243,13 +246,13 @@ namespace giac {
     const_iterateur it=a.begin(),itend=a.end();
     for (;it!=itend;++it){
       double cur_re(re(*it,contextptr).evalf_double(1,contextptr)._DOUBLE_val),cur_im(im(*it,contextptr).evalf_double(1,contextptr)._DOUBLE_val);
-      if (cur_re > max_re ){
+      if (cur_re > (1+1e-14)*max_re ){
 	current=*it;
 	max_re=cur_re;
 	max_im=cur_im;
       }
       else { // same argument
-	if ( (cur_re == max_re) && (cur_im>max_im) ){
+	if ( std::abs(cur_re-max_re)<1e-14*max_re && (cur_im>max_im) ){
 	  current=*it;
 	  max_im=cur_im;
 	}
@@ -266,7 +269,8 @@ namespace giac {
     double eps=std::pow(0.1,n);
     int rprec=int(n*3.3);
     vecteur a=proot(v,eps,rprec);
-    return in_select_root(a,is_real(v,contextptr),contextptr);
+    gen r=in_select_root(a,is_real(v,contextptr),contextptr);
+    return r;
   }
 
   gen alg_evalf(const gen & a,const gen &b,GIAC_CONTEXT){
@@ -277,7 +281,7 @@ namespace giac {
       return a1;
     if (b1.type!=_VECT)
       return algebraic_EXTension(a1,b1);
-    gen r(select_root(*b1._VECTptr,contextptr));
+    gen r(select_root(*b1._VECTptr,contextptr)); 
     if (is_undef(r))
       return algebraic_EXTension(a1,b1);
     return horner(*a1._VECTptr,r);
@@ -709,6 +713,31 @@ namespace giac {
     }
   }
 
+  // in-place reduction of algebraic extensions
+  void clean_ext_reduce(vecteur & v){
+    iterateur it=v.begin(),itend=v.end();
+    for (;it!=itend;++it)
+      clean_ext_reduce(*it);
+  }
+  void clean_ext_reduce(gen & g){
+    if (g.type==_EXT){
+      g=ext_reduce(g);
+      return;
+    }
+    if (g.type==_VECT){
+      clean_ext_reduce(*g._VECTptr);
+      return;
+    }
+    if (g.type==_POLY){
+      vector< monomial<gen> >::iterator it=g._POLYptr->coord.begin(),itend=g._POLYptr->coord.end();
+      for (;it!=itend;++it)
+	clean_ext_reduce(it->value);
+      return;
+    }
+    if (g.type==_FRAC)
+      clean_ext_reduce(g._FRACptr->num);
+  }
+
   // a and b are supposed to be *(_EXTptr+1) of some algebraic extension
   // common_EXT will return a new algebraic extension 
   // (suitable to be an extptr+1)
@@ -776,8 +805,12 @@ namespace giac {
       if (innerdim){
 	gen params;
 	*logptr(contextptr) << gettext("Warning, need to choose a branch for the root of a polynomial with parameters. This might be wrong.") << endl;
-	if (l->size()>=2){
-	  params=(*l)[1];
+	if (l && l->size()>=2){
+	  for (int i=1;i<l->size();++i){
+	    params=(*l)[i];
+	    if (params.type==_VECT && !params._VECTptr->empty())
+	      break;
+	  }
 	  // IMPROVE: using context and *l look for assumptions
 	  if (params.type==_VECT){
 	    vecteur paramv=*params._VECTptr;
@@ -802,8 +835,12 @@ namespace giac {
 		      else {
 			if (b==plus_inf)
 			  vb[j]=a+1;
-			else
-			  vb[j]=(a+b)/2;
+			else {
+			  if (a+b==0)
+			    vb[j]=b/2;
+			  else
+			    vb[j]=(a+b)/2;
+			}
 		      }
 		    }
 		  }
@@ -818,7 +855,7 @@ namespace giac {
 	if (vb==vb0)
 	  *logptr(contextptr) << gettext("The choice was done assuming ") << params << "=" << vb << endl;       
 	else 
-	  *logptr(contextptr) << gettext("Non regular value ") << vb0 << gettext(" was discarded and replaced randomly by ") << params << "=" << endl;
+	  *logptr(contextptr) << gettext("Non regular value ") << vb0 << gettext(" was discarded and replaced randomly by ") << params << "=" << vb << endl;
 	racines=proot(polynome2poly1(pb));
       }
       else
@@ -1038,6 +1075,12 @@ namespace giac {
     if (!lop(lvar(e),at_pow).empty())
       return gensizeerr(gettext("Algebraic extensions not allowed in a rootof"));
     // should call factor before returning unevaluated rootof
+    if (e.type==_VECT && e._VECTptr->size()==2 && e._VECTptr->back().type==_VECT){
+      vecteur v2=*e._VECTptr->back()._VECTptr;
+      gen g(1);
+      lcmdeno(v2,g,contextptr);
+      return symbolic(at_rootof,gen(makevecteur(e._VECTptr->front(),gen(v2,e._VECTptr->back().subtype)),e.subtype));
+    }
     return symbolic(at_rootof,e);
   }
   gen approx_rootof(const gen & e,GIAC_CONTEXT){
@@ -1467,7 +1510,7 @@ namespace giac {
     if (w.empty() && debug_infolevel)
       *logptr(contextptr) << gettext("Warning: ") << df << gettext("=0: no solution found") << endl;
     vecteur wvar=makevecteur(cst_pi);
-    lidnt(w,wvar);
+    lidnt(w,wvar,false);
     if (wvar.size()>1)
       return undef;
     gen resmin=plus_inf;
@@ -1527,7 +1570,7 @@ namespace giac {
 	  return 0;
 	vecteur lv0(lvar(g._SYMBptr->feuille)),lv; // remove cst idnt
 	for (unsigned i=0;i<lv0.size();++i){
-	  if (evalf_double(lv0[i],1,contextptr)!=_DOUBLE_) // if (!is_constant_idnt(lv0[i]))
+	  if (evalf_double(lv0[i],1,contextptr).type!=_DOUBLE_) // if (!is_constant_idnt(lv0[i]))
 	    lv.push_back(lv0[i]);
 	}
 	if (!lv.empty()){

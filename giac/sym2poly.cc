@@ -2422,7 +2422,7 @@ namespace giac {
   }
 
   static gen in_normalize_sqrt(const gen & e,vecteur & L,GIAC_CONTEXT){
-    if (complex_mode(contextptr)) 
+    if (complex_mode(contextptr) || has_i(e)) 
       return e;
     // remove multiple factors inside sqrt
     // vecteur l0=lop(e,at_pow),lin,lout;
@@ -2648,7 +2648,9 @@ namespace giac {
 	purgenoassume(Lk,contextptr);
       }
       if (is_undef(tmp)){
-	*logptr(contextptr) << gettext("Unable to build a single algebraic extension for simplifying. Trying rational simplification only.") << endl;
+	if (calc_mode(contextptr)==1)
+	  return undef;
+	*logptr(contextptr) << gettext("Unable to build a single algebraic extension for simplifying.\nTrying rational simplification only. This might return a wrong answer if simplifying 0/0!") << endl;
 	l=lvar(ee);
 	tmp=e2r(ee,l,contextptr);	
       }

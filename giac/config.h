@@ -40,7 +40,7 @@
 
 
 /* Version number of package */
-#define VERSION "1.2"
+#define VERSION "1.2.2"
 
 
 #define EMCC
@@ -51,5 +51,6 @@
 #define HAVE_LIBMPFR
 #define HAVE_MPFR_H 1
 #define HAVE_LIBMPFI
+//#define HAVE_LIBPARI // uncomment if you want to include pari, currently buggy
 #define TIMEOUT
 //#define HAVE_SYS_TIMES_H 1

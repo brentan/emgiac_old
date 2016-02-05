@@ -19,6 +19,7 @@
 #define _GIAC_SOLVE_H
 #include "first.h"
 
+// GIAC_64VARS is currently compatible with GROEBNER_VARS 15 only
 #define GIAC_64VARS 
 // comment if you don't want the modular algorithm for gbasis with >15 var
 //#define GIAC_CHARDEGTYPE 
@@ -27,6 +28,7 @@
 #ifndef NO_NAMESPACE_GIAC
 namespace giac {
 #endif // ndef NO_NAMESPACE_GIAC
+  vecteur lvarfracpow(const gen & e);
   std::string print_intvar_counter(GIAC_CONTEXT);
   std::string print_realvar_counter(GIAC_CONTEXT);
   gen _reset_solve_counter(const gen & args,const context * contextptr);
