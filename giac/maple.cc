@@ -66,7 +66,7 @@ using namespace std;
 
 
 #ifdef GIAC_HAS_STO_38
-  TMillisecs AspenGetNow();
+  TMillisecs PrimeGetNow();
 #endif
 
 #if defined(EMCC) && !defined(PNACL)
@@ -165,7 +165,7 @@ namespace giac {
     if (s==3 && mode.type==_IDNT)
       return _quorem(g,contextptr);
     return gensizeerr();
-    return 0;
+    // return 0;
   }
   static const char _divide_s []="divide";
   static define_unary_function_eval (__divide,&_divide,_divide_s);
@@ -369,7 +369,7 @@ namespace giac {
     return makevecteur(double(u1)/CLOCKS_PER_SEC,fin.tv_sec-debut.tv_sec+(fin.tv_usec-debut.tv_usec)/1e6);
 #endif
 #ifdef GIAC_HAS_STO_38
-   int t1=AspenGetNow(),t2;
+   int t1=PrimeGetNow(),t2;
 #endif
 #ifdef _RUSAGE
     struct rusage tmp1,tmp2,tmpc1,tmpc2;
@@ -390,7 +390,7 @@ namespace giac {
 	eval(a,level,contextptr);
       }
 #ifdef GIAC_HAS_STO_38
-      t2=AspenGetNow();
+      t2=PrimeGetNow();
       delta=(t2-t1)/1000.;
 #else // GIAC_HAS_STO_38
 #ifdef _RUSAGE
@@ -869,7 +869,7 @@ namespace giac {
   // open a file, returns a FD
   gen _open(const gen & g,GIAC_CONTEXT){
     if ( g.type==_STRNG && g.subtype==-1) return  g;
-#if defined(VISUALC) || defined(__MINGW_H) || defined (BESTA_OS) || defined(NSPIRE) || defined(__ANDROID__) || defined(NSPIRE_NEWLIB) || defined(OSX) || defined(IOS)
+#if defined(VISUALC) || defined(__MINGW_H) || defined (FIR) || defined(NSPIRE) || defined(__ANDROID__) || defined(NSPIRE_NEWLIB) 
     return gensizeerr(gettext("not implemented"));
 #else
     gen tmp=check_secure();
@@ -1029,6 +1029,8 @@ namespace giac {
       return sto(delrowscols(eval(g,eval_level(contextptr),contextptr),isrow,contextptr),gm,contextptr);
     }
     interval=g._VECTptr->back();
+    // if (interval.type==_IDNT || interval.type==_SYMB)
+      interval=eval(interval,1,contextptr);
     if (!interval.is_symb_of_sommet(at_interval))
       interval=symb_interval(interval,interval);
     if (!ckmatrix(gm) || !interval.is_symb_of_sommet(at_interval) || (f=interval._SYMBptr->feuille).type!=_VECT || f._VECTptr->size()!=2 || !is_integral(fa=f._VECTptr->front()) || !is_integral(fb=f._VECTptr->back()) )
@@ -1814,7 +1816,7 @@ namespace giac {
       return false;
     vecteur v(v_);
     int channels,sample_rate=44100,bits_per_sample=0;
-    unsigned int u,byte_rate,block_align=0,data_size=1<<31;
+    unsigned int u,byte_rate,block_align=0,data_size=1U<<31;
     if (!read_audio(v,channels,sample_rate,bits_per_sample,data_size))
       return false;
     u=0x46464952;

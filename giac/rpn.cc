@@ -1896,8 +1896,9 @@ namespace giac {
       }
       if (args._VECTptr->size()>=4 && abs_calc_mode(contextptr)!=38)
 	value=(*args._VECTptr)[3];
-      identificateur idx("hpdiffx");
-      gen newx(idx);
+      static int count=0;
+      gen newx("hpdiffx"+print_INT_(count),contextptr);
+      ++count;
       gen arg0=eval(subst(args._VECTptr->front(),var,newx,false,contextptr),eval_level(contextptr),contextptr);
       arg0=subst(arg0,var,newx,false,contextptr);
       if (ndiff==0){
@@ -1946,8 +1947,8 @@ namespace giac {
       if (v.size()>=4){
 	if (v[1].type!=_IDNT){
 	  return gensizeerr(gettext("∫(expression,var,lower,upper)"));
-	  swapgen(v[0],v[2]);
-	  swapgen(v[1],v[3]);
+	  // swapgen(v[0],v[2]);
+	  // swapgen(v[1],v[3]);
 	}
 	gen x,newx;
 	hp38_eval(v,x,newx,contextptr);
@@ -2165,7 +2166,7 @@ namespace giac {
 	return 0;
     }
     return gentypeerr(contextptr);
-    return 0;
+    // return 0;
   }
   static const char _IS_LINEAR_s[]="LINEAR?";
   static define_unary_function_eval_quoted (__IS_LINEAR,&giac::_IS_LINEAR,_IS_LINEAR_s);
@@ -3020,6 +3021,7 @@ namespace giac {
     //g=qualifysubst(g,v,w,contextptr);
   }
 
+#if 0
   // 0: ok, -1: invalid views, -2: invalid VIEWS/EXPORT declaration in a program
   static int parse_program_decl(vecteur & assignation_by_equal,vecteur & undeclared_global_vars,vecteur & declared_global_vars,vecteur & declared_functions,vecteur & exported_function_names,vecteur & exported_variable_names,vecteur & unknown_exported,vecteur & unexported,vecteur & unexported_declared_global_vars,vecteur & views,vecteur & errors,const gen & prog,gen & parsed,GIAC_CONTEXT){
     check_local_assign(parsed,vecteur(0),assignation_by_equal,undeclared_global_vars,declared_global_vars,declared_functions,true,contextptr);
@@ -3202,6 +3204,7 @@ namespace giac {
   static define_unary_function_eval(__testfunc,&_testfunc,_testfunc_s);
   define_unary_function_ptr5( at_testfunc ,alias_at_testfunc,&__testfunc,0,true);
 
+#endif // old code not used anymore
 
 #ifdef DOUBLEVAL
   const identificateur nsymbolic__IDNT("nsymbolic");
@@ -3767,6 +3770,7 @@ namespace giac {
     return __inputform.op(symbolic(at_choosebox,gen(res,_SEQ__VECT)),contextptr);
 #endif
 #endif
+    return undef;
   }
   static const char _CHOOSE_s []="CHOOSE";
   static define_unary_function_eval_quoted (__CHOOSE,&giac::_CHOOSE,_CHOOSE_s);

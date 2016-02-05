@@ -552,8 +552,10 @@ namespace giac {
       }
 #endif
     }
-    if (!is_positive(p,contextptr) || !is_greater(1,p,contextptr))
-      return gensizeerr(contextptr);
+    if (!is_positive(p,contextptr) || !is_greater(1,p,contextptr)){
+      if (calc_mode(contextptr)!=1)
+	return gensizeerr(contextptr);
+    }
     return comb(n,k,contextptr)*pow(p,k,contextptr)*pow(1-p,n-k,contextptr);
   }
   gen _binomial(const gen & g,GIAC_CONTEXT){
@@ -1033,11 +1035,13 @@ namespace giac {
       return _upper_incomplete_gamma(makesequence(x+1,lambda,1),contextptr);
     else
       return _upper_incomplete_gamma(makesequence(evalf(fx,1,contextptr),lambda,1),contextptr);
+#if 0
     gen res=0;
     for (int i=0;i<=fx.val;++i){
       res +=poisson(lambda,i,contextptr);
     }
     return res;
+#endif
     //identificateur k(" k");
     //return sum(poisson(n,k,contextptr),k,0,_floor(x,contextptr),contextptr);
   }
@@ -1284,7 +1288,7 @@ namespace giac {
     if (dof<=0)
       return gendimerr(contextptr);
     double x=x1._DOUBLE_val,x2=x*x,y2= x2/dof;
-    if (dof>=100){
+    if (0 && dof>=100){
       double y=std::log(y2)+1, a=dof-0.5, b=48*a*a;
       y=a*y;
       double res = (((((-.4*y - 3.3)*y -24)*y - 85.5)/(.8*y*y + 100 + b)+ y + 3)/b + 1)*std::sqrt(y);
@@ -1389,7 +1393,12 @@ namespace giac {
     // return x0;
     // FIXME: use an iterative method to improve the initial guess
     identificateur x(" x");
-    return newton(_student_cdf(makesequence(m,x),contextptr)-y,x,x0,NEWTON_DEFAULT_ITERATION,1e-5,1e-12,true,1,0,1,0,.5,contextptr);
+    gen res=newton(_student_cdf(makesequence(m,x),contextptr)-y,x,x0,NEWTON_DEFAULT_ITERATION,1e-5,1e-12,true,1,0,1,0,.5,contextptr);
+    if (!is_undef(res))
+      return res;
+    // for example student_icdf(100,0.95)
+    *logptr(contextptr) << "Low accuracy" << endl;
+    return x0;
   }
   gen _student_icdf(const gen & g,GIAC_CONTEXT){
     if ( g.type==_STRNG && g.subtype==-1) return  g;

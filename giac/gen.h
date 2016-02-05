@@ -1526,7 +1526,7 @@ namespace giac {
 
   void sprintfdouble(char *,const char *,double d);
 
-  const char * caseval(const char *);
+  extern "C" const char * caseval(const char *);
 
 #ifndef NO_NAMESPACE_GIAC
 } // namespace giac

@@ -468,8 +468,8 @@ namespace giac {
     }
     // no info about derivative
     return symbolic(at_derive,gen(makevecteur(s,i),_SEQ__VECT));
-    i.dbgprint();
-    s.dbgprint();
+    //i.dbgprint();
+    //s.dbgprint();
   }
 
   static gen derive_VECT(const vecteur & v,const identificateur & i,GIAC_CONTEXT){
@@ -759,7 +759,7 @@ namespace giac {
       vecteur v=*s._VECTptr;
       int vs=int(v.size());
       for (int i=0;i<vs;++i){
-	gen g=subst(d2,var,v[i],false,contextptr);
+	gen g=simplify(subst(d2,var,v[i],false,contextptr),contextptr);
 	gprintf(step_extrema3,gettext("Hessian at %gen : % gen"),makevecteur(v[i],g),contextptr);
 	// *logptr(contextptr) << "Hessian at " << v[i] << ": " << g << endl;
 	if (ckmatrix(g)){
@@ -806,7 +806,7 @@ namespace giac {
 	if (is_zero(g)){
 	  for (++d;d< NEWTON_DEFAULT_ITERATION;++d){
 	    curd=ratnormal(_derive(makesequence(curd,var),contextptr));
-	    g=subst(curd,var,v[i],false,contextptr);
+	    g=simplify(subst(curd,var,v[i],false,contextptr),contextptr);
 	    if (!is_zero(g))
 	      break;
 	  }

@@ -1099,7 +1099,7 @@ namespace giac {
     if ( env && (env->moduloon) && !env->complexe && (env->modulo.type==_INT_) && (env->modulo.val < smallint) && (product_deg < 65536) )
       Mulmodpolysmall(ita,ita_end,itb,itb_end,env,new_coord);
     else {
-      if ( (!env || !env->moduloon ) && as>FFTMUL_SIZE && bs>FFTMUL_SIZE){
+      if ( 0 && (!env || !env->moduloon ) && as>FFTMUL_SIZE && bs>FFTMUL_SIZE){
 	// Check that all coeff are integers
 	for (;ita!=ita_end;++ita){
 	  if (!ita->is_integer())
@@ -2184,6 +2184,7 @@ namespace giac {
   void gcdsmallmodpoly(const vector<int> &p,const vector<int> & q,int m,vector<int> & d){
     gcdsmallmodpoly(p,q,m,d,0,0);
     return;
+#if 0
     int as=int(p.size()),bs=int(q.size());
     if (!as){ d=q; return ; }
     if (!bs){ d=p; return ; }
@@ -2220,6 +2221,7 @@ namespace giac {
 #if defined VISUALC || defined BESTA_OS
     delete [] asave;
     delete [] bsave;
+#endif
 #endif
   }
 
@@ -3239,8 +3241,8 @@ namespace giac {
     modpoly a;
     gcdmodpoly(p,q,env,a);
     return a;
-    dbgp(a);
-    return a;
+    // dbgp(a);
+    // return a;
   }
 
   modpoly lcm(const modpoly & p,const modpoly &q,environment * env){
@@ -3578,9 +3580,9 @@ namespace giac {
     }
     gen res;
     if (simp)
-      return rdiv(gen(resz),gen(dz),context0);
+      res=rdiv(gen(resz),gen(dz),context0);
     else
-      return fraction(gen(resz),gen(dz));
+      res=fraction(gen(resz),gen(dz));
     mpz_clear(resz);
     mpz_clear(dz);
     mpz_clear(denz);

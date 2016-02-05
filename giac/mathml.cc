@@ -964,7 +964,7 @@ namespace giac {
       if (v[0].type==_SYMB)
 	return symbolic2svg(*v[0]._SYMBptr,xmin,xmax,ymin,ymax,contextptr);
     }
-    if (v.subtype==_GROUP__VECT)
+    if (v.subtype==_GROUP__VECT || v._VECTptr->size()>2)
       return svg_polyline(v, attr, name,xmin,xmax,ymin,ymax,contextptr);
     if (v.subtype==_LINE__VECT)
       return svg_line(v[0],v[1], attr, name,xmin,xmax,ymin,ymax,contextptr);
@@ -1112,6 +1112,11 @@ namespace giac {
       svg=svg+symbolic2svg(mys,gnuplot_xmin,gnuplot_xmax,gnuplot_ymin,gnuplot_ymax,contextptr);
       return "<mtext>"+mys.print(contextptr)+"</mtext>";
     }
+    gen tmp,value;
+    if (mys.sommet==at_rootof && (tmp=mys.feuille).type==_VECT && tmp._VECTptr->size()==2 && tmp._VECTptr->front().type==_VECT && has_rootof_value(tmp._VECTptr->back(),value,contextptr)){
+      value=horner_rootof(*tmp._VECTptr->front()._VECTptr,value,contextptr);
+      return gen2mathml(value,svg,contextptr);
+    }
     if ( (mys.feuille.type==_VECT) && (mys.feuille._VECTptr->empty()) )
       return string(provisoire_mbox_begin)+mys.sommet.ptr()->print(contextptr)+string("()")+string(provisoire_mbox_end);
     if ( (mys.feuille.type!=_VECT) || (mys.feuille._VECTptr->front().type==_VECT)){
@@ -1249,6 +1254,7 @@ namespace giac {
     return gen2mathml(e, svg,contextptr);
   }
 
+#ifdef EMCC
   static string mathml_split(const string & s,int slicesize){
     if (s.size()<=slicesize)
       return s;
@@ -1262,6 +1268,11 @@ namespace giac {
     }
     return res;
   }
+#else
+  static string mathml_split(const string & s,int slicesize){
+    return s;
+  }
+#endif
 
   string gen2mathml(const gen &e, string &svg,GIAC_CONTEXT){
     string part_re="", part_im="<mi>i</mi>";
@@ -1313,8 +1324,12 @@ namespace giac {
 	if (e==undef)
 	  return "<mi>undef</mi>";
 	return  "<mi>"+e.print(contextptr)+"</mi>";
-      case _SYMB:                        
-	return symbolic2mathml(*e._SYMBptr, svg,contextptr);
+      case _SYMB: {
+	gen tmp=aplatir_fois_plus(e);
+	if (tmp.type!=_SYMB)
+	  return gen2mathml(e,svg,contextptr);
+	return symbolic2mathml(*tmp._SYMBptr, svg,contextptr);
+      }
       case _VECT:                        
 	if (e.subtype==_SPREAD__VECT)
 	  return spread2mathml(*e._VECTptr,1,contextptr); //----------------v??rifier le 2??me param??tre

@@ -348,6 +348,8 @@ namespace giac {
     }
     if (is_zero(b))
       return undef;
+    if (is_inf(a))
+      return pow(a,inv(b,contextptr),contextptr);
     c=_floor(b,contextptr);
     if (c.type==_FLOAT_)
       c=get_int(c._FLOAT_val);
@@ -2815,7 +2817,7 @@ namespace giac {
     gen x=v[1];
     if (x.is_symb_of_sommet(at_unquote))
       x=eval(x,1,contextptr);
-    if (rcl_38 && x.type==_IDNT && rcl_38(x,0,x._IDNTptr->id_name,undef,false,contextptr)){
+    if (storcl_38 && x.type==_IDNT && storcl_38(x,0,x._IDNTptr->id_name,undef,false,contextptr,NULL,false)){
       identificateur t("t_");
       x=v[1];
       v[0]=quotesubst(v[0],x,t,contextptr);
@@ -2913,7 +2915,7 @@ namespace giac {
 	    v[3].type==_FLOAT_ || v[3].type==_DOUBLE_ || v[3].type==_REAL)){
 	vecteur ld=makevecteur(unsigned_inf,cst_pi);
 	// should first remove mute variables inside embedded sum/int/fsolve
-	lidnt(makevecteur(true_lidnt(v[0]),evalf_double(v[2],1,contextptr),evalf_double(v[3],1,contextptr)),ld);
+	lidnt(makevecteur(true_lidnt(v[0]),evalf_double(v[2],1,contextptr),evalf_double(v[3],1,contextptr)),ld,false);
 	ld.erase(ld.begin());
 	ld.erase(ld.begin());
 	if (ld==vecteur(1,v[1]) || ld.empty())
@@ -4110,7 +4112,7 @@ namespace giac {
   // write e(x+1)/e(x) as P(n+1)/P(n)*Q(x)/R(x+1) 
   bool is_hypergeometric(const gen & e,const identificateur &x,vecteur &v,polynome & P,polynome & Q,polynome & R,GIAC_CONTEXT){
     v=lvarx(e,x);
-    if (!loptab(v,sincostan_tab).empty() || !loptab(v,asinacosatan_tab).empty())
+    if (!loptab(v,sincostan_tab).empty() || !loptab(v,asinacosatan_tab).empty() || !lop(v,at_Psi).empty())
       return false;
     // if v contains a non linear exp abort
     int vs=int(v.size());
@@ -4550,13 +4552,20 @@ namespace giac {
       gen af=evalf_double(v[2],1,contextptr),bf=evalf_double(v[3],1,contextptr);
       if (v[1].type==_IDNT && (is_inf(af) || af.type==_DOUBLE_) && (is_inf(bf) || bf.type==_DOUBLE_)){
 	vecteur w;
-	gen v0=eval(v[0],1,contextptr);
 #ifdef NO_STDEXCEPT
-	  w=protect_find_singularities(v0,*v[1]._IDNTptr,0,contextptr);
+	gen v0=eval(v[0],1,contextptr);
+	if (is_undef(v0)) 
+	  v0=v[0];
+	w=protect_find_singularities(v0,*v[1]._IDNTptr,0,contextptr);
 #else
+	gen v0=v[0];
 	try {
+#ifndef EMCC
+	  v0=eval(v[0],1,contextptr);
+#endif
 	  w=protect_find_singularities(v0,*v[1]._IDNTptr,0,contextptr);
 	} catch (std::runtime_error & e){
+	  v0=v[0];
 	}
 #endif
 	for (unsigned i=0;i<w.size();++i){
@@ -4959,7 +4968,11 @@ namespace giac {
     }
     if (tstep>abs(t1_e-t0_e,contextptr)._DOUBLE_val)
       tstep=abs(t1_e-t0_e,contextptr)._DOUBLE_val;
+#if 1
+    double * y =(double *)alloca(dim*sizeof(double));
+#else
     double * y=new double[dim];
+#endif
     for (int i=0;i<dim;i++){
       if (y0v[i].type!=_DOUBLE_ && y0v[i].type!=_CPLX)
 	return gensizeerr(contextptr);
