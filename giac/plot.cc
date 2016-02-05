@@ -1226,7 +1226,8 @@ namespace giac {
 	    CERR << y << " not real at " << i << " " << yy << endl;
           if (!chemin.empty()) {
 #ifdef SWIFT_CALCS_OPTIONS // Swift Calcs options to output 2d array of x y pairs, instead of points etc as we do our own plotting
-	    res.push_back(makevecteur(i,plus_inf));
+	    chemin.push_back(makevecteur(i,plus_inf));
+            res = mergevecteur(res, chemin);
 #else
             res.push_back(pnt_attrib(symb_curve(gen(makevecteur(vars+cst_i*f,vars,xmin,i,showeq),_PNT__VECT),gen(chemin,_GROUP__VECT)),attributs.empty()?color:attributs,contextptr));
 #endif
