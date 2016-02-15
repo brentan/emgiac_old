@@ -8986,6 +8986,7 @@ namespace giac {
   }
 
   vecteur combine_units_routine(const gen & g, const gen pow, GIAC_CONTEXT) {
+    vecteur v_out;
     vecteur v;
     if (g.type==_IDNT) {
       vecteur v = mksa_convert(*g._IDNTptr, contextptr);
@@ -8996,10 +8997,13 @@ namespace giac {
         v.push_back(zero);
       v.push_back(pow);
       v[0] = *g._IDNTptr;
-      return v;
+      v_out.push_back(v);
+      return v_out;
     }
-    if (g.type!=_SYMB)
-      return v;
+    if (g.type!=_SYMB) {
+      v_out.push_back(v);
+      return v_out;
+    }
     if (g._SYMBptr->sommet==at_inv) 
       return combine_units_routine(g._SYMBptr->feuille, minus_one * pow, contextptr);
     if (g._SYMBptr->sommet==at_pow) {
@@ -9015,14 +9019,18 @@ namespace giac {
       vecteur & vv=*f._VECTptr;
       const_iterateur it=vv.begin(),itend=vv.end();
       for (;it!=itend;++it){
-        v.push_back(combine_units_routine(*it, pow, contextptr));
+        vecteur v_prod = combine_units_routine(*it, pow, contextptr);
+        const_iterateur it2=v_prod.begin(),it2end=v_prod.end();
+        for (;it2!=it2end;++it2)
+          v_out.push_back(*it2);
       }
-      return v;
+      return v_out;
     }
-    return v;
+    v_out.push_back(v);
+    return v_out;
   }
   // will take an input and combine like units, so that _m^2/_in becomes _m, etc.  In case of same type of unit but different base, first instance is used
-  gen combine_units(const gen & g, GIAC_CONTEXT) {
+  gen combine_units(const gen & g, GIAC_CONTEXT) {          
     if (g.type!=_SYMB)
       return g;
     if (g.is_symb_of_sommet(at_unit)){
