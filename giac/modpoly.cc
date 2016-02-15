@@ -4216,7 +4216,7 @@ namespace giac {
     }
     else
       k=2;
-    if (k*k>n){ 
+    if ((n>2) && (k*k>n)) { 
       // prime size, slow discrete Fourier transform
       res.clear();
       res.reserve(n);
