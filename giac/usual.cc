@@ -22,7 +22,6 @@ using namespace std;
 #include <cmath>
 #include <cstdlib>
 #include "gen.h"
-#include "identificateur.h"
 #include "symbolic.h"
 #include "poly.h"
 #include "usual.h"
