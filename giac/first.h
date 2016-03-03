@@ -23,10 +23,11 @@
 
 // Thanks to Jason Papadopoulos, author of msieve
 #ifdef BESTA_OS
+#include <time.h>
 #define PREFETCH(addr) /* nothing */
 #elif (defined(__GNUC__) && __GNUC__ >= 3) || defined(__clang__)
 	#define PREFETCH(addr) __builtin_prefetch(addr) 
-#elif defined(_MSC_VER) && _MSC_VER >= 1400
+#elif defined(_MSC_VER) && _MSC_VER >= 1400 && !defined(MS_SMART)
 	#define PREFETCH(addr) PreFetchCacheLine(PF_TEMPORAL_LEVEL_1, addr)
 #else
 	#define PREFETCH(addr) /* nothing */
@@ -45,6 +46,8 @@
 #define NO_STDEXCEPT 1
 #endif
 
+
+
 #ifdef NSPIRE
 #define clock() 0
 #undef HAVE_LIBDL
@@ -62,9 +65,16 @@ extern "C" double emcctime();
 extern "C" int glinit(int,int,int,int,int);
 extern "C" void glcontext(int);
 #define CLOCK emcctime
+#define CLOCK_T clock_t
 #else
 #define CERR std::cerr
+#if defined(MS_SMART) || defined(NO_CLOCK)
+#define CLOCK() 0
+#define CLOCK_T int
+#else
 #define CLOCK clock
+#define CLOCK_T clock_t
+#endif // MS_SMART
 #endif
 #endif
 
@@ -105,6 +115,13 @@ int my_sprintf(char * s, const char * format, ...);
 
 #if defined(RTOS_THREADX) || defined(BESTA_OS) || defined NSPIRE
 #define NO_TEMPLATE_MULTGCD
+#endif
+
+#ifdef BESTA_OS
+#undef CLOCK
+#undef CLOCK_T
+#define CLOCK() PrimeGetNow()
+#define CLOCK_T int
 #endif
 
 #ifdef NO_UNARY_FUNCTION_COMPOSE

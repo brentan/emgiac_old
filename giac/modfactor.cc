@@ -610,12 +610,12 @@ namespace giac {
 	      addmodpoly(*itv,vadd,env,*itv); // (*itv)=(*itv)+moduloi*vadd;
 	      testfortruefs = false;
 	    }
-	    int debut_time=clock();
+	    int debut_time=CLOCK();
 	    if (debuglevel)
 	      COUT << debut_time << "Searching true factor" << endl;
 	    // test if *itv divides q in Z
 	    if ( testfortruefs && !hasbeentested[i] && DenseDivRem(newq,truefact,tmp1,tmp2,true) && (tmp2.empty()) ){
-	      int fin_time=clock();
+	      int fin_time=CLOCK();
 	      if (debuglevel)
 		COUT << fin_time << "Found true factor " << *itv << endl << "New bound:"<< bound << endl;
 	      // yes! _VECTute new q and bound
@@ -638,7 +638,7 @@ namespace giac {
 	      }
 	    }
 	    else {
-	      int fin_time=clock();
+	      int fin_time=CLOCK();
 	      if (debuglevel)
 		COUT << fin_time << "No luck!" << endl;
 	      if (testfortruefs)
@@ -794,7 +794,7 @@ namespace giac {
       return; // nothing to do
     int n=int(v_in.size());
     if (debuglevel)
-      COUT << clock() << "Starting combining with " << n << " factors" << endl;
+      COUT << CLOCK() << "Starting combining with " << n << " factors" << endl;
     gen lcoeff(smod(q.front(),env->modulo));
     bool notunit=(!is_one(lcoeff));
     if (n==1){
@@ -817,11 +817,12 @@ namespace giac {
     for (int j=0;j<n;j++)
       d1tab[j]=(iquo(v_in[j][1]*twoto32,env->modulo)).to_int();
     gen dminus1bound((norm(q,0)+1)*gen((int)q.size()-1)*lcoeff);
-    int d1=(iquo(dminus1bound*twoto32,env->modulo)).to_int()+1; // maxvalue of d-1 coeff for a product
+    gen dminus1bound_=iquo(dminus1bound*twoto32,env->modulo);
+    int d1=dminus1bound_.to_int()+1; // maxvalue of d-1 coeff for a product
     // COUT << dminus1bound << endl;
     for (;k<n;k++){
       if (debuglevel)
-	COUT << clock() << "Testing combination of " << k << " factors" << endl;
+	COUT << CLOCK() << "Testing combination of " << k << " factors" << endl;
       // initialize all iterators, picstcoeff[] and totaldeg[]
       it[1]=v_in.begin();
       // product of cst coeff
@@ -867,11 +868,14 @@ namespace giac {
 	// first test that the degree is admissible, 
 	// then do the d-1 test: coeff multiplied by lcoeff mod modulo < bound
 	// and that the product of cst_coeff divides the polynomial
-	if ( possible_degrees[lastdeg+(*position)] &&
-	     // ( abs(smod((lastdminus1+(*current)[1])*lcoeff,env->modulo)) < dminus1bound ) &&
-	     ( absint(lastd1+(*d1tabposition))< d1 ) ){
+	if ( possible_degrees[lastdeg+(*position)] 
+	     && is_greater(dminus1bound,abs(smod((lastdminus1+(*current)[1])*lcoeff,env->modulo)),0)
+	     //&& ( absint(lastd1+(*d1tabposition))< d1 ) 
+	     ){
+	  gen check=smod(lastpi*cstcoeff(*current)*lcoeff,env->modulo);
+	  check=check/gcd(check,lcoeff);
 	  if (
-	      is_zero(cstcoeff(q)%smod(lastpi*cstcoeff(*current),env->modulo))
+	      is_zero(cstcoeff(q)%check)
 	      ){
 	    it[k]=current;
 	    // modpoly pi(*it[1]);
@@ -943,7 +947,7 @@ namespace giac {
 	      break;
 	  }
 	  if (debuglevel && (j<k/2))
-	    COUT << clock() << " " << _VECTteur << " tries." << endl;
+	    COUT << CLOCK() << " " << _VECTteur << " tries." << endl;
 	  // if j!=0, recalculate successors, picstcoeff and totaldeg
 	  if (j){
 	    lastpi=picstcoeff[j-1];
@@ -962,8 +966,9 @@ namespace giac {
 	    position=&degrees[current-itbegin];
 	    lastd1=(iquo(lastdminus1*twoto32,env->modulo)).to_int();
 	    d1tabposition=&d1tab[current-itbegin];
-	    if (2*(lastdeg+current->size()-1)>q.size()-1)
-	      break;
+	    if (2*(lastdeg+current->size()-1)>q.size()-1){
+	      current=itend-1; continue;
+	    }
 	  }
 	  else
 	    break;
@@ -1304,7 +1309,7 @@ namespace giac {
     }
     env->moduloon=false;
     if (debuglevel)
-      COUT << clock() << "End combine" << endl;
+      COUT << CLOCK() << "End combine" << endl;
     return true;
   }
 

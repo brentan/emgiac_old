@@ -125,7 +125,7 @@ namespace giac {
 #ifdef TIMEOUT
 #ifndef EMCC
   double time(int ){
-    return double(clock())/1000000; // CLOCKS_PER_SEC;
+    return double(CLOCK())/1000000; // CLOCKS_PER_SEC;
   }
 #endif
   time_t caseval_begin,caseval_current;
@@ -1580,7 +1580,9 @@ extern "C" void Sleep(unsigned int miliSecond);
   int MAX_PRINTABLE_ZINT=10000;
   int MAX_RECURSION_LEVEL=9;
   int GBASIS_DETERMINISTIC=20;
-
+  int GBASISF4_MAX_TOTALDEG=1024;
+  int GBASISF4_MAXITER=256;
+  // int GBASISF4_BUCHBERGER=5;
   const int BUFFER_SIZE=512;
 #else
   int CALL_LAPACK=1111;
@@ -1613,6 +1615,9 @@ extern "C" void Sleep(unsigned int miliSecond);
   int MAX_PRINTABLE_ZINT=1000000;
   int MAX_RECURSION_LEVEL=100;
   int GBASIS_DETERMINISTIC=50;
+  int GBASISF4_MAX_TOTALDEG=16384;
+  int GBASISF4_MAXITER=1024;
+  // int GBASISF4_BUCHBERGER=5;
   const int BUFFER_SIZE=16384;
 #endif
   volatile bool ctrl_c=false,interrupted=false;
@@ -1816,9 +1821,9 @@ extern "C" void Sleep(unsigned int miliSecond);
 	sigprocmask (SIG_UNBLOCK, &mask, NULL);
 #endif
 	// read and evaluate input
-	clock_t start, end;
+	CLOCK_T start, end;
 	double elapsed;
-	start = clock();
+	start = CLOCK();
         messages_to_print="";
 	ifstream child_in(cas_entree_name().c_str());
 	// Unarchive step
@@ -1929,7 +1934,7 @@ extern "C" void Sleep(unsigned int miliSecond);
 	  }
 	} // END of old try/catch block
 	block_signal=false;
-	end = clock();
+	end = CLOCK();
 	elapsed = ((double) (end - start)) / CLOCKS_PER_SEC;
 	ofstream child_out(cas_sortie_name().c_str());
 	archive(child_out,args,context0) ;
@@ -1973,8 +1978,8 @@ extern "C" void Sleep(unsigned int miliSecond);
     if (child_busy || data_ready)
       return false;
     gen entr;
-    clock_t start, end;
-    start = clock();
+    CLOCK_T start, end;
+    start = CLOCK();
     try {
       ofstream parent_out(cas_entree_name().c_str());
       if (!signal_plot_parent){
@@ -2025,7 +2030,7 @@ extern "C" void Sleep(unsigned int miliSecond);
     kill(child_id,SIGUSR1);
 #endif
     running_file=is_run_file;
-    end = clock();
+    end = CLOCK();
     // cerr << "# Save time" << double(end-start)/CLOCKS_PER_SEC << endl;
     return true;
 #endif /// HAVE_NO_SIGNAL_H
@@ -2336,11 +2341,11 @@ extern "C" void Sleep(unsigned int miliSecond);
       ifstream parent_in(cas_sortie_name().c_str());
       if (!parent_in)
 	setsizeerr();
-      clock_t start, end;  
-      start = clock();
+      CLOCK_T start, end;  
+      start = CLOCK();
       entree=unarchive(parent_in,contextptr);
       sortie=unarchive(parent_in,contextptr);
-      end = clock();
+      end = CLOCK();
       parent_in.getline(buf,BUFFER_SIZE,'¿');
       if (buf[0]=='\n')
 	message += (buf+1);
@@ -3388,7 +3393,7 @@ extern "C" void Sleep(unsigned int miliSecond);
     struct tms tmp1,tmp2;
     times(&tmp1);
 #else
-    int beg=clock();
+    int beg=CLOCK();
 #endif
     gen g = (*v)[0];
     g = giac::protecteval(g,(*v)[1].val,contextptr);
@@ -3399,7 +3404,7 @@ extern "C" void Sleep(unsigned int miliSecond);
       total_time(contextptr) += dt;
       (*v)[4]=dt;
 #else
-      int end=clock();
+      int end=CLOCK();
       (*v)[4]=end-beg;
 #endif
       (*v)[5]=g;
@@ -3500,7 +3505,8 @@ extern "C" void Sleep(unsigned int miliSecond);
   int check_threads(int i){
     int s,ans=-1;
     context * cptr;
-    if (i>=s || i<0)
+    if (// i>=s || 
+	i<0)
       return -2;
     for (;;++i){
       pthread_mutex_lock(&context_list_mutex);
@@ -4751,6 +4757,7 @@ unsigned int ConvertUTF8toUTF16 (
     "ifactor",
     "lncollect",
     "lnexpand",
+    "mathml",
     "mult_c_conjugate",
     "mult_conjugate",
     "nodisp",

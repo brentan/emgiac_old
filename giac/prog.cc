@@ -75,9 +75,7 @@ using namespace std;
 u32 PrimeGetNow();
 extern "C" uint32_t mainThreadStack[];
 #else
-#undef clock
-#undef clock_t
-#include <time.h>
+//#include <time.h>
 #endif
 
 #ifndef NO_NAMESPACE_GIAC
@@ -3375,6 +3373,8 @@ namespace giac {
   // static gen symb_makelist(const gen & args){  return symbolic(at_makelist,args);  }
   gen _makelist(const gen & args,GIAC_CONTEXT){
     if ( args.type==_STRNG &&  args.subtype==-1) return  args;
+    if (args.type==_INT_ && args.val>=0 && args.val<LIST_SIZE_LIMIT)
+      return vecteur(args.val);
     if (args.type!=_VECT)
       return gensizeerr();
     vecteur v(*args._VECTptr);
@@ -3667,6 +3667,8 @@ namespace giac {
       a=eval(a,1,contextptr);
       gen a1=a._SYMBptr->feuille._VECTptr->front(),a2=a._SYMBptr->feuille._VECTptr->back();
       gen nstep=(a2-a1)/b1;
+      if (nstep.type==_DOUBLE_)
+	nstep=(1+1e-12)*nstep;
       if (ck_is_positive(nstep,contextptr))
 	nstep=_floor(nstep,contextptr);
       else {
@@ -5943,7 +5945,7 @@ namespace giac {
   }
 
   // TI89/92 function/program translate
-#if defined(WIN32) || defined(BESTA_OS)
+#if defined(WIN32) || defined(BESTA_OS) || defined(MS_SMART)
 #define BUFFER_SIZE 16384
 #endif
 

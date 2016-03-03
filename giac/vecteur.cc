@@ -361,7 +361,7 @@ namespace giac {
     v[2]=c;
     v[3]=d;
     v[4]=e;
-    return v;
+    return gen(v,_SEQ__VECT);
   }
 
   gen makesequence(const gen & a,const gen & b,const gen & c,const gen & d,const gen & e,const gen & f){
@@ -1787,6 +1787,11 @@ namespace giac {
   }
 
   static bool in_proot(const vecteur & w,double & eps,int & rprec,vecteur & res,bool isolaterealroot,GIAC_CONTEXT){
+#ifdef EMCC
+    if (eps<1e-300)
+      eps=1e-11;
+    return proot_real1(w,eps,rprec,res,contextptr);
+#endif
     // new code using francis_schur
     // if (has_num_coeff(w))
       isolaterealroot=false; // eliminating real roots is not stable enough
@@ -2865,11 +2870,18 @@ namespace giac {
       return;
     }
     if (is_zero(a,context0)){
-      const_iterateur it=b.begin(),itend=b.end();
-      res.clear();
-      res.reserve(itend-it);
-      for (;it!=itend;++it)
-	res.push_back((*it)*zero);
+      if (&b==&res){
+	iterateur it=res.begin(),itend=res.end();
+	for (;it!=itend;++it)
+	  *it=(*it)*zero;
+      }
+      else {
+	const_iterateur it=b.begin(),itend=b.end();
+	res.clear();
+	res.reserve(itend-it);
+	for (;it!=itend;++it)
+	  res.push_back((*it)*zero);
+      }
     }
     else {
       mulmodpoly(b,a,0,res);
@@ -3366,7 +3378,8 @@ namespace giac {
   const int mmult_double_blocksize=45; // 2*45^2*sizeof(double)= a little less than 32K
   const int mmult_int_blocksize=60; // 2*60^2*sizeof(int)= a little less than 32K
 
-  // multiply bloc a[a0..a1,i0..i1] with bloc b[b0..b1,i0..i1] into c[a0..a1,b0..b1]
+  // multiply a[a0..a1,i0+delta..i1+delta] with bloc btran[b0..b1,i0..i1] 
+  // and adds or subtracts to c[a0+c0..a1+c0,b0+c1..b1+c1]  
   void mmult_double_block(const matrix_double & A,int a0,int a1,const matrix_double & Btran,int b0,int b1,matrix_double & C,int c0,int c1,int i0,int i1,int delta=0,bool add=true){
     for (int a=a0;a<a1;++a){
       const vector<giac_double> & Aa=A[a];
@@ -3651,6 +3664,7 @@ namespace giac {
     return ptr;
   }
 
+  // C +-= A[Ar0..Ar1-1,Ac0..Ac1-1]*B[Br0..Br1,Bc0], where B is given by Btran 
   void in_mmult_double(const matrix_double & A,const matrix_double & Btran,matrix_double & C,int c0,int c1,int Ar0,int Ar1,int Ac0,int Ac1,bool add,int Br0=0,int Br1=0,int Bc0=0){	
     int resrows=Ar1>Ar0?Ar1-Ar0:A.size(),rescols=Btran.size();
     if (Br1>Br0)
@@ -3661,7 +3675,7 @@ namespace giac {
 #ifdef HAVE_LIBPTHREAD
     int nthreads=threads_allowed?threads:1;
     if (nthreads>1){
-      pthread_t tab[nthreads-1];
+      pthread_t tab[nthreads];
       thread_mmult_double_t multdparam[nthreads];
       for (int j=0;j<nthreads;++j){
 	thread_mmult_double_t tmp={&A,&Btran,&C,0,0,n,rescols,Ar0,Br0,Ac0,Bc0,c0,c1,add};
@@ -4274,6 +4288,100 @@ namespace giac {
     return true;
   }
 
+  void transpose_double(const matrix_double & a,int r0,int r1,int c0,int c1,matrix_double & at){
+    int L=a.size(),C=a.front().size();
+    if (r0<0) r0=0;
+    if (r1<=r0)
+      r1=L;
+    if (c1<0) c1=0;
+    if (c1<=c0)
+      c1=C;
+    if (r1>L) r1=L;
+    if (c1>C) c1=C;
+    L=r1-r0; C=c1-c0;
+    at.resize(C);
+    for (int i=0;i<C;++i)
+      at[i].resize(L);
+    for (int i=0;i<L;++i){
+      const vector<giac_double> & ai=a[r0+i];
+      for (int j=0;j<C;++j){
+	at[j][i]=ai[c0+j];
+      }
+    }
+  }
+
+  // square matrix inplace transpose
+  void transpose_double(matrix_double &P){
+    int Ps=int(P.size());
+    for (int i=0;i<Ps;++i){
+      for (int j=0;j<i;++j){
+	giac_double t=P[i][j];
+	P[i][j]=P[j][i];
+	P[j][i]=t;
+      }
+    }
+  }
+
+  // ad*b->c where b is given by it's tranposed btrand
+  void mmult_double(const matrix_double & ad,const matrix_double & btrand,matrix_double & c){
+    int n=ad.front().size();
+    int resrows=ad.size();
+    int rescols=btrand.size();
+    if (c.empty())
+      c=matrix_double(resrows,vector<giac_double>(rescols));
+    else {
+      c.resize(resrows);
+      for (int i=0;i<resrows;++i)
+	c[i].resize(rescols);
+    }
+#ifdef HAVE_LIBPTHREAD
+    int nthreads=threads_allowed?threads:1;
+    if (nthreads>1){
+      pthread_t tab[nthreads-1];
+      thread_mmult_double_t multdparam[nthreads];
+      for (int j=0;j<nthreads;++j){
+	thread_mmult_double_t tmp={&ad,&btrand,&c,0,0,n,rescols,0,0,0,0,0,0,true};
+	multdparam[j]=tmp;
+      }
+      int kstep=int(std::ceil(resrows/double(nthreads))),k=0;
+      for (int j=0;j<nthreads;++j){
+	multdparam[j].k=k;
+	k += kstep;
+	if (k>resrows)
+	  k=resrows;
+	multdparam[j].kend=k;
+	bool res=true;
+	if (j<nthreads-1)
+	  res=pthread_create(&tab[j],(pthread_attr_t *) NULL,do_thread_mmult_double,(void *) &multdparam[j]);
+	if (res)
+	  do_thread_mmult_double((void *)&multdparam[j]);
+      }
+      for (int j=0;j<nthreads;++j){
+	void * ptr=(void *)&nthreads; // non-zero initialisation
+	if (j<nthreads-1)
+	  pthread_join(tab[j],&ptr);
+      }
+      return ;
+    } // end nthreads
+#endif // PTHREAD
+    for (int i=0;i<n;i+=mmult_double_blocksize){
+      int iend=i+mmult_double_blocksize;
+      if (iend>n)
+	iend=n;
+      for (int k=0;k<resrows;k+=mmult_double_blocksize){
+	int kend=k+mmult_double_blocksize;
+	if (kend>resrows)
+	  kend=resrows;
+	for (int j=0;j<rescols;j+=mmult_double_blocksize){
+	  int jend=j+mmult_double_blocksize;
+	  if (jend>rescols)
+	    jend=rescols;
+	  mmult_double_block(ad,k,kend,btrand,j,jend,c,0,0,i,iend);
+	}
+      }
+    }
+  }
+
 #endif // GIAC_HAS_STO_38
 
   bool mmult_double(const matrice & a,const matrice & btran,matrice & res){
@@ -4371,64 +4479,16 @@ namespace giac {
 	  lapack2matrice(C,resrows,rescols,res);
 	  delete [] A; delete [] B; delete [] C;
 	  return true;
-#endif
+#endif // LAPACK
 	} // if n>LAPACK_CALL ...
 	matrix_double c(resrows,vector<giac_double>(rescols));
-#ifdef HAVE_LIBPTHREAD
-	int nthreads=threads_allowed?threads:1;
-	if (nthreads>1){
-	  pthread_t tab[nthreads-1];
-	  thread_mmult_double_t multdparam[nthreads];
-	  for (int j=0;j<nthreads;++j){
-	    thread_mmult_double_t tmp={&ad,&btrand,&c,0,0,n,rescols,0,0,0,0,0,0,true};
-	    multdparam[j]=tmp;
-	  }
-	  int kstep=int(std::ceil(resrows/double(nthreads))),k=0;
-	  for (int j=0;j<nthreads;++j){
-	    multdparam[j].k=k;
-	    k += kstep;
-	    if (k>resrows)
-	      k=resrows;
-	    multdparam[j].kend=k;
-	    bool res=true;
-	    if (j<nthreads-1)
-	      res=pthread_create(&tab[j],(pthread_attr_t *) NULL,do_thread_mmult_double,(void *) &multdparam[j]);
-	    if (res)
-	      do_thread_mmult_double((void *)&multdparam[j]);
-	  }
-	  for (int j=0;j<nthreads;++j){
-	    void * ptr=(void *)&nthreads; // non-zero initialisation
-	    if (j<nthreads-1)
-	      pthread_join(tab[j],&ptr);
-	  }
-	  std_matrix<gen> cg;
-	  std_matrix_giac_double2std_matrix_gen(c,cg);
-	  std_matrix_gen2matrice_destroy(cg,res);
-	  return true;
-	} // end nthreads
-#endif // PTHREAD
-	for (int i=0;i<n;i+=mmult_double_blocksize){
-	  int iend=i+mmult_double_blocksize;
-	  if (iend>n)
-	    iend=n;
-	  for (int k=0;k<resrows;k+=mmult_double_blocksize){
-	    int kend=k+mmult_double_blocksize;
-	    if (kend>resrows)
-	      kend=resrows;
-	    for (int j=0;j<rescols;j+=mmult_double_blocksize){
-	      int jend=j+mmult_double_blocksize;
-	      if (jend>rescols)
-		jend=rescols;
-	      mmult_double_block(ad,k,kend,btrand,j,jend,c,0,0,i,iend);
-	    }
-	  }
-	}
+	mmult_double(ad,btrand,c);
 	std_matrix<gen> cg;
 	std_matrix_giac_double2std_matrix_gen(c,cg);
 	std_matrix_gen2matrice_destroy(cg,res);
 	return true;
       }
-#endif
+#endif // GIAC_HAS_STO38
       matrix_double::const_iterator ita=ad.begin(),itaend=ad.end();
       matrix_double::const_iterator itbbeg=btrand.begin(),itb,itbend=btrand.end();
       res.clear();
@@ -6417,10 +6477,17 @@ namespace giac {
       // convert a to internal form
       lv=alg_lvar(res);
       if (!lv.empty() && lv.front().type==_VECT && lv.front()._VECTptr->size()>1){
-	vecteur lw=*tsimplify(lv.front(),contextptr)._VECTptr;
+	vecteur lw=*halftan(lv.front(),contextptr)._VECTptr;
 	if (lvar(lw).size()<lv.front()._VECTptr->size()){
 	  res=*subst(gen(res),lv.front(),lw,false,contextptr)._VECTptr;
 	  lv=alg_lvar(res);
+	}
+	if (!lv.empty() && lv.front().type==_VECT && lv.front()._VECTptr->size()>1){
+	  lw=*tsimplify(lv.front(),contextptr)._VECTptr;
+	  if (lvar(lw).size()<lv.front()._VECTptr->size()){
+	    res=*subst(gen(res),lv.front(),lw,false,contextptr)._VECTptr;
+	    lv=alg_lvar(res);
+	  }
 	}
       }
       res = *(e2r(res,lv,contextptr)._VECTptr);
@@ -7442,9 +7509,9 @@ namespace giac {
     bool inverting=fullreduction==2;
     int linit=l;//,previous_l=l;
     // Reduction
-    int pivot,temp;
+    int pivot,temp=0;
     // vecteur vtemp;
-    int pivotline,pivotcol;
+    int pivotline,pivotcol=0;
     if (reset){
       idet=1;
       pivots.clear();
@@ -9503,6 +9570,16 @@ namespace giac {
       return;
     }
     if (f.is_symb_of_sommet(at_interval) && f._SYMBptr->feuille.type==_VECT){
+      gen x=evalf(f._SYMBptr->feuille._VECTptr->front(),1,contextptr),y=evalf(f._SYMBptr->feuille._VECTptr->back(),1,contextptr);
+      if (x.type==_DOUBLE_ && y.type==_DOUBLE_){
+	double xd=x._DOUBLE_val,yd=y._DOUBLE_val;
+	double scale=(yd-xd)/(rand_max2+1.0);
+	for (int i=0;i<n;++i){
+	  double xr= giac_rand(contextptr)*scale+xd;
+	  res.push_back(xr);
+	}
+	return;
+      }
       for (int i=0;i<n;++i)
 	res.push_back(rand_interval(*f._SYMBptr->feuille._VECTptr,false,contextptr));
       return;
@@ -10438,7 +10515,7 @@ namespace giac {
       ++Aptr;++Cptr;
     }
     Cend+=4;
-    for (;Cptr!=Cend;){
+    for (;Cptr<Cend;){
       giac_double tmp=c*(*Aptr)-a*(*Cptr);
       *Cptr=a*(*Aptr)+c*(*Cptr);
       *Aptr=tmp;
@@ -10560,13 +10637,127 @@ namespace giac {
     return true;
   }
 
-  // QR reduction, P is orthogonal and should be initialized to identity
-  // trn(P)*H=original, Givens method
-  void qr_givens(matrix_double & H,matrix_double & P,int cstart=0,int cend=0){
-    int n=int(H.size()),c=int(H.front().size()),cP=int(P.front().size());
+  void double_idn(matrix_double & P){
+    int cP=P.size();
+    for (int i=0;i<cP;++i){
+      vector<giac_double> & Pi=P[i];
+      if (Pi.size()!=cP) Pi.resize(cP);
+      vector<giac_double>::iterator it=Pi.begin(),itend=Pi.end();
+      for (;it!=itend;++it)
+	*it=0;
+      Pi[i]=1;
+    }
+  }
+
+  void qr_givens_p(matrix_double & P,int Pstart,int Pend,int cstart,int n,int lastcol,const vector<giac_double> & coeffs){
+    int pos=int(coeffs.size());
+    // m-cstart must be < Pend, otherwise nothing to do
+    for (int m=lastcol-1;m>=cstart;--m){
+      for (;m>=Pend+cstart;--m){
+	pos -= 2*(n-1-(m-cstart));
+      }
+      for (int i=n-1;i>m-cstart;--i){
+	// line operation
+	--pos;
+	double un=-coeffs[pos];
+	--pos;
+	double tn=coeffs[pos];
+	if (un==0)
+	  continue;
+	if (i>m-cstart+1){
+	  double U=-coeffs[pos-1];
+	  double T=coeffs[pos-2];
+	  if (U!=0){
+	    tri_linear_combination(un,P[i],tn,P[m-cstart],U,P[i-1],T,giacmax(m-cstart,Pstart),Pend);
+	    --i;
+	    pos-=2;
+	    continue;
+	  }
+	}
+	bi_linear_combination_CA(un,P[i],tn,P[m-cstart],giacmax(m-cstart,Pstart),Pend); // givens_linear_combination(un,P[i],tn,P[m],m); 
+      }
+    } // end for m
+  }
+
+  struct thread_givens_p_t {
+    matrix_double *Pptr;
+    int Pstart,Pend,cstart,n,lastcol;
+    const vector<giac_double> * coeffsptr;
+  };
+
+  void * do_thread_qr_givens_p(void * ptr_){
+    thread_givens_p_t * ptr=(thread_givens_p_t *)ptr_;
+    qr_givens_p(*ptr->Pptr,ptr->Pstart,ptr->Pend,ptr->cstart,ptr->n,ptr->lastcol,*ptr->coeffsptr);
+    return ptr;
+  }
+
+  // QR reduction, Q=P is orthogonal and should be initialized to identity
+  // P*H=original if tranpose is false, H=P*original otherwise, Givens method
+  // H[rstart..n+rstart-1] n rows, c cols -> Q=nxn matrix and R n rows, c cols
+  void qr_givens(matrix_double & H,int rstart,matrix_double & P,bool computeP,bool Pidn,bool transpose,int cstart=0,int cend=0,bool recurse=true){
+    int n=int(H.size())-rstart,c=int(H.front().size()),cP=int(P.front().size());
     if (cstart>=c) return;
     if (cend<=0) cend=c;
-    int lastcol=std::min(n-1,cend);
+    if (recurse && n>=c && cend-cstart>200){
+      // if cstart, cend !=0, block-recursive version 
+      // H n rows, c1+c2 cols, n>=c1+c2, H=[A1|A2]=Q*[[R11,R12],[0,R22]]
+      // A1 and A2 have n rows and c1, c2 columns
+      // first step A1=Q1*[[R11],[0]] recursive call, 
+      // R11 c1 rows, c1 cols, R12 c1 rows, n-c1 cols, R22 c2 rows, n-c1 cols
+      // tran(Q1)*A2=[[R12],[A22]]
+      // A22=Q2*R22
+      // [A1|A2]=Q1*[[R11,R12],[0,A22]]=Q1*[[Id,0],[0,Q2]]*[[R11,R12],[0,R22]]
+      // tran(Q)=[[Id,0],[0,tran(Q2)]]*tran(Q1)
+      // If tran(Q1)=[[Q11],[Q12]] then tran(Q)=[[Q11],[tran(Q2)*Q12]]
+      // Q12 has n-c1 rows, Q2 has n-c2 rows
+      int c1=(cend-cstart)/2,c2=cend-cstart-c1;
+      qr_givens(H,rstart,P,true,true,false,cstart,cstart+c1,/* recurse*/ false); // P is Q1
+      transpose_double(P); // P is tran(Q1)
+      // R11 is in place in H, R21=0 also
+      // temporary storage to compute tran(Q1)*A2
+      // tranA2 c2 rows, n cols
+      matrix_double tranA2; tranA2.reserve(giacmax(c2,n-c1));
+      transpose_double(H,rstart,rstart+n,cstart+c1,cend,tranA2);
+      matrix_double R(n,vector<giac_double>(n-c1)); 
+      mmult_double(P,tranA2,R); // R n rows, c2 cols, n-c1 cols reserved for later use as tranQ12
+#if 0
+      // QR on A22
+      matrix_double A22(R.begin()+c1,R.end()); // A22 n-c1 rows, c2 cols
+      matrix_double Q2(P.begin()+c1,P.end());
+      qr_givens(A22,0,Q2,computeP,false,true,0,0,false);
+      // work on columns c1 to cend of H
+      for (int i=0;i<c1;++i){
+	std::copy(R[i].begin(),R[i].end(),H[i].begin()+c1);
+      }
+      for (int i=0;i<n-c1;++i){
+	std::copy(A22[i].begin(),A22[i].end(),H[i+c1].begin()+c1);
+      }
+      for (int i=0;i<n-c1;++i)
+	swap(Q2[i],P[i+c1]);
+#else
+      // QR on A22 stored in rows c1..n-1 of R
+      // matrix_double Q2(n-c1,vector<giac_double>(n-c1)); 
+      matrix_double & Q2 =tranA2; Q2.resize(n-c1);
+      double_idn(Q2);
+      qr_givens(R,c1,Q2,computeP,true,false,0,0,/* recurse */true);
+      for (int i=0;i<n;++i){
+	std::copy(R[i].begin(),R[i].end(),H[rstart+i].begin()+c1);
+      }
+      // P is tran(Q1), Q12
+      transpose_double(Q2);
+      matrix_double tmp;
+      transpose_double(P,c1,n,0,0,R); // R as tranQ12: n rows, n-c1 cols
+      // tran(Q2)*Q12
+      mmult_double(Q2,R,tmp); // tmp n-c1 rows, n cols
+      for (int i=0;i<n-c1;++i){
+	swap(tmp[i],P[i+c1]);
+      }
+      if (!transpose)
+	transpose_double(P);
+#endif
+      return;
+    }
+    int lastcol=std::min(n,cend);
     double t,tn,tabs,u,un,norme;
     vector<double> coeffs; coeffs.reserve(lastcol*(2*n-lastcol));
     if (debug_infolevel)
@@ -10574,75 +10765,92 @@ namespace giac {
     for (int m=cstart;m<lastcol;++m){
       if (debug_infolevel>=5)
 	CERR << "// Givens reduction H line " << m << endl;
-      int i=m;
+      int i;
       // creation of zeros in lines i=m+1 and below
-      for (i=m+1;i<n;++i){
+      for (i=m-cstart+1;i<n;++i){
 	// line operation
-	t=H[m][m];
-	u=H[i][m];
-	coeffs.push_back(t);
-	coeffs.push_back(u);
-	if (u==0)
+	t=H[m-cstart+rstart][m];
+	u=H[i+rstart][m];
+	if (u==0){
+	  coeffs.push_back(t);
+	  coeffs.push_back(u);
 	  continue;
+	}
 	norme=hypot(u,t);
 	un=u/norme; tn=t/norme; 
+	coeffs.push_back(tn);
+	coeffs.push_back(un);
 	if (debug_infolevel>=6)
 	  CERR << "// i=" << i << " " << u <<endl;
 	if (i+1<n){
-	  double T=un*u+tn*t, U=H[i+1][m];
+	  double T=un*u+tn*t, U=H[i+rstart+1][m];
 	  if (U!=0){
+	    norme=hypot(U,T);
+	    U/=norme; T/=norme;
 	    coeffs.push_back(T);
 	    coeffs.push_back(U);
-	    norme=hypot(U,T);
-	    tri_linear_combination(un,H[i],tn,H[m],U/norme,H[i+1],T/norme,m,cend);
+	    tri_linear_combination(un,H[i+rstart],tn,H[m-cstart+rstart],U,H[i+rstart+1],T,m,cend);
 	    ++i;
 	    continue;
 	  }
 	}
 	// H[m]=un*H[i]+tn*H[m] and H[i]=tn*H[i]-un*H[m];
-	bi_linear_combination_CA(un,H[i],tn,H[m],m,cend); // givens_linear_combination(un,H[i],tn,H[m],m); 
+	bi_linear_combination_CA(un,H[i+rstart],tn,H[m-cstart+rstart],m,cend); // givens_linear_combination(un,H[i],tn,H[m],m); 
       }
     }
+    if (!computeP)
+      return;
     if (debug_infolevel)
       CERR << CLOCK() << " givens compute P" << endl;
-    if (is_identity(P)){
+    if (Pidn){
       // assumes P=idn at begin, transpose the product, reverse order
-      int pos=int(coeffs.size());
-      for (int m=lastcol-1;m>=cstart;--m){
-	if (debug_infolevel>=5)
-	  CERR << "// Givens reduction P line " << m << endl;
-	for (int i=n-1;i>m;--i){
-	  // line operation
-	  --pos;
-	  u=-coeffs[pos];
-	  --pos;
-	  t=coeffs[pos];
-	  if (u==0)
-	    continue;
-	  norme=hypot(u,t);
-	  un=u/norme; tn=t/norme; 
-	  if (i>m+1){
-	    double U=-coeffs[pos-1];
-	    double T=coeffs[pos-2];
-	    if (U!=0){
-	      norme=hypot(U,T);
-	      tri_linear_combination(un,P[i],tn,P[m],U/norme,P[i-1],T/norme,m,cP);
-	      --i;
-	      pos-=2;
-	      continue;
-	    }
-	  }
-	  bi_linear_combination_CA(un,P[i],tn,P[m],m,cP); // givens_linear_combination(un,P[i],tn,P[m],m); 
+      bool done=false;
+#ifdef HAVE_LIBPTHREAD
+      int nthreads=threads_allowed?threads:1;
+      if (nthreads>1){
+	pthread_t tab[nthreads];
+	thread_givens_p_t multdparam[nthreads];
+	for (int j=0;j<nthreads;++j){
+	  thread_givens_p_t tmp={&P,0,0,cstart,n,lastcol,&coeffs};
+	  multdparam[j]=tmp;
 	}
-      }
-      pos=int(P.size());
-      for (int i=0;i<pos;++i){
-	for (int j=0;j<i;++j){
-	  giac_double t=P[i][j];
-	  P[i][j]=P[j][i];
-	  P[j][i]=t;
+	int slicesize=cP/nthreads+1;
+	int Pstart=0,Pend=0;
+	for (int j=0;j<nthreads;++j){
+	  Pstart=Pend;
+	  Pend = Pstart+slicesize;
+	  if (Pend>=cP) 
+	    Pend=cP;
+	  multdparam[j].Pstart=Pstart;
+	  multdparam[j].Pend=Pend;
+	  bool res=true;
+	  if (j<nthreads-1)
+	    res=pthread_create(&tab[j],(pthread_attr_t *) NULL,do_thread_qr_givens_p,(void *) &multdparam[j]);
+	  if (res)
+	    do_thread_qr_givens_p((void *)&multdparam[j]);
 	}
+	for (int j=0;j<nthreads;++j){
+	  void * ptr=(void *)&nthreads; // non-zero initialisation
+	  if (j<nthreads-1)
+	    pthread_join(tab[j],&ptr);
+	}
+	done=true;
+      } // end nthreads
+#endif // PTHREAD
+      if (!done){
+	// slicing is slower
+	int nslice=1; // nslice=cP/128+1;
+	int slicesize=cP/nslice+1;
+	int Pstart=0,Pend=0;
+	for (;Pstart<cP;Pstart=Pend){
+	  Pend = Pstart+slicesize;
+	  if (Pend>=cP) 
+	    Pend=cP;
+	  qr_givens_p(P,Pstart,Pend,cstart,n,lastcol,coeffs);
+	} // end slice
       }
+      if (transpose)
+	transpose_double(P);
     }
     else {
       int pos=0;
@@ -10652,17 +10860,27 @@ namespace giac {
 	int i=m;
 	for (i=m+1;i<n;++i){
 	  // line operation
-	  t=coeffs[pos];
+	  tn=coeffs[pos];
 	  ++pos;
-	  u=coeffs[pos];
+	  un=coeffs[pos];
 	  ++pos;
-	  if (u==0)
+	  if (un==0)
 	    continue;
-	  norme=hypot(u,t);
-	  un=u/norme; tn=t/norme; 
+	  if (i+1<n){
+	    t=coeffs[pos];
+	    u=coeffs[pos+1];
+	    if (u!=0){
+	      tri_linear_combination(un,P[i],tn,P[m-cstart],u,P[i+1],t,0,cP);
+	      pos+=2;
+	      ++i;
+	      continue;
+	    }
+	  }
 	  bi_linear_combination_CA(un,P[i],tn,P[m],0,cP); // givens_linear_combination(un,P[i],tn,P[m],0); 
 	}
       }
+      if (!transpose)
+	transpose_double(P);
     }
     if (debug_infolevel)
       CERR << CLOCK() << " givens end" << endl;
@@ -13435,7 +13653,7 @@ namespace giac {
 	std_matrix<gen> H,P;
 	matrice2std_matrix_gen(h,H);
 	matrice2std_matrix_gen(p,P);
-	qr_ortho(H,P,contextptr);
+	qr_ortho(H,P,true,contextptr);
 	std_matrix_gen2matrice_destroy(H,h);
 	std_matrix_gen2matrice_destroy(P,p);
 	if (method<=-3)
@@ -14878,18 +15096,21 @@ namespace giac {
 
   // w*H->v, assumes correct sizes (v already initialized)
   // assumes w[0]=w[1]=...=w[k-1]=0
-  void householder_mult(const std::vector<giac_double> & w,const matrix_double & H,vector<giac_double> & v,int k,bool is_k_hessenberg,int jstart,int jend){
-    int n=int(H.size());
-    v.resize(n);
-    for (int j=0;j<n;++j)
+  void householder_mult(const std::vector<giac_double> & w,const matrix_double & H,vector<giac_double> & v,int k,bool is_k_hessenberg,int jstart,int jend,int deltarow=0,int cstart=0,int cend=0){
+    int n=int(H.size())-deltarow;
+    if (cend<=cstart)
+      cend=H.front().size();
+    int c=cend-cstart;
+    v.resize(c);
+    for (int j=0;j<c;++j)
       v[j]=0;
     int j=jstart; // at least k
 #if 1
     // if H is hessenberg up to column k, we can start at H[j][k-1] instead of H[j][0]
     for (;j<=jend-8;j+=8){
       giac_double wj0=w[j],wj1=w[j+1],wj2=w[j+2],wj3=w[j+3],wj4=w[j+4],wj5=w[j+5],wj6=w[j+6],wj7=w[j+7];
-      const giac_double * Hjk0=&H[j].front(),* Hjk1=&H[j+1].front(),* Hjk2=&H[j+2].front(),* Hjk3=&H[j+3].front(),* Hjk4=&H[j+4].front(),* Hjk5=&H[j+5].front(),* Hjk6=&H[j+6].front(),* Hjk7=&H[j+7].front();
-      giac_double * vk=&v.front(),*vkend=vk+n;
+      const giac_double * Hjk0=&H[j+deltarow][cstart],* Hjk1=&H[j+deltarow+1][cstart],* Hjk2=&H[j+deltarow+2][cstart],* Hjk3=&H[j+deltarow+3][cstart],* Hjk4=&H[j+deltarow+4][cstart],* Hjk5=&H[j+deltarow+5][cstart],* Hjk6=&H[j+deltarow+6][cstart],* Hjk7=&H[j+deltarow+7][cstart];
+      giac_double * vk=&v.front(),*vkend=vk+c;
       // if H is hessenberg up to column k, we can start at H[j][k-1] instead of H[j][0]
       if (is_k_hessenberg && k){
 	Hjk0 += k-1;
@@ -14936,8 +15157,8 @@ namespace giac {
 #endif
     for (;j<jend;j++){
       giac_double wj=w[j];
-      const giac_double * Hjk=&H[j].front();
-      giac_double * vk=&v.front(),*vkend=vk+n;
+      const giac_double * Hjk=&H[j+deltarow][cstart];
+      giac_double * vk=&v.front(),*vkend=vk+c;
       // if H is hessenberg up to column k, start at H[j][k-1] instead of H[j][0]
       if (is_k_hessenberg && k){
 	Hjk += k-1;
@@ -14958,7 +15179,7 @@ namespace giac {
 
   // P -> P - 2 w qprime
   // not used except possibly for 1 reflector if P is initially identity
-  void hessenberg_p_pass1(matrix_double & P,const vector<giac_double> & w,const vector<giac_double> & qprime,int j,int jend,int n){
+  void hessenberg_p_pass1(matrix_double & P,const vector<giac_double> & w,const vector<giac_double> & qprime,int j,int jend,int n,int deltarow=0,int deltacol=0){
     int qstart=0;
     for (;qstart<n;++qstart){
       if (qprime[qstart])
@@ -14968,7 +15189,7 @@ namespace giac {
     for (;j<=jend-3;j+=3){
       const giac_double wj0=2*w[j], wj1=2*w[j+1], wj2=2*w[j+2];
       giac_double vk;//, wj3=2*w[j+3]
-      giac_double * Pj0k=&P[j][qstart],* Pj1k=&P[j+1][qstart],* Pj2k=&P[j+2][qstart],*Pj0kend=Pj0k+(n-qstart);
+      giac_double * Pj0k=&P[j+deltarow][qstart+deltacol],* Pj1k=&P[j+deltarow+1][qstart+deltacol],* Pj2k=&P[j+deltarow+2][qstart+deltacol],*Pj0kend=Pj0k+(n-qstart);
       const giac_double *vprimek=&qprime[qstart];
 #if 1
       Pj0kend -= 8;
@@ -15042,7 +15263,7 @@ namespace giac {
     }
     for (;j<jend;++j){
       giac_double wj=2*w[j];
-      giac_double * Pjk=&P[j][qstart],*Pjkend=Pjk+(n-qstart);
+      giac_double * Pjk=&P[j+deltarow][qstart+deltacol],*Pjkend=Pjk+(n-qstart);
       const giac_double *vprimek=&qprime[qstart];
       for (;Pjk!=Pjkend;++vprimek,++Pjk){
 	*Pjk -= wj*(*vprimek);
@@ -15082,7 +15303,7 @@ namespace giac {
   }
 
   // P*wi->Pwi, assumes correct sizes 
-  // assumes w[0]=w[1]=...=w[k-1]=0 and H is identity except if rows and col >=k
+  // assumes w[0]=w[1]=...=w[k-1]=0 and P is identity except if rows and col >=k
   void householder_idnt_mult2(const matrix_double & P,const std::vector<giac_double> & w1,vector<giac_double> & w2,vector<giac_double> & Pw1,vector<giac_double> & Pw2,int k){
     Pw1.resize(w1.size());
     Pw2.resize(w2.size());
@@ -15152,7 +15373,7 @@ namespace giac {
     } 
   }
 
-  void qr_householder(matrix_double & H,matrix_double & P,bool compute_P){
+  void qr_householder(matrix_double & H,int rstart,matrix_double & P,bool computeP,bool Pidn,bool transpose,int cstart=0,int cend=0,bool recurse=true,bool thin=true){
     // Let R be a Householder reflection with respect to w (normalized)
     // R=I-2 w w*
     // Then R H = H - 2 w (w*H) and R P = P - 2 w (w*P)
@@ -15169,41 +15390,103 @@ namespace giac {
     //        =(a00+alpha)^2+alpha^2-a00^2=2*alpha*(alpha+a00)
     // divide by r=sqrt(2*alpha*(alpha+a00))
     // For k=m, add m to all indices
-    int n=int(H.size());
+    int n=int(H.size())-rstart,c=int(H.front().size()),cP=int(P.front().size());
+    if (cstart>=c) return;
+    if (cend<=0) cend=c;
     if (n<2)
       return;
+    int lastcol=std::min(n,cend);
     if (debug_infolevel)
       CERR << CLOCK() << " Householder, computing H" << endl;
-    vector<giac_double> w(n),q(n);
-    vector<giac_double> Pw((n*(n+1))/2); // save w to compute P all at once at the end
+    if (recurse && n>=c && cend-cstart>200){
+      if (n<2*(cend-cstart)) 
+	thin=false;
+      // if cstart, cend !=0, block-recursive version 
+      // H n rows, c1+c2 cols, n>=c1+c2, H=[A1|A2]=Q*[[R11,R12],[0,R22]]
+      // A1 and A2 have n rows and c1, c2 columns
+      // first step A1=Q1*[[R11],[0]] recursive call, 
+      // R11 c1 rows, c1 cols, R12 c1 rows, n-c1 cols, R22 c2 rows, n-c1 cols
+      // tran(Q1)*A2=[[R12],[A22]]
+      // A22=Q2*R22
+      // [A1|A2]=Q1*[[R11,R12],[0,A22]]=Q1*[[Id,0],[0,Q2]]*[[R11,R12],[0,R22]]
+      // tran(Q)=[[Id,0],[0,tran(Q2)]]*tran(Q1)
+      // If tran(Q1)=[[Q11],[Q12]] then tran(Q)=[[Q11],[tran(Q2)*Q12]]
+      // Q12 has n-c1 rows, Q2 has n-c2 rows
+      int c1=(cend-cstart)/2,c2=cend-cstart-c1;
+      qr_householder(H,rstart,P,true,true,true,cstart,cstart+c1,/* recurse*/ false,/* thin */false); // P is Q1
+      //transpose_double(P); // P is tran(Q1)
+      // R11 is in place in H, R21=0 also
+      // temporary storage to compute tran(Q1)*A2
+      // tranA2 c2 rows, n cols
+      matrix_double tranA2; tranA2.reserve(giacmax(c2,n-c1));
+      transpose_double(H,rstart,rstart+n,cstart+c1,cend,tranA2);
+      matrix_double R(n,vector<giac_double>(n-c1)); 
+      mmult_double(P,tranA2,R); // R n rows, c2 cols, n-c1 cols reserved for later use as tranQ12
+      // QR on A22 stored in rows c1..n-1 of R
+      // matrix_double Q2(n-c1,vector<giac_double>(n-c1)); 
+      matrix_double & Q2 =tranA2; Q2.resize(n-c1);
+      if (thin){
+	qr_householder(R,c1,Q2,false,true,true,0,0,/* recurse */true,thin);
+      }
+      else {
+	double_idn(Q2);
+	qr_householder(R,c1,Q2,computeP,true,true,0,0,/* recurse */true,/* thin */false);
+	// transpose_double(Q2);
+      }
+      for (int i=0;i<n;++i){
+	std::copy(R[i].begin(),R[i].end(),H[rstart+i].begin()+c1);
+      }
+      if (!thin){
+	// P is tran(Q1), Q12
+	matrix_double tmp;
+	transpose_double(P,c1,n,0,0,R); // R as tranQ12: n rows, n-c1 cols
+	// tran(Q2)*Q12
+	mmult_double(Q2,R,tmp); // tmp n-c1 rows, n cols
+	for (int i=0;i<n-c1;++i){
+	  swap(tmp[i],P[i+c1]);
+	}
+      }
+      if (!transpose)
+	transpose_double(P);
+      if (debug_infolevel)
+	CERR << CLOCK() << " Householder end" << endl;
+      return;
+    }
+    vector<giac_double> w(n),q(cend-cstart);
+    // save w to compute P all at once at the end, this could also be done
+    // inside the lower diagonal bloc of H
+    vector<giac_double> Pw((lastcol*(2*n-lastcol+1))/2); 
+    int nreflectors=0;
     giac_double * Pwptr=&Pw.front();
-    for (int m=0;m<n-1;++m){
+    for (int m=cstart;m<lastcol;++m){
       giac_double alpha=0;
       for (int j=m;j<n;++j){
-	giac_double Hjm=H[j][m];
+	giac_double Hjm=H[j-cstart+rstart][m];
 	alpha += Hjm*Hjm;
       }
       alpha=std::sqrt(alpha);
-      if (alpha<=1e-15*std::abs(H[m][m])){
+      giac_double Hmm=H[m-cstart+rstart][m];
+      if (alpha<=1e-15*std::abs(Hmm)){
 	Pwptr += n-m;
 	continue;
       }
-      if (H[m][m]<0)
+      if (Hmm<0)
 	alpha=-alpha;
-      giac_double r=std::sqrt(2*alpha*(alpha+H[m][m]));
-      *Pwptr=w[m]=(H[m][m]+alpha)/r;
+      giac_double r=std::sqrt(2*alpha*(alpha+Hmm));
+      *Pwptr=w[m]=(Hmm+alpha)/r;
       ++Pwptr;
       for (int j=m+1;j<n;++Pwptr,++j){
-	*Pwptr=w[j]=H[j][m]/r;
+	*Pwptr=w[j]=H[j-cstart+rstart][m]/r;
       }
-      householder_mult(w,H,q,m,true);
-      hessenberg_p_pass1(H,w,q,m,n,n);
+      ++nreflectors;
+      householder_mult(w,H,q,m,true,m,n,rstart,cstart,cend);
+      hessenberg_p_pass1(H,w,q,m,n,cend-cstart,rstart,cstart);
     }
-    if (compute_P){
+    if (computeP){
       if (debug_infolevel)
 	CERR << CLOCK() << " Householder, computing P" << endl;
       Pwptr=&Pw.front();
-      if (is_identity(P)){
+      if (Pidn){
 	// IMPROVE: if P is identity at the beginning, it is faster
 	// to compute (I-w_n w_n*) ... (I-w_1 w_1*) from left to right than
 	// starting from the right 
@@ -15211,7 +15494,7 @@ namespace giac {
 	// has only rows and columns k..n different from identity
 	// sum(k^2,k,1,n)=n^3/3 compared to sum(k*n,k,1,n)=n^3/2 operations
 	// (and also less cache misses)
-	int m=n-2;
+	int m=nreflectors-1;
 	vector<giac_double> w1(n),w2(n),Pw1(n),Pw2(n);
 	for (;m>=1;m-=2){
 	  // 2 operations P(I-w1w1*)(I-w2w2*)=P-2Pw1(w1*-2<w1|w2>w2*)-2Pw2 w2*
@@ -15223,7 +15506,7 @@ namespace giac {
 	    w2[i]=*Pwptr;
 	  for (int i=m;i<n;++Pwptr,++i)
 	    w1[i]=*Pwptr;	  
-	  householder_idnt_mult2(P,w1,w2,Pw1,Pw2,m);
+	  householder_idnt_mult2(P,w1,w2,Pw1,Pw2,m-1);
 	  double w1w2=2*dotvecteur(w1,w2);
 	  for (unsigned i=0;i<w1.size();++i){
 	    w1[i]-=w1w2*w2[i];
@@ -15242,8 +15525,10 @@ namespace giac {
 	}
 	if (debug_infolevel)
 	  CERR << CLOCK() << " Householder end" << endl;
+	if (!transpose)
+	  transpose_double(P);
 	return;
-      }
+      } // end P==identity
       for (int m=0;m<n-1;++m){
 	for (int i=0;i<m;++i)
 	  w[i]=0;
@@ -15255,19 +15540,31 @@ namespace giac {
     }
     if (debug_infolevel)
       CERR << CLOCK() << " Householder end" << endl;
+    if (!transpose)
+      transpose_double(P);
   }
 
   // QR reduction, P is orthogonal and should be initialized to identity
   // trn(P)*H=original, Givens method
-  void qr_ortho(std_matrix<gen> & H,std_matrix<gen> & P,GIAC_CONTEXT){
+  void qr_ortho(std_matrix<gen> & H,std_matrix<gen> & P,bool computeP,GIAC_CONTEXT){
     matrix_double H1;
     if (epsilon(contextptr)>=1e-15 && std_matrix_gen2std_matrix_giac_double(H,H1,true)){
       matrix_double P1;
       std_matrix_gen2std_matrix_giac_double(P,P1,true);
-      if (0 && H.size()==H.front().size())
-	qr_householder(H1,P1,true); // works only for square matrices
-      else
-	qr_givens(H1,P1);
+      // count 0 in H under the diagonal
+      // if less than 20% Householder else Givens
+      int count1=0,count2=0,L=int(H.size()),C=H.front().size();
+      for (int i=1;i<L;++i){
+	const vector<giac_double> & Hi=H1[i];
+	for (int j=0;j<i && j<C;++count2,++j){
+	  if (Hi[j]==0.0)
+	    ++count1;
+	}
+      }
+      if (count1<=0.2*count2)
+	qr_householder(H1,0,P1,computeP,true,true,0,0,/* recurse */ true,/* thin */false); 
+      else 
+	qr_givens(H1,0,P1,computeP,true,true,0,0,threads>1);
       std_matrix_giac_double2std_matrix_gen(P1,P);
       std_matrix_giac_double2std_matrix_gen(H1,H);
       return;
@@ -16062,9 +16359,12 @@ namespace giac {
   template<class T>
   nio::ios_base<T> & operator << (nio::ios_base<T> & os,const vector<giac_double> & m){
     int s=int(m.size());
-    for (int i=0;i<s;++i)
-      os << m[i] << " ";
-    return os;
+    os << "[";
+    for (int i=0;i<s;++i){
+      os << m[i] ;
+      if (i==s
+    }
+    return "]" << os;
   }
 
   template<class T>
@@ -16097,16 +16397,25 @@ namespace giac {
 
   ostream & operator << (ostream & os,const vector<giac_double> & m){
     int s=int(m.size());
-    for (int i=0;i<s;++i)
-      os << m[i] << " ";
-    return os;
+    os << "[";
+    for (int i=0;i<s;++i){
+      os << m[i]; 
+      if (i+1!=s)
+	os << ",";
+    }
+    return os << "]";
   }
 
   ostream & operator << (ostream & os,const matrix_double & m){
     int s=int(m.size());
-    for (int i=0;i<s;++i)
-      os << m[i] << endl;
-    return os;
+    os << "[";
+    for (int i=0;i<s;++i){
+      os << m[i] ;
+      if (i+1!=s)
+	os << ",";
+      os << endl;
+    }
+    return os << "]";
   }
 
   void matrix_double::dbgprint() const { COUT << *this << std::endl; }

@@ -920,15 +920,20 @@ namespace giac {
 	}
 	if (debug_infolevel) // abs_calc_mode(contextptr)!=38)
 	  *logptr(contextptr) << gettext("Warning! Algebraic extension not implemented yet for poly ") << r2sym(w,lv,contextptr) << endl;
-	w=*evalf(r2sym(w,lv,contextptr),1,contextptr)._VECTptr;
+	gen w_orig;
+	w=*evalf((w_orig=r2sym(w,lv,contextptr)),1,contextptr)._VECTptr;
 	if (has_num_coeff(w)){ // FIXME: test is always true...
 #ifndef NO_STDEXCEPT
 	  try {
 #endif
 	    if (complexmode)
 	      newv=proot(w,epsilon(contextptr));
-	    else
-	      newv=real_proot(w,epsilon(contextptr),contextptr);
+	    else {
+	      if (lidnt(w_orig).empty())
+		newv=gen2vecteur(_realroot(gen(makevecteur(w_orig,epsilon(contextptr),at_evalf),_SEQ__VECT),contextptr));
+	      else 
+		newv=real_proot(w,epsilon(contextptr),contextptr);
+	    }
 	    solve_ckrange(x,newv,isolate_mode,contextptr);
 	    v=mergevecteur(v,newv);
 #ifndef NO_STDEXCEPT
@@ -2495,7 +2500,10 @@ namespace giac {
       }
     }
     // if (is_fully_numeric(res))
-    if (!v.empty() && v.back().type!=_VECT && lidnt(res).empty() && is_zero(im(res,contextptr),contextptr))
+    if (!v.empty() && v.back().type!=_VECT && 
+	lidnt(evalf(res,1,contextptr)).empty()
+	// lidnt(res).empty() && is_zero(im(res,contextptr),contextptr)
+	)
       res=protect_sort(res,contextptr);
     if (!xcas_mode(contextptr) && calc_mode(contextptr)!=1)
       return gen(res,_LIST__VECT);
@@ -3342,12 +3350,13 @@ namespace giac {
 	break;
       }
       if (poly){
-	gen tmp=_e2r(makesequence(v0,v[1]),contextptr);
+	gen tmp=_e2r(makesequence(v0,v[1]),contextptr),tmp1=tmp;
 	if (tmp.type==_FRAC)
-	  tmp=tmp._FRACptr->num;
+	  tmp1=tmp=tmp._FRACptr->num;
 	tmp=evalf(tmp,eval_level(contextptr),contextptr);
 	if (tmp.type==_VECT){
-	  gen res=complex_mode(contextptr)?proot(*tmp._VECTptr,epsilon(contextptr)):real_proot(*tmp._VECTptr,epsilon(contextptr),contextptr);
+	  // call realroot? this would be more accurate
+	  gen res=complex_mode(contextptr)?proot(*tmp._VECTptr,epsilon(contextptr)):_realroot(gen(makevecteur(tmp1,epsilon(contextptr),at_evalf),_SEQ__VECT),contextptr);//real_proot(*tmp._VECTptr,epsilon(contextptr),contextptr);
 	  if (res.type==_VECT && res._VECTptr->size()==1)
 	    return res._VECTptr->front();
 	  return res;
@@ -4065,7 +4074,7 @@ namespace giac {
     bool out=niter!=NEWTON_DEFAULT_ITERATION;
     gen guess(guess_);
     // ofstream of("log"); of << f0 << endl << x << endl << guess << endl << niter ; 
-    gen f(eval(f0,1,context0));  // eval of f wrt context0 is intentionnal, replace UTPN by erf
+    gen f=real?eval(f0,1,context0):f0;  // eval of f wrt context0 is intentionnal, replace UTPN by erf
     if (guess.is_symb_of_sommet(at_interval))
       guess=(guess._SYMBptr->feuille[0]+guess._SYMBptr->feuille[1])/2;
     bool inv_after=f.type==_VECT;
@@ -5127,7 +5136,7 @@ namespace giac {
       idxm=index_t(idxt);
       M.coord.push_back(monomial<gen>(1,idxm));
       if (debug_infolevel>0)
-	CERR << clock() << " reduce begin " << M << endl;
+	CERR << CLOCK() << " reduce begin " << M << endl;
       gen mprev=m;
       m=1;
       if (prev.empty())
@@ -5141,7 +5150,7 @@ namespace giac {
 	m=mprev*m;
       }
       if (debug_infolevel>0)
-	CERR << clock() << " reduce end " << endl;
+	CERR << CLOCK() << " reduce end " << endl;
       // 1st check if we need to add new monomials
       int pos;
       bool inserted=false;
@@ -5164,7 +5173,7 @@ namespace giac {
 	}
       }
       if (debug_infolevel>0)
-	CERR << clock() << " end insert monomials" << endl;
+	CERR << CLOCK() << " end insert monomials" << endl;
       // now make last matrix line
       ligne.clear();
       for (unsigned i=0;i<positions.size();++i)
@@ -5183,7 +5192,7 @@ namespace giac {
       gen det,bareiss=1,piv,coeff;
       int li=0,lmax=int(mat.size()),c=0,cmax=int(mat.front()._VECTptr->size())-1;
       if (debug_infolevel>0)
-	CERR << clock() << " reduce line" << endl;
+	CERR << CLOCK() << " reduce line" << endl;
       for (;li<lmax-1 && c<cmax;){
 	vecteur & v=*mat[li]._VECTptr;
 	piv=v[c];
@@ -5274,7 +5283,7 @@ namespace giac {
 	swap(mat,matr);
       }
       if (debug_infolevel>0)
-	CERR << clock() << " reduce line end" << endl;
+	CERR << CLOCK() << " reduce line end" << endl;
       // if last line is 0, add element to Glex and remove last line from mat
       for (pos=0;pos<int(l.size())-1;++pos){
 	if (!is_zero(l[pos],contextptr))
@@ -5359,10 +5368,10 @@ namespace giac {
       M.coord.front().index=idxm;
       gen m;
       if (debug_infolevel>0)
-	CERR << clock() << " reduce begin " << endl;
+	CERR << CLOCK() << " reduce begin " << endl;
       reduce(M,&G.front(),&G.back()+1,R,m,env);
       if (debug_infolevel>0)
-	CERR << clock() << " reduce end " << endl;
+	CERR << CLOCK() << " reduce end " << endl;
       if (R.coord.empty()){
 	Glex.push_back(M);
 	break;
@@ -5385,7 +5394,7 @@ namespace giac {
 	if (debug_infolevel>0){
 	  if (R==M)
 	    CERR << "R=M " ;
-	  CERR << clock() << " fill matrix " << endl;
+	  CERR << CLOCK() << " fill matrix " << endl;
 	}
 	lignes.clear();
 	lignes.reserve(reduced.size()+1);
@@ -5465,10 +5474,10 @@ namespace giac {
 	    lcmdeno(*syst[i]._VECTptr,m,context0);
 	  }
 	  if (debug_infolevel>0)
-	    CERR << clock() << " ker begin " << neq << "*" << nunknown << endl;
+	    CERR << CLOCK() << " ker begin " << neq << "*" << nunknown << endl;
 	  mker(syst,B,contextptr);
 	  if (debug_infolevel>0)
-	    CERR << clock() << " ker end " << endl;
+	    CERR << CLOCK() << " ker end " << endl;
 	}
 	if (is_undef(B) || B.empty())
 	  ;
@@ -5552,7 +5561,7 @@ namespace giac {
     return count==dim;
   }
 
-  static bool giac_gbasis(vectpoly & res,const gen & order_,environment * env,int modularcheck,bool & rur,GIAC_CONTEXT,bool eliminate_flag){
+  static bool giac_gbasis(vectpoly & res,const gen & order_,environment * env,int modularcheck,int & rur,GIAC_CONTEXT,bool eliminate_flag){
     if (res.empty()) return true;
     int order,lexvars=0;
     if (order_.type==_VECT && order_._VECTptr->size()==2){
@@ -5579,10 +5588,9 @@ namespace giac {
 	return true;
       }
     }
-    rur=false;
     if (order<0){
       order=-order;
-      rur=true;
+      rur=1;
     }
 #ifdef GIAC_REDUCEMODULO
     //if (res.size()<=2*res.front().dim) reduce(res,env);
@@ -5601,7 +5609,8 @@ namespace giac {
 	 res.front().dim<=GROEBNER_VARS+1-(order!=_PLEX_ORDER)){
       vectpoly tmp;
       order_t order_={order,lexvars};
-      gbasis8(res,order_,tmp,env,modularcheck!=0,modularcheck>=2,rur,contextptr,eliminate_flag); 
+      if (!gbasis8(res,order_,tmp,env,modularcheck!=0,modularcheck>=2,rur,contextptr,eliminate_flag))
+	return false;
       int i;
       for (i=0;i<tmp.size();++i){
 	if (tmp[i].coord.empty())
@@ -5658,7 +5667,7 @@ namespace giac {
     }
     for (;!B.empty() && !interrupted;){
       if (debug_infolevel>1)
-	CERR << clock() << " number of pairs: " << B.size() << ", base size: " << G.size() << endl;
+	CERR << CLOCK() << " number of pairs: " << B.size() << ", base size: " << G.size() << endl;
       // find smallest lcm pair in B
       index_t small0,cur;
       unsigned smallpos;
@@ -5683,21 +5692,21 @@ namespace giac {
       }
       pair<unsigned,unsigned> bk=B[smallpos];
       if (debug_infolevel>1 && (equalposcomp(G,bk.first)==0 || equalposcomp(G,bk.second)==0))
-	CERR << clock() << " reducing pair with 1 element not in basis " << bk << " from " << B << endl;
+	CERR << CLOCK() << " reducing pair with 1 element not in basis " << bk << " from " << B << endl;
       B.erase(B.begin()+smallpos);
       polynome h=spoly(res[bk.first],res[bk.second],env);
       if (debug_infolevel>1)
-	CERR << clock() << " reduce begin, pair " << bk << " remainder size " << h.coord.size() << endl;
+	CERR << CLOCK() << " reduce begin, pair " << bk << " remainder size " << h.coord.size() << endl;
       reduce(h,res,G,unsigned(-1),h,env);
       if (debug_infolevel>1){
 	if (debug_infolevel>2){ CERR << h << endl; }
-	CERR << clock() << " reduce end, remainder size " << h.coord.size() << endl;
+	CERR << CLOCK() << " reduce end, remainder size " << h.coord.size() << endl;
       }
       if (!h.coord.empty()){
 	res.push_back(h);
 	gbasis_update(G,B,res,int(res.size())-1,env);
 	if (debug_infolevel>2)
-	  CERR << clock() << " basis indexes " << G << " pairs indexes " << B << endl;
+	  CERR << CLOCK() << " basis indexes " << G << " pairs indexes " << B << endl;
       }
     }
     vectpoly newres(G.size(),polynome(res.front().dim,res.front()));
@@ -5714,7 +5723,7 @@ namespace giac {
     return true;
   }
 
-  vectpoly gbasis(const vectpoly & v,const gen & order,bool with_cocoa,int modular,environment * env,bool & rur,GIAC_CONTEXT,bool eliminate_flag){
+  vectpoly gbasis(const vectpoly & v,const gen & order,bool with_cocoa,int modular,environment * env,int & rur,GIAC_CONTEXT,bool eliminate_flag){
     if (v.size()<=1){
       return v;
     }
@@ -6269,7 +6278,7 @@ namespace giac {
       if (!is_zero(n,contextptr))
 	return vecteur(0); // no solution since cst equation
     }
-    bool rur;
+    int rur=0;
     vectpoly eqpr(gbasis(eqp,_PLEX_ORDER,/* cocoa */false,/* f5 */ false,/*environment * */0,rur,contextptr,false));
     // should reorder eqpr with lex order here
     // solve from right to left
@@ -6564,7 +6573,7 @@ namespace giac {
     }
     if (!with_cocoa)
       change_monomial_order(eqp,abs(order,contextptr));
-    bool rur;
+    int rur=0;
     vectpoly eqpr(gbasis(eqp,order,with_cocoa,with_cocoa?with_f5:modular,&env,rur,contextptr,eliminate_flag));
     vecteur res;
     vectpoly::const_iterator it=eqpr.begin(),itend=eqpr.end();
@@ -6744,6 +6753,8 @@ namespace giac {
       returngb=1;
     if (args._VECTptr->back()==at_lcoeff)
       returngb=2;
+    if (args._VECTptr->back()==at_resultant)
+      returngb=3;
     bool with_f5=false,with_cocoa=false,eliminate_flag=epsilon(contextptr)!=0; int modular=1; gen o;
     read_gbargs(*args._VECTptr,2,int(args._VECTptr->size()),o,with_cocoa,with_f5,modular,eliminate_flag);
     vecteur eqs=gen2vecteur(remove_equal(args._VECTptr->front()));
@@ -6780,7 +6791,7 @@ namespace giac {
     }
     vecteur linelim;
 #ifdef GIAC_GBASISLEX
-    if (!returngb && eqs.size()<=l.size()+3){
+    if (returngb==3 && eqs.size()<=l.size()+3){
       // eliminate variables with linear dependency 
       // (in order to lower the number of vars, since <= 11 vars is handled faster)
       // not faster
@@ -6802,13 +6813,13 @@ namespace giac {
     lvar(elim,linelim);
     elim=linelim;
     int es=int(elim.size()),rs=int(l.size()-elim.size()),neq=int(eqs.size());
-#if 0 
+#if 1
     // check if we should eliminate linear dependency with resultant
     // to fit inside 3/11 or 7/7 or 11/3
-    if (!returngb && eqs.size()<=l.size()+3){
-      bool ok=(es<=3 && rs<=11) || (es<=7 && rs<=7) || (es<=11 && rs<=3);
-      if (!ok){
-	*logptr(contextptr) << "First eliminating with resultant. Original equations may reduce further."<<endl;
+    if (returngb==3 && eqs.size()<=l.size()+3){
+      bool ok=es>=1;
+      if (ok){
+	*logptr(contextptr) << "Eliminating with resultant. Original equations may reduce further."<<endl;
 	vector<int> vtdeg;
 	// Choose lowest degree pivot 
 	int curdeg=_total_degree(makesequence(eqs.front(),l),contextptr).val;
@@ -6845,7 +6856,7 @@ namespace giac {
 	    }
 	  }
 	}
-	if (curdeg==1){
+	if (1 || curdeg==1){
 	  // Choose lowest number of dependant equations in poselim
 	  gen besteq(0),bestvar(0); int bestpos=-1,n0deps=-1;
 	  for (int i=0;i<int(poselim.size());++i){
@@ -6872,7 +6883,10 @@ namespace giac {
 	  vecteur neweq;
 	  for (int i=0;i<neq;++i){
 	    if (i==bestpos) continue;
-	    gen r=_resultant(makesequence(eqs[i],besteq,bestvar),contextptr);
+	    gen a=_simp2(makesequence(eqs[i],besteq),contextptr);
+	    if (a.type!=_VECT || a._VECTptr->size()!=2)
+	      return gensizeerr(contextptr);
+	    gen r=_resultant(makesequence(a._VECTptr->front(),a._VECTptr->back(),bestvar),contextptr);
 	    neweq.push_back(r);
 	  }
 	  vecteur newelim;
@@ -6881,7 +6895,9 @@ namespace giac {
 	      newelim.push_back(elim[i]);
 	  }
 	  // recursive call
-	  gen res=_eliminate(makesequence(neweq,newelim),contextptr);
+	  if (newelim.empty())
+	    return neweq;
+	  gen res=_eliminate(makesequence(neweq,newelim,at_resultant),contextptr);
 	  return res;
 	}
       }
@@ -6953,11 +6969,29 @@ namespace giac {
 	    break;
 	  }
 	}
+	// add "x_k=0" equation for fake variables x_k in eqp
+	if (l.front().type==_VECT){
+	  vecteur lf=*l.front()._VECTptr;
+	  for (int i=0;i<int(lf.size());++i){
+	    if (is_zero(lf[i])){
+	      index_t idx(lf.size());
+	      idx[i]=1;
+	      eqp.push_back(polynome(lf.size()));
+	      eqp.back().coord.push_back(monomial<gen>(1,idx));
+	    }
+	  }
+	}
 	change_monomial_order(eqp,order);
 	if (debug_infolevel)
 	  CERR << "eliminate revlex/revlex with " << order << " variables " << endl;
-	bool rur;
-	vectpoly eqpr(gbasis(eqp,makevecteur(order,lexvars),false,modular,&env,rur,contextptr,eliminate_flag));
+	int rur=0;
+	vectpoly eqpr;
+	if (eliminate_flag && !eqp.empty() && eqp.front().dim==order+1){
+	  rur=2;
+	  eqpr=gbasis(eqp,makevecteur(_REVLEX_ORDER,0),false,modular,&env,rur,contextptr,eliminate_flag);
+	}
+	if (rur==0)
+	  eqpr=gbasis(eqp,makevecteur(order,lexvars),false,modular,&env,rur,contextptr,eliminate_flag);
 	vectpoly::const_iterator it=eqpr.begin(),itend=eqpr.end();
 	gb.reserve(itend-it);
 	if (returngb){
@@ -6976,8 +7010,11 @@ namespace giac {
 	      if (*jt!=0)
 		break;
 	    }
-	    if (jt==jtend)
-	      gb.push_back(r2e(*it,l,contextptr));
+	    if (jt==jtend){
+	      gen tmp=r2e(*it,l,contextptr);
+	      if (!is_zero(tmp))
+		gb.push_back(tmp);
+	    }
 	  }
 	  if (debug_infolevel)
 	    COUT << CLOCK() << " end eliminate" << endl;
@@ -8164,6 +8201,7 @@ int trstlp(int *n, int *m, double *a,
     int *iact, double *z__, double *zdota, double *vmultc,
      double *sdirn, double *dxnew, double *vmultd)
 {
+#ifndef MS_SMART // https://connect.microsoft.com/VisualStudio/feedback/details/1028781/crash-c1001-on-relase-build
   /* System generated locals */
   int a_dim1, a_offset, z_dim1, z_offset, i__1, i__2;
   double d__1, d__2;
@@ -8776,6 +8814,7 @@ L490:
   }
   *ifull = 0;
 L500:
+#endif // MS_SMART
   return 0;
 } /* trstlp */
 

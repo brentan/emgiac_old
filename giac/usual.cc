@@ -4541,7 +4541,7 @@ namespace giac {
     gen prod(operator_times(a,b,contextptr));
     */
     if (debug_infolevel>2)
-      CERR << clock() << " begin _prod" << endl;
+      CERR << CLOCK() << " begin _prod" << endl;
     for (;it!=itend;++it){
       if ( (it->type==_SYMB) && (it->_SYMBptr->sommet==at_inv) && (it->_SYMBptr->feuille.type!=_VECT) )
 	prod = rdiv(prod,it->_SYMBptr->feuille,contextptr);
@@ -4552,7 +4552,7 @@ namespace giac {
 	  prod = operator_times(prod,*it,contextptr);
       }
       if (debug_infolevel>2)
-	CERR << clock() << " in _prod" << endl;
+	CERR << CLOCK() << " in _prod" << endl;
     }
     return prod;
   }
@@ -5130,6 +5130,12 @@ namespace giac {
       }
     }
     f=qf.eval(eval_level(contextptr),contextptr);
+    if (f.type<=_POLY || f.type==_FRAC || f.type==_FLOAT_)
+#ifdef SWIFT_CALCS_OPTIONS
+      return f * b; // Assume implicit multiplication here
+#else
+      *logptr(contextptr) << "Warning, constant function " << f << " applied to " << b << endl;
+#endif
     if ( f.is_symb_of_sommet(at_program) && qf.type==_IDNT ){
       value=f._SYMBptr->feuille;
       if (value.type!=_VECT)
@@ -5504,7 +5510,7 @@ namespace giac {
     if (args.type!=_VECT)
       return args;
     if (debug_infolevel)
-      CERR << "gcd begin " << clock() << endl;
+      CERR << "gcd begin " << CLOCK() << endl;
     vecteur::const_iterator it=args._VECTptr->begin(),itend=args._VECTptr->end();
     if (ckmatrix(args) && itend-it==2)
       return apply(*it,*(it+1),contextptr,gcd);
@@ -8197,7 +8203,7 @@ namespace giac {
       return gsl_sf_zeta(x._DOUBLE_val);
 #endif // HAVE_LIBGSL
 #ifdef HAVE_LIBPARI
-    if (x.type==_CPLX)
+    if (x.type==_CPLX && x.subtype!=3)
       return pari_zeta(x);
 #endif
 #ifdef HAVE_LIBMPFR
