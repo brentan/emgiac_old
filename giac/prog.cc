@@ -8449,7 +8449,7 @@ namespace giac {
       it=unit_conversion_map().find(s.c_str());
     }
     if (it==itend) {
-      output.unit = makevecteur(res*find_or_make_symbol("_"+s,false,contextptr));
+      output.unit = makevecteur(operator_times(res,find_or_make_symbol("_"+s,false,contextptr),contextptr));
       return output;
     }
     vecteur v;
@@ -8457,7 +8457,7 @@ namespace giac {
         v = mksa_unit2vecteur(it->second);
     else
         v = default_unit_unit2vecteur(it->second);
-    v[0]=res*v[0];
+    v[0]=operator_times(res, v[0], contextptr);
     res_d=res_d * it->second->coeff;
     output.coeff = res_d;
     output.mksa_vector = it->second;
@@ -8493,7 +8493,7 @@ namespace giac {
       vecteur res0=unit_convert(v[1], mksa, contextptr);
       vecteur res1=unit_convert(v[0], mksa, contextptr);
       vecteur res=addvecteur(res0,res1);
-      res.front()=res0.front()*res1.front();
+      res.front()=operator_times(res0.front(), res1.front(), contextptr);
       return res;
     }
     if (g._SYMBptr->sommet==at_inv){
@@ -8513,7 +8513,7 @@ namespace giac {
       res[0]=pow(res[0],e,contextptr);
       int s=int(res.size());
       for (int i=1;i<s;++i)
-	res[i]=e*res[i];
+	res[i]=operator_times(e, res[i], contextptr);
       return res;
     }
     if (g._SYMBptr->sommet==at_prod){
@@ -8525,7 +8525,7 @@ namespace giac {
       const_iterateur it=v.begin(),itend=v.end();
       for (;it!=itend;++it){
       	vecteur tmp(unit_convert(*it, mksa, contextptr));
-      	res[0]=res[0]*tmp[0];
+      	res[0]=operator_times(res[0], tmp[0], contextptr);
       	iterateur it=res.begin()+1,itend=res.end(),jt=tmp.begin()+1,jtend=tmp.end();
       	for (;it!=itend && jt!=jtend;++it,++jt)
       	  *it=*it+*jt;
@@ -8554,13 +8554,13 @@ namespace giac {
             if(mksa_reduce(evalf((*f._VECTptr)[0]/(*f._VECTptr)[i],1,contextptr),contextptr).is_symb_of_sommet(at_unit))
               return makevecteur(g);
           }
-          res[0]=res[0] + tmp[0];
+          res[0]=operator_plus(res[0], tmp[0], contextptr);
         }
         return res;
       }
       if (g._SYMBptr->sommet==at_neg) {
         vecteur res(unit_convert(g._SYMBptr->feuille, mksa, contextptr));
-        res[0]= -1 * res[0];
+        res[0]= operator_times(minus_one, res[0], contextptr);
         return res;
       }
     #endif
@@ -8911,7 +8911,7 @@ namespace giac {
     if(is_one(num) && is_one(den))
       return res1;
     else if(is_one(num))
-      return res1 / symbolic(at_unit,makevecteur(plus_one, den));
+      return operator_times(res1, plus_one / symbolic(at_unit,makevecteur(plus_one, den)), contextptr);
     else if(is_one(den))
       return symbolic(at_unit,makevecteur(res1,num));
     else
@@ -8930,11 +8930,11 @@ namespace giac {
     gen res=plus_one;
     int s=int(v.size());
     if (s>2)
-      res = res *unitpow(_kg_unit,v[2]);
+      res = res * unitpow(_kg_unit,v[2]);
     if (s>1)
-      res = res *unitpow(_m_unit,v[1]);
+      res = res * unitpow(_m_unit,v[1]);
     if (s>3)
-      res = res *unitpow(_s_unit,v[3]);
+      res = res * unitpow(_s_unit,v[3]);
     if (s>4)
       res = res * unitpow(_A_unit,v[4]);
     if (s>5)
@@ -8958,7 +8958,7 @@ namespace giac {
     if ( g.type==_STRNG &&  g.subtype==-1) return  g;
     if (g.type==_VECT && g.subtype==_SEQ__VECT && g._VECTptr->size()==2){
       vecteur & v=*g._VECTptr;
-      return v.back()*default_units(v.front()/v.back(),contextptr);
+      return operator_times(v.back(), default_units(operator_times(v.front(),plus_one/v.back(),contextptr),contextptr), contextptr);
     }
     return gensizeerr(contextptr);
   }
@@ -8994,7 +8994,7 @@ namespace giac {
       vecteur v = mksa_convert(*g._IDNTptr, contextptr);
       int l = int(v.size());
       for(int i=1; i<l; ++i)
-        v[i] = v[i] * pow;
+        v[i] = operator_times(v[i], pow, contextptr);
       for(int i=l; i<9; ++i)
         v.push_back(zero);
       v.push_back(pow);
@@ -9007,12 +9007,12 @@ namespace giac {
       return v_out;
     }
     if (g._SYMBptr->sommet==at_inv) 
-      return combine_units_routine(g._SYMBptr->feuille, minus_one * pow, contextptr);
+      return combine_units_routine(g._SYMBptr->feuille, operator_times(minus_one, pow, contextptr), contextptr);
     if (g._SYMBptr->sommet==at_pow) {
       gen & f=g._SYMBptr->feuille;
       if (f.type!=_VECT||f._VECTptr->size()!=2)
         return vecteur(1,gensizeerr(contextptr));
-      return combine_units_routine(f._VECTptr->front(), pow * f._VECTptr->back(), contextptr);
+      return combine_units_routine(f._VECTptr->front(), operator_times(pow, f._VECTptr->back(), contextptr), contextptr);
     }
     if (g._SYMBptr->sommet==at_prod) {
       gen & f=g._SYMBptr->feuille;
@@ -9069,9 +9069,9 @@ namespace giac {
           }
           if(!is_zero(frac)) { //Matches already added unit 
             vecteur output_unit = gen2vecteur(output_units[j]);
-            output_unit[9] = output_unit[9] + (*it)[9];
+            output_unit[9] = operator_plus(output_unit[9], (*it)[9], contextptr);
             output_units[j] = output_unit;
-            coeff = coeff * pow(_usimplify_base(symbolic(at_unit,makevecteur(1,output_units[j][0] / (*it)[0])), contextptr), -1*(*it)[9], contextptr);
+            coeff = operator_times(coeff, pow(_usimplify_base(symbolic(at_unit,makevecteur(1,operator_times(output_units[j][0], inv((*it)[0], contextptr), contextptr))), contextptr), operator_times(minus_one,(*it)[9],contextptr), contextptr), contextptr);
             break;
           }
         }
@@ -9082,13 +9082,13 @@ namespace giac {
       gen out = plus_one;
       for(int j=0; j<l; j++) {
         if (is_one(output_units[j][9]))
-          out = out * output_units[j][0];
+          out = operator_times(out, output_units[j][0], contextptr);
         else if(is_minus_one(output_units[j][9]))
-          out = out * inv(output_units[j][0],contextptr);
+          out = operator_times(out, inv(output_units[j][0],contextptr), contextptr);
         else if(is_greater(output_units[j][9], zero, contextptr))
-          out = out * pow(output_units[j][0], output_units[j][9], contextptr);
+          out = operator_times(out, pow(output_units[j][0], output_units[j][9], contextptr), contextptr);
         else
-          out = out * inv(pow(output_units[j][0], -1*output_units[j][9], contextptr), contextptr);
+          out = operator_times(out, inv(pow(output_units[j][0], -1*output_units[j][9], contextptr), contextptr), contextptr);
       }
       return symbolic(at_unit,makevecteur(coeff, out));
     }
@@ -9118,7 +9118,7 @@ namespace giac {
         gen out = plus_one;
         const_iterateur it=v.begin(),itend=v.end();
         for (;it!=itend;++it){
-          out = out * _usimplify(*it, contextptr);
+          out = operator_times(out, _usimplify(*it, contextptr), contextptr);
         }
         return out;
       }
@@ -9129,12 +9129,12 @@ namespace giac {
             return _usimplify(f, contextptr);
           gen out = zero;
           for (unsigned i=0;i<f._VECTptr->size();++i){
-            out = out + _usimplify((*f._VECTptr)[i], contextptr);
+            out = operator_plus(out, _usimplify((*f._VECTptr)[i], contextptr), contextptr);
           }
           return out;
         }
         if (g._SYMBptr->sommet==at_neg) 
-          return -1*_usimplify(g._SYMBptr->feuille, contextptr);
+          return operator_times(minus_one, _usimplify(g._SYMBptr->feuille, contextptr), contextptr);
       #endif
       return g;
     }
@@ -9160,7 +9160,7 @@ namespace giac {
         tmp.push_back(zero);
       tmp_i.push_back(plus_one);
       for (int i = 1;i < 9;++i)
-        tmp_i.push_back(tmp[i] * minus_one);
+        tmp_i.push_back(operator_times(tmp[i], minus_one, contextptr));
       tmp[0]=plus_one;  
       if (tmp==v) // If a 'usual unit' matches the unit dimension of the unit being simplified, convert to the 'usual_unit'
         return _ufactor(gen(makevecteur(g,symbolic(at_unit,makevecteur(1,*it))),_SEQ__VECT),contextptr);
@@ -9260,13 +9260,13 @@ namespace giac {
           }
           if (pos == 0){ // If a combination of a usual unit and a usual unit (usual*usual, usual/usual, 1/usual/usual, usual/usual) then return that:
             if (j == 0) 
-              return _ufactor(gen(makevecteur(g,symbolic(at_unit,makevecteur(1,inv(*it, contextptr))) * symbolic(at_unit,makevecteur(1,inv(*it2, contextptr)))),_SEQ__VECT),contextptr);
+              return _ufactor(gen(makevecteur(g,operator_times(symbolic(at_unit,makevecteur(1,inv(*it, contextptr))), symbolic(at_unit,makevecteur(1,inv(*it2, contextptr))), contextptr)),_SEQ__VECT),contextptr);
             else if(j == 1) 
-              return _ufactor(gen(makevecteur(g,symbolic(at_unit,makevecteur(1,*it)) * symbolic(at_unit,makevecteur(1,*it2))),_SEQ__VECT),contextptr);
+              return _ufactor(gen(makevecteur(g,operator_times(symbolic(at_unit,makevecteur(1,*it)), symbolic(at_unit,makevecteur(1,*it2)), contextptr)),_SEQ__VECT),contextptr);
             else if(j == 2)
-              return _ufactor(gen(makevecteur(g,symbolic(at_unit,makevecteur(1,inv(*it, contextptr))) * symbolic(at_unit,makevecteur(1,*it2))),_SEQ__VECT),contextptr);
+              return _ufactor(gen(makevecteur(g,operator_times(symbolic(at_unit,makevecteur(1,inv(*it, contextptr))), symbolic(at_unit,makevecteur(1,*it2)), contextptr)),_SEQ__VECT),contextptr);
             else
-              return _ufactor(gen(makevecteur(g,symbolic(at_unit,makevecteur(1,*it)) * symbolic(at_unit,makevecteur(1,inv(*it2, contextptr)))),_SEQ__VECT),contextptr);
+              return _ufactor(gen(makevecteur(g,operator_times(symbolic(at_unit,makevecteur(1,*it)), symbolic(at_unit,makevecteur(1,inv(*it2, contextptr))), contextptr)),_SEQ__VECT),contextptr);
           }
         }
       }

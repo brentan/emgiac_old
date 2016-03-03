@@ -4516,11 +4516,11 @@ namespace giac {
 	vecteur & va=*a._SYMBptr->feuille._VECTptr;
 	vecteur & vb=*b._SYMBptr->feuille._VECTptr;
 	if (va[1]==vb[1])
-	  return new_ref_symbolic(symbolic(at_unit,makenewvecteur(va[0]+vb[0],va[1])));
+	  return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),va[1])));
 	gen g=mksa_reduce(vb[1]/va[1],contextptr);
 	gen tmp=chk_not_unit(g);
 	if (is_undef(tmp)) return tmp;
-	return new_ref_symbolic(symbolic(at_unit,makenewvecteur(va[0]+g*vb[0],va[1])));
+	return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],operator_times(g,vb[0],contextptr),contextptr),va[1])));
       }
       if (lidnt(b).empty()){
 	gen g=mksa_reduce(a,contextptr);
