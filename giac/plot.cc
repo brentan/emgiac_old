@@ -96,8 +96,10 @@ using namespace std;
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
 #else
+#ifndef BESTA_OS
 #define clock_t int
-#define clock() 0
+#define CLOCK() 0
+#endif
 #endif
 #ifndef HAVE_NO_SYS_RESOURCE_WAIT_H
 #include <sys/resource.h>
@@ -721,7 +723,7 @@ namespace giac {
       }
       // fclose(gnuplot_out_readstream);
       usleep(10000);
-      // CERR << "gnuplot_wait end " << getpid() << " " <<clock() << endl;
+      // CERR << "gnuplot_wait end " << getpid() << " " <<CLOCK() << endl;
     }
     else
       ;// CERR << "gnuplot wait no input" << endl;

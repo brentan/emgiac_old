@@ -24,7 +24,7 @@ using namespace std;
 #include <cmath>
 #include <cstdlib>
 #include <stdio.h>
-#ifndef HAVE_NO_SYS_TIMES_H
+#if !defined HAVE_NO_SYS_TIMES_H && defined HAVE_SYS_TIME_H
 #include <fcntl.h>
 #include <sys/time.h>
 #include <time.h>
@@ -355,13 +355,13 @@ namespace giac {
     return (emcctime()-t1)/1000;
 #endif
 #if defined(__APPLE__) || defined(PNACL)
-    unsigned u1=clock();
+    unsigned u1=CLOCK();
     struct timezone tz;
     struct timeval debut,fin;
     gettimeofday(&debut,&tz);
     eval(a,level,contextptr);
     gettimeofday(&fin,&tz);
-    u1=clock()-u1;
+    u1=CLOCK()-u1;
     return makevecteur(double(u1)/CLOCKS_PER_SEC,fin.tv_sec-debut.tv_sec+(fin.tv_usec-debut.tv_usec)/1e6);
 #endif
 #ifdef GIAC_HAS_STO_38
@@ -865,7 +865,7 @@ namespace giac {
   // open a file, returns a FD
   gen _open(const gen & g,GIAC_CONTEXT){
     if ( g.type==_STRNG && g.subtype==-1) return  g;
-#if defined(VISUALC) || defined(__MINGW_H) || defined (FIR) || defined(NSPIRE) || defined(__ANDROID__) || defined(NSPIRE_NEWLIB) 
+#if defined(VISUALC) || defined(__MINGW_H) || defined (FIR) || defined(NSPIRE) || defined(__ANDROID__) || defined(NSPIRE_NEWLIB) || defined(EMCC)
     return gensizeerr(gettext("not implemented"));
 #else
     gen tmp=check_secure();

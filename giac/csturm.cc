@@ -1084,7 +1084,7 @@ namespace giac {
 	if (!is_exactly_zero(vradius[i]))
 	  vradius[i]=min(epsg,pow(plus_two,int(evalf_double(ln(vradius[i],context0),1,context0)._DOUBLE_val/std::log(2.))+1),context0);
 	if (debug_infolevel)
-	  CERR << clock() << " isolated " << r << " radius " << vradius[i] << endl;
+	  CERR << CLOCK() << " isolated " << r << " radius " << vradius[i] << endl;
 	if (nextconj){
 	  v[i+1]=conj(r,context0);
 	  vradius[i+1]=vradius[i];
@@ -1137,10 +1137,10 @@ namespace giac {
       for (;n<400;n*=2){
 	double cureps=std::pow(2.0,-n);
 	if (debug_infolevel)
-	  CERR << clock() << " proot at precision " << cureps << endl;
+	  CERR << CLOCK() << " proot at precision " << cureps << endl;
 	vecteur v=proot(P,cureps,n);
 	if (debug_infolevel)
-	  CERR << clock() << " proot end at precision " << cureps << endl;
+	  CERR << CLOCK() << " proot end at precision " << cureps << endl;
 	vecteur vradius(v.size());
 	unsigned i=0;
 	int kmax=int(std::log(eps)/std::log(cureps))+4;
@@ -1346,7 +1346,13 @@ namespace giac {
 
   gen _realroot(const gen & g,GIAC_CONTEXT){
     if ( g.type==_STRNG && g.subtype==-1) return  g;
-    gen res=complexroot(g,false,contextptr);
+    gen res; bool evalf_after=false;
+    if (g.type==_VECT && !g._VECTptr->empty() && g._VECTptr->back()==at_evalf){
+      res=complexroot(gen(vecteur(g._VECTptr->begin(),g._VECTptr->end()-1),g.subtype),false,contextptr);
+      evalf_after=true;
+    }
+    else
+      res=complexroot(g,false,contextptr);
     if (res.type!=_VECT)
       return res;
     vecteur v=*res._VECTptr;
@@ -1354,8 +1360,16 @@ namespace giac {
       if (v[i].type==_VECT && v[i]._VECTptr->size()==2){
 	gen a=v[i]._VECTptr->front(),b=v[i]._VECTptr->back();
 	if (a.type==_VECT && a.subtype==_INTERVAL__VECT){
-	  a=eval(a,1,contextptr);
-	  v[i]=makevecteur(a,b);
+	  if (evalf_after)
+	    v[i]=evalf((a._VECTptr->front()+a._VECTptr->back())/2,1,contextptr);
+	  else {
+	    a=eval(a,1,contextptr);
+	    v[i]=makevecteur(a,b);
+	  }
+	}
+	else {
+	  if (evalf_after)
+	    v[i]=evalf(a,1,contextptr);
 	}
       }
     }

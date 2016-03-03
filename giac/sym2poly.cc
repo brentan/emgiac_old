@@ -3011,7 +3011,7 @@ namespace giac {
     alg_lvar(b,l);
     fraction fa(e2r(a,l,contextptr)),fb(e2r(b,l,contextptr)); // ok
     if (debug_infolevel)
-      CERR << "rational gcd begin " << clock() << endl;
+      CERR << "rational gcd begin " << CLOCK() << endl;
     if (!is_one(fa.den) || !is_one(fb.den))
       CERR << "Warning gcd of fractions " << fa << " " << fb ;
     if (fa.num.type==_FRAC)
@@ -3298,6 +3298,8 @@ namespace giac {
     if (args.subtype==_SEQ__VECT){
       if (v.size()>2)
 	toomanyargs("factor");
+      if (v.back()==at_sqrt)
+	return factor(v.front(),true,contextptr);
       if (v.back().type!=_IDNT){ // FIXME could be improved!
 	gen f=v.back();
 	if (v.back().type==_VECT)
@@ -3518,7 +3520,7 @@ namespace giac {
     if (is_equal(args))
       return apply_to_equal(args,_factor,contextptr);
     gen var,res;
-    if (is_algebraic_program(args,var,res))
+    if (args.type!=_VECT && is_algebraic_program(args,var,res))
       return symbolic(at_program,makesequence(var,0,_factor(res,contextptr)));
     if (xcas_mode(contextptr)==3)
       res=factorcollect(args,lvar(args).size()==1,contextptr);

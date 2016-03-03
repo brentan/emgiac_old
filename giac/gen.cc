@@ -4,7 +4,9 @@
 #undef clock
 #undef clock_t
 #ifndef ConnectivityKit
+#ifndef MS_SMART
 #include "../../../_windows/src/stdafx.h"
+#endif
 #endif
 #endif
 
@@ -2916,6 +2918,7 @@ namespace giac {
 	    if (conj_in_nf(w,P,contextptr)){
 	      // P is a rootof such that conj(rootof(w))=P
 	      gen c=horner(tmp[0].conj(contextptr),P);
+	      c=normal(c,contextptr);
 	      return c;
 	    }
 	  }
@@ -6338,16 +6341,16 @@ namespace giac {
 	res=ratnormal(res);
 	if (is_one(res))
 	  return va[0]*v[0];
-	return new_ref_symbolic(symbolic(at_unit,makenewvecteur(va[0]*v[0],res)));
+	return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_times(va[0],v[0],contextptr),res)));
       }
       else {
 	if (lidnt(b).empty())
-	  return new_ref_symbolic(symbolic(at_unit,makenewvecteur(va[0]*b,va[1])));
+	  return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_times(va[0],b,contextptr),va[1])));
       }
     }
     if (b.is_symb_of_sommet(at_unit) && lidnt(a).empty()){
       vecteur & v=*b._SYMBptr->feuille._VECTptr;
-      return new_ref_symbolic(symbolic(at_unit,makenewvecteur(a*v[0],v[1])));
+      return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_times(a,v[0],contextptr),v[1])));
     }
     gen var1,var2,res1,res2;
     if (is_algebraic_program(a,var1,res1)){
@@ -7199,7 +7202,7 @@ namespace giac {
       if (b.type==_FLOAT_)
 	return rdiv(a,evalf_double(b,1,contextptr),contextptr);      
       if (a.is_symb_of_sommet(at_unit) || b.is_symb_of_sommet(at_unit))
-	return a*inv(b,contextptr);
+	return operator_times(a,inv(b,contextptr),contextptr);
       if (is_one(b))
 	return chkmod(a,b);
       if (is_minus_one(b))
@@ -12536,8 +12539,14 @@ namespace giac {
 	return printmap(*_MAPptr,contextptr);
     case _EQW:
       return print_EQW(*_EQWptr);
-    case _POINTER_:
-      return "pointer("+hexa_print_INT_(int((alias_type)_POINTER_val))+","+print_INT_(subtype)+")";
+    case _POINTER_: {
+      // handle 64 bits pointers
+      unsigned long long u=(unsigned long long)_POINTER_val;
+      if (u<(1U<<31))
+	return "pointer("+hexa_print_INT_(int((alias_type)_POINTER_val))+","+print_INT_(subtype)+")";
+      gen z=longlong(u);
+      return "pointer("+hexa_print_ZINT(*z._ZINTptr)+","+print_INT_(subtype)+")";
+    }
     default:
 #ifndef NO_STDEXCEPT
       settypeerr(gettext("print"));
@@ -12550,7 +12559,7 @@ namespace giac {
 #ifdef ConnectivityKit
   void gen::dbgprint() const { }
 #else
-#ifdef VISUALC
+#if defined(VISUALC) && !defined(MS_SMART)
   void gen::dbgprint() const { ATLTRACE2("%s\r\n", this->print(0).c_str()); }
 #else
   void gen::dbgprint() const{    
@@ -12660,7 +12669,7 @@ namespace giac {
   /* Some string utilities not use anymore */
   // Note that this function should be optimized for large input
   string cut_string(const string & chaine,int nchar,vector<int> & ligne_end) {
-    // CERR << clock() << endl;
+    // CERR << CLOCK() << endl;
     int pos;
     if (ligne_end.empty())
       pos=0;
@@ -12673,7 +12682,7 @@ namespace giac {
       int k=int(chaine.find_first_of('\n',i));
       if ( (l-i<nchar) && ((k<i)||(k>=l-1)) ){
 	ligne_end.push_back(pos+l);
-	// CERR << clock() << endl;
+	// CERR << CLOCK() << endl;
 	return res+chaine.substr(i,l-i);
       }
       if ((k>=i) && (k<i+nchar+4*(i==0)) ){
@@ -12698,7 +12707,7 @@ namespace giac {
 	}
       }
     }
-    // CERR << clock() << endl;
+    // CERR << CLOCK() << endl;
     return res;
   }
 
@@ -13318,7 +13327,7 @@ namespace giac {
     }
     int save_decimal_digits=decimal_digits(context0);
     set_decimal_digits(precision,context0);
-    gen tmp=evalf(g,1,context0);
+    gen tmp=re(evalf(g,1,context0),context0);
     set_decimal_digits(save_decimal_digits,context0);
     if (tmp.type!=_REAL){
 #ifndef NO_STDEXCEPT
@@ -14696,7 +14705,7 @@ namespace giac {
       return S.c_str();
     }
 #endif
-    if (!lop(g,at_rootof).empty())
+    if (calc_mode(&C)==1 && !lop(g,at_rootof).empty())
       g=evalf(g,1,&C);
     if (has_undef_stringerr(g,S))
       S="GIAC_ERROR: "+S;
