@@ -8074,6 +8074,79 @@ namespace giac {
   }
 
   gen superieur_strict(const gen & a,const gen & b,GIAC_CONTEXT){
+
+#ifdef SWIFT_CALCS_OPTIONS 
+    if ((a.type==_SYMB || b.type==_SYMB) && (!is_inf(a) && !is_undef(a) && !is_inf(b) && !is_undef(b) && a.type!=_VECT && b.type!=_VECT ) && (a.is_symb_of_sommet(at_unit) || b.is_symb_of_sommet(at_unit))) {
+      gen tmp = chk_not_unit(mksa_reduce(symb_prod(mksa_reduce_base(a.evalf(1, contextptr), contextptr),_inv(mksa_reduce_base(b.evalf(1, contextptr), contextptr),contextptr)),contextptr));
+      if(is_undef(tmp)) return tmp;
+      return superieur_strict(mksa_remove_base(a.evalf(1, contextptr), contextptr),mksa_remove_base(b.evalf(1, contextptr),contextptr),contextptr);
+    }
+    if(a.type == _VECT) {
+      if(b.type == _VECT) {
+        if(ckmatrix(a)) {
+          if(ckmatrix(b)) {
+            if (a._VECTptr->front()._VECTptr->size()!=b._VECTptr->front()._VECTptr->size())
+              return gendimerr("");
+          } else
+            return gendimerr("");
+        } else if(ckmatrix(b))
+          return gendimerr("");
+        if (a._VECTptr->size()!=b._VECTptr->size()) 
+          return gendimerr("");
+        vecteur res, res2;
+        const_iterateur it=a._VECTptr->begin(),itend=a._VECTptr->end();
+        const_iterateur it2=b._VECTptr->begin(),it2end=b._VECTptr->end();
+        gen holder;
+        res.clear();
+        res.reserve(itend-it);
+        for (;it!=itend;++it) {
+          if (it->type==_VECT){
+            res.push_back(superieur_strict(*it->_VECTptr,*it2->_VECTptr,contextptr));
+          } else {
+            holder = superieur_strict(*it,*it2,contextptr);
+            if((holder.type == _INT_) && abs_calc_mode(contextptr)!=38) holder.subtype=_INT_BOOLEAN;
+            res.push_back(holder);
+          }
+          ++it2;
+        }
+        return res;
+      } else {
+        vecteur res;
+        const_iterateur it=a._VECTptr->begin(),itend=a._VECTptr->end();
+        gen holder;
+        res.clear();
+        res.reserve(itend-it);
+        for (;it!=itend;++it) {
+          if (it->type==_VECT){
+            res.push_back(superieur_strict(*it->_VECTptr,b,contextptr));
+          } else {
+            holder = superieur_strict(*it,b,contextptr);
+            if((holder.type == _INT_) && abs_calc_mode(contextptr)!=38) holder.subtype=_INT_BOOLEAN;
+            res.push_back(holder);
+          }
+        }
+        return res;
+      }
+    } 
+    if(b.type == _VECT) {
+      vecteur res;
+      const_iterateur it=b._VECTptr->begin(),itend=b._VECTptr->end();
+        gen holder;
+      res.clear();
+      res.reserve(itend-it);
+      for (;it!=itend;++it) {
+        if (it->type==_VECT){
+          res.push_back(superieur_strict(a,*it->_VECTptr,contextptr));
+        } else {
+          holder = superieur_strict(a,*it,contextptr);
+          if((holder.type == _INT_) && abs_calc_mode(contextptr)!=38) holder.subtype=_INT_BOOLEAN;
+          res.push_back(holder);
+        }
+      }
+      return res;
+    }
+#endif
+
     switch ( (a.type<< _DECALAGE) | b.type ) {
     case _INT___INT_: 
       return (a.val>b.val);
@@ -8112,15 +8185,16 @@ namespace giac {
 
   gen superieur_egal(const gen & a,const gen & b,GIAC_CONTEXT){
     if ( (a.type==_REAL && b.type<=_REAL) ||
-	 (b.type==_REAL && a.type<=_REAL) ){
-      if (is_positive(a-b,contextptr))
-	return 1;
-      return 0;
-    }
-    gen g=!superieur_strict(b,a,contextptr);
+	 (b.type==_REAL && a.type<=_REAL) )
+      return is_positive(a-b,contextptr);
+    gen g=superieur_strict(b,a,contextptr);
     if (is_undef(g)) return g;
     if (g.type==_INT_)
-      return g;
+      return !g;
+#ifdef SWIFT_CALCS_OPTIONS 
+    if (g.type==_VECT)
+      return _not(g, contextptr);
+#endif
     return symb_superieur_egal(a,b);
   }
 

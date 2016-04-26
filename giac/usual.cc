@@ -4795,13 +4795,6 @@ namespace giac {
     if (args.type!=_VECT)
       return symb_inferieur_strict(args);
     gen res;
-#ifdef SWIFT_CALCS_OPTIONS 
-    if ((args._VECTptr->front().type==_SYMB || args._VECTptr->back().type==_SYMB) && (!is_inf(args._VECTptr->front()) && !is_undef(args._VECTptr->front()) && !is_inf(args._VECTptr->back()) && !is_undef(args._VECTptr->back()) && args._VECTptr->front().type!=_VECT &&args._VECTptr->back().type!=_VECT ) && (args._VECTptr->front().is_symb_of_sommet(at_unit) || args._VECTptr->back().is_symb_of_sommet(at_unit))) {
-      gen tmp = chk_not_unit(mksa_reduce(symb_prod(mksa_reduce_base(args._VECTptr->front().evalf(1, contextptr), contextptr),_inv(mksa_reduce_base(args._VECTptr->back().evalf(1, contextptr), contextptr),contextptr)),contextptr));
-      if(is_undef(tmp)) return tmp;
-      res=inferieur_strict(mksa_remove_base(args._VECTptr->front().evalf(1, contextptr), contextptr),mksa_remove_base(args._VECTptr->back().evalf(1, contextptr),contextptr),contextptr);
-    } else
-#endif
     res=inferieur_strict(args._VECTptr->front(),args._VECTptr->back(),contextptr);
     if (res.type==_INT_ && abs_calc_mode(contextptr)!=38)
       res.subtype=_INT_BOOLEAN;
@@ -4828,13 +4821,6 @@ namespace giac {
     if (args.type!=_VECT)
       return symb_inferieur_egal(args);
     gen res;
-#ifdef SWIFT_CALCS_OPTIONS 
-    if ((args._VECTptr->front().type==_SYMB || args._VECTptr->back().type==_SYMB) && (!is_inf(args._VECTptr->front()) && !is_undef(args._VECTptr->front()) && !is_inf(args._VECTptr->back()) && !is_undef(args._VECTptr->back()) && args._VECTptr->front().type!=_VECT &&args._VECTptr->back().type!=_VECT ) && (args._VECTptr->front().is_symb_of_sommet(at_unit) || args._VECTptr->back().is_symb_of_sommet(at_unit))) {
-      gen tmp = chk_not_unit(mksa_reduce(symb_prod(mksa_reduce_base(args._VECTptr->front().evalf(1, contextptr), contextptr),_inv(mksa_reduce_base(args._VECTptr->back().evalf(1, contextptr), contextptr),contextptr)),contextptr));
-      if(is_undef(tmp)) return tmp;
-      res=inferieur_egal(mksa_remove_base(args._VECTptr->front().evalf(1, contextptr), contextptr),mksa_remove_base(args._VECTptr->back().evalf(1, contextptr),contextptr),contextptr);
-    } else
-#endif
     res=inferieur_egal(args._VECTptr->front(), args._VECTptr->back(),contextptr);
     if (res.type==_INT_ && abs_calc_mode(contextptr)!=38)
       res.subtype=_INT_BOOLEAN;
@@ -4858,13 +4844,6 @@ namespace giac {
     if (args.type!=_VECT)
       return symb_superieur_strict(args);
     gen res;
-#ifdef SWIFT_CALCS_OPTIONS 
-    if ((args._VECTptr->front().type==_SYMB || args._VECTptr->back().type==_SYMB) && (!is_inf(args._VECTptr->front()) && !is_undef(args._VECTptr->front()) && !is_inf(args._VECTptr->back()) && !is_undef(args._VECTptr->back()) && args._VECTptr->front().type!=_VECT &&args._VECTptr->back().type!=_VECT ) && (args._VECTptr->front().is_symb_of_sommet(at_unit) || args._VECTptr->back().is_symb_of_sommet(at_unit))) {
-      gen tmp = chk_not_unit(mksa_reduce(symb_prod(mksa_reduce_base(args._VECTptr->front().evalf(1, contextptr), contextptr),_inv(mksa_reduce_base(args._VECTptr->back().evalf(1, contextptr), contextptr),contextptr)),contextptr));
-      if(is_undef(tmp)) return tmp;
-      res=superieur_strict(mksa_remove_base(args._VECTptr->front().evalf(1, contextptr), contextptr),mksa_remove_base(args._VECTptr->back().evalf(1, contextptr),contextptr),contextptr);
-    } else
-#endif
     res=superieur_strict(args._VECTptr->front(),args._VECTptr->back(),contextptr);
     if (res.type==_INT_ && abs_calc_mode(contextptr)!=38)
       res.subtype=_INT_BOOLEAN;
@@ -4892,13 +4871,6 @@ namespace giac {
     if (args.type!=_VECT)
       return symb_superieur_egal(args);
     gen res;
-#ifdef SWIFT_CALCS_OPTIONS 
-    if ((args._VECTptr->front().type==_SYMB || args._VECTptr->back().type==_SYMB) && (!is_inf(args._VECTptr->front()) && !is_undef(args._VECTptr->front()) && !is_inf(args._VECTptr->back()) && !is_undef(args._VECTptr->back()) && args._VECTptr->front().type!=_VECT &&args._VECTptr->back().type!=_VECT ) && (args._VECTptr->front().is_symb_of_sommet(at_unit) || args._VECTptr->back().is_symb_of_sommet(at_unit))) {
-      gen tmp = chk_not_unit(mksa_reduce(symb_prod(mksa_reduce_base(args._VECTptr->front().evalf(1, contextptr), contextptr),_inv(mksa_reduce_base(args._VECTptr->back().evalf(1, contextptr), contextptr),contextptr)),contextptr));
-      if(is_undef(tmp)) return tmp;
-      res=superieur_egal(mksa_remove_base(args._VECTptr->front().evalf(1, contextptr), contextptr),mksa_remove_base(args._VECTptr->back().evalf(1, contextptr),contextptr),contextptr);
-    } else
-#endif
     res=superieur_egal(args._VECTptr->front(), args._VECTptr->back(),contextptr);
     if (res.type==_INT_ && abs_calc_mode(contextptr)!=38)
       res.subtype=_INT_BOOLEAN;
@@ -4929,10 +4901,9 @@ namespace giac {
 #if 1
     res=_same(args,contextptr);
 #ifdef SWIFT_CALCS_OPTIONS
-    if ((args._VECTptr->front().type==_SYMB || args._VECTptr->back().type==_SYMB) && (!is_inf(args._VECTptr->front()) && !is_undef(args._VECTptr->front()) && !is_inf(args._VECTptr->back()) && !is_undef(args._VECTptr->back()) && args._VECTptr->front().type!=_VECT &&args._VECTptr->back().type!=_VECT ) && (args._VECTptr->front().is_symb_of_sommet(at_unit) || args._VECTptr->back().is_symb_of_sommet(at_unit))) {
-      gen tmp = chk_not_unit(mksa_reduce(symb_prod(mksa_reduce_base(args._VECTptr->front().evalf(1, contextptr), contextptr),_inv(mksa_reduce_base(args._VECTptr->back().evalf(1, contextptr), contextptr),contextptr)),contextptr));
-      if(is_undef(tmp)) return tmp;
-    }
+    if(is_undef(res)) return res;
+    if(res.type == _VECT) 
+      return _not(res, contextptr);
 #endif
     if (res.type==_INT_)
       return !res;
@@ -5677,6 +5648,61 @@ namespace giac {
 	res=is_zero(res,contextptr);
       }
     }
+
+#ifdef SWIFT_CALCS_OPTIONS 
+    if(a._VECTptr->front().type == _VECT) {
+      if(a._VECTptr->back().type == _VECT) {
+        if(ckmatrix(a._VECTptr->front())) {
+          if(ckmatrix(a._VECTptr->back())) {
+            if (a._VECTptr->front()._VECTptr->front()._VECTptr->size()!=a._VECTptr->back()._VECTptr->front()._VECTptr->size())
+              return gendimerr("");
+          } else
+            return gendimerr("");
+        } else if(ckmatrix(a._VECTptr->back()))
+          return gendimerr("");
+        if (a._VECTptr->front()._VECTptr->size()!=a._VECTptr->back()._VECTptr->size()) 
+          return gendimerr("");
+        vecteur res, res2;
+        const_iterateur it=a._VECTptr->front()._VECTptr->begin(),itend=a._VECTptr->front()._VECTptr->end();
+        const_iterateur it2=a._VECTptr->back()._VECTptr->begin(),it2end=a._VECTptr->back()._VECTptr->end();
+        res.clear();
+        res.reserve(itend-it);
+        for (;it!=itend;++it) {
+          if (it->type==_VECT){
+            res.push_back(_same(makevecteur(*it->_VECTptr,*it2->_VECTptr),contextptr));
+          } else
+            res.push_back(_same(makevecteur(*it,*it2),contextptr));
+          ++it2;
+        }
+        return res;
+      } else {
+        vecteur res;
+        const_iterateur it=a._VECTptr->front()._VECTptr->begin(),itend=a._VECTptr->front()._VECTptr->end();
+        res.clear();
+        res.reserve(itend-it);
+        for (;it!=itend;++it) {
+          if (it->type==_VECT){
+            res.push_back(_same(makevecteur(*it->_VECTptr,a._VECTptr->back()),contextptr));
+          } else
+            res.push_back(_same(makevecteur(*it,a._VECTptr->back()),contextptr));
+        }
+        return res;
+      }
+    } 
+    if(a._VECTptr->back().type == _VECT) {
+      vecteur res;
+      const_iterateur it=a._VECTptr->back()._VECTptr->begin(),itend=a._VECTptr->back()._VECTptr->end();
+      res.clear();
+      res.reserve(itend-it);
+      for (;it!=itend;++it) {
+        if (it->type==_VECT){
+          res.push_back(_same(makevecteur(a._VECTptr->front(),*it->_VECTptr),contextptr));
+        } else
+          res.push_back(_same(makevecteur(a._VECTptr->front(),*it),contextptr));
+      }
+      return res;
+    }
+#endif
     if (is_undef(res))
       res=operator_equal(a._VECTptr->front(),a._VECTptr->back(),contextptr);
     if (res.type==_INT_ && abs_calc_mode(contextptr)!=38)
