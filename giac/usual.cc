@@ -4797,11 +4797,9 @@ namespace giac {
     gen res;
 #ifdef SWIFT_CALCS_OPTIONS 
     if ((args._VECTptr->front().type==_SYMB || args._VECTptr->back().type==_SYMB) && (!is_inf(args._VECTptr->front()) && !is_undef(args._VECTptr->front()) && !is_inf(args._VECTptr->back()) && !is_undef(args._VECTptr->back()) && args._VECTptr->front().type!=_VECT &&args._VECTptr->back().type!=_VECT ) && (args._VECTptr->front().is_symb_of_sommet(at_unit) || args._VECTptr->back().is_symb_of_sommet(at_unit))) {
-      vecteur & va=*args._VECTptr->front()._SYMBptr->feuille._VECTptr;
-      vecteur & vb=*args._VECTptr->back()._SYMBptr->feuille._VECTptr;
-      gen tmp = chk_not_unit(mksa_reduce(symb_prod(mksa_reduce_base(args._VECTptr->front(), contextptr),_inv(mksa_reduce_base(args._VECTptr->back(), contextptr),contextptr)),contextptr));
+      gen tmp = chk_not_unit(mksa_reduce(symb_prod(mksa_reduce_base(args._VECTptr->front().evalf(1, contextptr), contextptr),_inv(mksa_reduce_base(args._VECTptr->back().evalf(1, contextptr), contextptr),contextptr)),contextptr));
       if(is_undef(tmp)) return tmp;
-      res=inferieur_strict(mksa_remove_base(args._VECTptr->front(), contextptr),mksa_remove_base(args._VECTptr->back(),contextptr),contextptr);
+      res=inferieur_strict(mksa_remove_base(args._VECTptr->front().evalf(1, contextptr), contextptr),mksa_remove_base(args._VECTptr->back().evalf(1, contextptr),contextptr),contextptr);
     } else
 #endif
     res=inferieur_strict(args._VECTptr->front(),args._VECTptr->back(),contextptr);
@@ -4832,11 +4830,9 @@ namespace giac {
     gen res;
 #ifdef SWIFT_CALCS_OPTIONS 
     if ((args._VECTptr->front().type==_SYMB || args._VECTptr->back().type==_SYMB) && (!is_inf(args._VECTptr->front()) && !is_undef(args._VECTptr->front()) && !is_inf(args._VECTptr->back()) && !is_undef(args._VECTptr->back()) && args._VECTptr->front().type!=_VECT &&args._VECTptr->back().type!=_VECT ) && (args._VECTptr->front().is_symb_of_sommet(at_unit) || args._VECTptr->back().is_symb_of_sommet(at_unit))) {
-      vecteur & va=*args._VECTptr->front()._SYMBptr->feuille._VECTptr;
-      vecteur & vb=*args._VECTptr->back()._SYMBptr->feuille._VECTptr;
-      gen tmp = chk_not_unit(mksa_reduce(symb_prod(mksa_reduce_base(args._VECTptr->front(), contextptr),_inv(mksa_reduce_base(args._VECTptr->back(), contextptr),contextptr)),contextptr));
+      gen tmp = chk_not_unit(mksa_reduce(symb_prod(mksa_reduce_base(args._VECTptr->front().evalf(1, contextptr), contextptr),_inv(mksa_reduce_base(args._VECTptr->back().evalf(1, contextptr), contextptr),contextptr)),contextptr));
       if(is_undef(tmp)) return tmp;
-      res=inferieur_egal(mksa_remove_base(args._VECTptr->front(), contextptr),mksa_remove_base(args._VECTptr->back(),contextptr),contextptr);
+      res=inferieur_egal(mksa_remove_base(args._VECTptr->front().evalf(1, contextptr), contextptr),mksa_remove_base(args._VECTptr->back().evalf(1, contextptr),contextptr),contextptr);
     } else
 #endif
     res=inferieur_egal(args._VECTptr->front(), args._VECTptr->back(),contextptr);
@@ -4864,11 +4860,9 @@ namespace giac {
     gen res;
 #ifdef SWIFT_CALCS_OPTIONS 
     if ((args._VECTptr->front().type==_SYMB || args._VECTptr->back().type==_SYMB) && (!is_inf(args._VECTptr->front()) && !is_undef(args._VECTptr->front()) && !is_inf(args._VECTptr->back()) && !is_undef(args._VECTptr->back()) && args._VECTptr->front().type!=_VECT &&args._VECTptr->back().type!=_VECT ) && (args._VECTptr->front().is_symb_of_sommet(at_unit) || args._VECTptr->back().is_symb_of_sommet(at_unit))) {
-      vecteur & va=*args._VECTptr->front()._SYMBptr->feuille._VECTptr;
-      vecteur & vb=*args._VECTptr->back()._SYMBptr->feuille._VECTptr;
-      gen tmp = chk_not_unit(mksa_reduce(symb_prod(mksa_reduce_base(args._VECTptr->front(), contextptr),_inv(mksa_reduce_base(args._VECTptr->back(), contextptr),contextptr)),contextptr));
+      gen tmp = chk_not_unit(mksa_reduce(symb_prod(mksa_reduce_base(args._VECTptr->front().evalf(1, contextptr), contextptr),_inv(mksa_reduce_base(args._VECTptr->back().evalf(1, contextptr), contextptr),contextptr)),contextptr));
       if(is_undef(tmp)) return tmp;
-      res=superieur_strict(mksa_remove_base(args._VECTptr->front(), contextptr),mksa_remove_base(args._VECTptr->back(),contextptr),contextptr);
+      res=superieur_strict(mksa_remove_base(args._VECTptr->front().evalf(1, contextptr), contextptr),mksa_remove_base(args._VECTptr->back().evalf(1, contextptr),contextptr),contextptr);
     } else
 #endif
     res=superieur_strict(args._VECTptr->front(),args._VECTptr->back(),contextptr);
@@ -4900,11 +4894,9 @@ namespace giac {
     gen res;
 #ifdef SWIFT_CALCS_OPTIONS 
     if ((args._VECTptr->front().type==_SYMB || args._VECTptr->back().type==_SYMB) && (!is_inf(args._VECTptr->front()) && !is_undef(args._VECTptr->front()) && !is_inf(args._VECTptr->back()) && !is_undef(args._VECTptr->back()) && args._VECTptr->front().type!=_VECT &&args._VECTptr->back().type!=_VECT ) && (args._VECTptr->front().is_symb_of_sommet(at_unit) || args._VECTptr->back().is_symb_of_sommet(at_unit))) {
-      vecteur & va=*args._VECTptr->front()._SYMBptr->feuille._VECTptr;
-      vecteur & vb=*args._VECTptr->back()._SYMBptr->feuille._VECTptr;
-      gen tmp = chk_not_unit(mksa_reduce(symb_prod(mksa_reduce_base(args._VECTptr->front(), contextptr),_inv(mksa_reduce_base(args._VECTptr->back(), contextptr),contextptr)),contextptr));
+      gen tmp = chk_not_unit(mksa_reduce(symb_prod(mksa_reduce_base(args._VECTptr->front().evalf(1, contextptr), contextptr),_inv(mksa_reduce_base(args._VECTptr->back().evalf(1, contextptr), contextptr),contextptr)),contextptr));
       if(is_undef(tmp)) return tmp;
-      res=superieur_egal(mksa_remove_base(args._VECTptr->front(), contextptr),mksa_remove_base(args._VECTptr->back(),contextptr),contextptr);
+      res=superieur_egal(mksa_remove_base(args._VECTptr->front().evalf(1, contextptr), contextptr),mksa_remove_base(args._VECTptr->back().evalf(1, contextptr),contextptr),contextptr);
     } else
 #endif
     res=superieur_egal(args._VECTptr->front(), args._VECTptr->back(),contextptr);
@@ -4938,9 +4930,7 @@ namespace giac {
     res=_same(args,contextptr);
 #ifdef SWIFT_CALCS_OPTIONS
     if ((args._VECTptr->front().type==_SYMB || args._VECTptr->back().type==_SYMB) && (!is_inf(args._VECTptr->front()) && !is_undef(args._VECTptr->front()) && !is_inf(args._VECTptr->back()) && !is_undef(args._VECTptr->back()) && args._VECTptr->front().type!=_VECT &&args._VECTptr->back().type!=_VECT ) && (args._VECTptr->front().is_symb_of_sommet(at_unit) || args._VECTptr->back().is_symb_of_sommet(at_unit))) {
-      vecteur & va=*args._VECTptr->front()._SYMBptr->feuille._VECTptr;
-      vecteur & vb=*args._VECTptr->back()._SYMBptr->feuille._VECTptr;
-      gen tmp = chk_not_unit(mksa_reduce(symb_prod(mksa_reduce_base(args._VECTptr->front(), contextptr),_inv(mksa_reduce_base(args._VECTptr->back(), contextptr),contextptr)),contextptr));
+      gen tmp = chk_not_unit(mksa_reduce(symb_prod(mksa_reduce_base(args._VECTptr->front().evalf(1, contextptr), contextptr),_inv(mksa_reduce_base(args._VECTptr->back().evalf(1, contextptr), contextptr),contextptr)),contextptr));
       if(is_undef(tmp)) return tmp;
     }
 #endif
@@ -5667,9 +5657,7 @@ namespace giac {
       if (!is_inf(a._VECTptr->front()) && !is_undef(a._VECTptr->front()) && !is_inf(a._VECTptr->back()) && !is_undef(a._VECTptr->back()) && a._VECTptr->front().type!=_VECT &&a._VECTptr->back().type!=_VECT ){
 #ifdef SWIFT_CALCS_OPTIONS 
         if (a._VECTptr->front().is_symb_of_sommet(at_unit) || a._VECTptr->back().is_symb_of_sommet(at_unit)) {
-          vecteur & va=*a._VECTptr->front()._SYMBptr->feuille._VECTptr;
-          vecteur & vb=*a._VECTptr->back()._SYMBptr->feuille._VECTptr;
-          gen tmp = chk_not_unit(mksa_reduce(symb_prod(mksa_reduce_base(a._VECTptr->front(), contextptr),_inv(mksa_reduce_base(a._VECTptr->back(), contextptr),contextptr)),contextptr));
+          gen tmp = chk_not_unit(mksa_reduce(symb_prod(mksa_reduce_base(a._VECTptr->front().evalf(1, contextptr), contextptr),_inv(mksa_reduce_base(a._VECTptr->back().evalf(1, contextptr), contextptr),contextptr)),contextptr));
           if(is_undef(tmp)) return tmp;
           res = _simplify(mksa_remove_base(a._VECTptr->front() - a._VECTptr->back(), contextptr),contextptr);
         } else
