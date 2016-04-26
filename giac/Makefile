@@ -46,8 +46,8 @@ giac_fast:	$(GIACOBJS)
 	$(CXX) $(LDJSFLAGS_FAST) $(GIACOBJS) $(LIBS) -o giac$(VERSION).js --closure 1 #>& log
 	rm -rf ../../swift_calcs/public/libraries/giac*.js
 	cp giac$(VERSION).js ../../swift_calcs/public/libraries
-	rm -rf ../../swift_calcs/public/libraries/chrome_giac*.js
-	cp giac$(VERSION).js ../../swift_calcs/public/libraries/chrome_giac$(VERSION).js
+	#rm -rf ../../swift_calcs/public/libraries/chrome_giac*.js
+	#cp giac$(VERSION).js ../../swift_calcs/public/libraries/chrome_giac$(VERSION).js
 	cp giac$(VERSION).js ../../../giac
 giac_chrome:	$(GIACOBJS) 
 	$(CXX) $(LDJSFLAGS_FAST) $(GIACOBJS) $(LIBS) -o chrome_giac$(VERSION).js --closure 1 #>& log
