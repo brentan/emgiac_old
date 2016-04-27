@@ -8765,6 +8765,9 @@ namespace giac {
 	return _SYMBptr->sommet(f(i,contextptr),contextptr);
       vecteur lid(lidnt(*this));
       if (lid.size()==1 && !has_algebraic_program(*this)){
+#ifdef SWIFT_CALCS_OPTIONS
+        return operator_times(*this, i, contextptr); // (this)(i) of P(x) should be a product, not a function call, unless P is explicitly defined as a function
+#else
 	if (lid.front()==vx_var)
 	// suspect something like P:=x^3+1 then P(2)
 	  *logptr(contextptr) << "Warning, evaluating univariate expression of x(value) like if expression was a function.\nYou should write subst(" << *this << "," << lid.front() << "," << i << ")" << endl;
@@ -8783,6 +8786,7 @@ namespace giac {
       if (warn)
 	*logptr(contextptr) << gettext("Warning, evaluating (") << *this << ")(" << i << ") as a function not as a product" << endl;
       return _SYMBptr->sommet(res,contextptr);
+#endif
     }
     if (type==_FUNC){
       if ( (i.type==_VECT) && (i.subtype==_SEQ__VECT) && (i._VECTptr->size()==1))
