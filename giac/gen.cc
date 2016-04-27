@@ -8764,10 +8764,10 @@ namespace giac {
       if (f.type!=_VECT)
 	return _SYMBptr->sommet(f(i,contextptr),contextptr);
       vecteur lid(lidnt(*this));
-      if (lid.size()==1 && !has_algebraic_program(*this)){
 #ifdef SWIFT_CALCS_OPTIONS
-        return operator_times(*this, i, contextptr); // (this)(i) of P(x) should be a product, not a function call, unless P is explicitly defined as a function
+      return operator_times(*this, i, contextptr); // (this)(i) of P(x) should be a product, not a function call, unless P is explicitly defined as a function
 #else
+      if (lid.size()==1 && !has_algebraic_program(*this)){
 	if (lid.front()==vx_var)
 	// suspect something like P:=x^3+1 then P(2)
 	  *logptr(contextptr) << "Warning, evaluating univariate expression of x(value) like if expression was a function.\nYou should write subst(" << *this << "," << lid.front() << "," << i << ")" << endl;
