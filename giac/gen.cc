@@ -6068,9 +6068,7 @@ namespace giac {
 	return symbolic(at_program,gen(makevecteur(a,0,pow(base,b,contextptr)),_SEQ__VECT));
     }
     if (base.type==_VECT && base.subtype!=_POLY1__VECT && !is_squarematrix(base)){
-#ifndef SWIFT_CALCS_OPTIONS
       *logptr(contextptr) << gettext("Warning, ^ is ambiguous on non square matrices. Use .^ to apply ^ element by element.") << endl;
-#endif
       if (exponent.type==_VECT)
 	return apply(base,exponent,contextptr,giac::giac_pow);
       if (base.subtype!=_LIST__VECT && (exponent.type==_INT_ && exponent.val %2==0) )
