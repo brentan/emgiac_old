@@ -6032,10 +6032,21 @@ namespace giac {
   static symbolic symb_floor(const gen & a){
     return symbolic(at_floor,a);
   }
-  gen apply_unit(const gen & args,const gen_op_context & f,GIAC_CONTEXT){
+#ifdef SWIFT_CALCS_OPTIONS
+  gen apply_unit(const gen & args_in,const gen_op_context & f,GIAC_CONTEXT){
+    gen args = _usimplify(args_in, contextptr);
+    *logptr(contextptr) << "Warning: Rounding assumes units of " << args._SYMBptr->feuille[1] << ". Change default units in settings to alter this behavior." << endl;
+#else
+  gen apply_unit(const gen & args,const gen_op_context & f,GIAC_CONTEXT) {
+#endif
     return symbolic(at_unit,gen(makevecteur(f(args._SYMBptr->feuille[0],contextptr),args._SYMBptr->feuille[1]),_SEQ__VECT));  
   }
+#ifdef SWIFT_CALCS_OPTIONS
+  gen _floor(const gen & a_in,GIAC_CONTEXT){
+    gen args = _usimplify_base(a_in, contextptr);
+#else
   gen _floor(const gen & args,GIAC_CONTEXT){
+#endif
     if ( args.type==_STRNG && args.subtype==-1) return  args;
     if (is_equal(args))
       return apply_to_equal(args,_floor,contextptr);
@@ -6239,7 +6250,12 @@ namespace giac {
   }
 
   // static symbolic symb_round(const gen & a){    return symbolic(at_round,a);  }
+#ifdef SWIFT_CALCS_OPTIONS
+  gen _round(const gen & a_in,GIAC_CONTEXT){
+    gen args = _usimplify_base(a_in, contextptr);
+#else
   gen _round(const gen & args,GIAC_CONTEXT){
+#endif
     if ( is_undef(args))
       return args;
     if (args.type==_STRNG && args.subtype==-1) return  args;
