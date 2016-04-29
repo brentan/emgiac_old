@@ -8764,16 +8764,17 @@ namespace giac {
       if (f.type!=_VECT)
 	return _SYMBptr->sommet(f(i,contextptr),contextptr);
       vecteur lid(lidnt(*this));
-#ifdef SWIFT_CALCS_OPTIONS
-      return operator_times(*this, i, contextptr); // (this)(i) of P(x) should be a product, not a function call, unless P is explicitly defined as a function
-#else
       if (lid.size()==1 && !has_algebraic_program(*this)){
+#ifdef SWIFT_CALCS_OPTIONS
+      return operator_times(*this, i, contextptr); // P(x) should be a product, not a function call, unless P is explicitly defined as a function
+#else
 	if (lid.front()==vx_var)
 	// suspect something like P:=x^3+1 then P(2)
 	  *logptr(contextptr) << "Warning, evaluating univariate expression of x(value) like if expression was a function.\nYou should write subst(" << *this << "," << lid.front() << "," << i << ")" << endl;
 	else 
 	  return gensizeerr("Expression used like a function "+this->print(contextptr)+"\nYou should write subst("+this->print(contextptr)+","+lid.front().print(contextptr)+","+i.print(contextptr)+")");
 	return subst(*this,lid.front(),i,false,contextptr);
+#endif
       }
       vecteur res(*f._VECTptr);
       iterateur it=res.begin(),itend=res.end();
@@ -8784,9 +8785,12 @@ namespace giac {
 	*it=(*it)(i,contextptr);
       }
       if (warn)
+#ifdef SWIFT_CALCS_OPTIONS
+        return operator_times(*this, i, contextptr); // (this)(i) should be a product, not a function call, right?
+#else
 	*logptr(contextptr) << gettext("Warning, evaluating (") << *this << ")(" << i << ") as a function not as a product" << endl;
-      return _SYMBptr->sommet(res,contextptr);
 #endif
+      return _SYMBptr->sommet(res,contextptr);
     }
     if (type==_FUNC){
       if ( (i.type==_VECT) && (i.subtype==_SEQ__VECT) && (i._VECTptr->size()==1))
