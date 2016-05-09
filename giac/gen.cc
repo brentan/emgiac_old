@@ -4318,11 +4318,11 @@ namespace giac {
     }
     register ref_mpz_t * e;
 
-    #ifdef SWIFT_CALCS_OPTIONS // Vect + float should add to all elements, not just the last element
-      if (a.type==_VECT && b.type!=_VECT)
-        return apply1st(a,b,contextptr,pointplus);
-      if (a.type!=_VECT && b.type==_VECT)
-        return apply2nd(a,b,contextptr,pointplus);
+    #ifdef SWIFT_CALCS_OPTIONS2 // Vect + float should add to all elements, not just the last element
+      //if (a.type==_VECT && b.type!=_VECT)
+      //  return apply1st(a,b,contextptr,pointplus);
+      //if (a.type!=_VECT && b.type==_VECT)
+      //  return apply2nd(a,b,contextptr,pointplus);
     #endif
 
     switch ( t ) {
@@ -5065,10 +5065,10 @@ namespace giac {
     register ref_mpz_t * e;
 
     #ifdef SWIFT_CALCS_OPTIONS // Vect - float should subtract from all elements, not just the last element
-      if (a.type==_VECT && b.type!=_VECT)
-        return apply1st(a,b,contextptr,pointminus);
-      if (a.type!=_VECT && b.type==_VECT)
-        return apply2nd(a,b,contextptr,pointminus);
+      //if (a.type==_VECT && b.type!=_VECT)
+      //  return apply1st(a,b,contextptr,pointminus);
+      //if (a.type!=_VECT && b.type==_VECT)
+      //  return apply2nd(a,b,contextptr,pointminus);
     #endif
 
     switch ( t) {
