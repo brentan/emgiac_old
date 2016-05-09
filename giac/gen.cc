@@ -658,6 +658,38 @@ namespace giac {
     }
   }
 
+  gen::gen(longlong i,int nbits) { 
+#ifdef COMPILE_FOR_STABILITY
+    control_c();
+#endif
+    val=(int)i;
+    //    longlong temp=val;
+    if (val==i && val!=1<<31){
+      type=_INT_;
+      subtype=0;
+    }
+    else {
+#ifdef SMARTPTR64
+      * ((longlong * ) this) = longlong(new ref_mpz_t(nbits)) << 16;
+#else
+      __ZINTptr = new ref_mpz_t(nbits);
+#endif
+      type =_ZINT;
+      subtype=0;
+      // convert longlong to mpz_t
+      bool signe=(i<0);
+      if (signe)
+	i=-i;
+      unsigned int i1=i>>32;
+      unsigned int i2=(unsigned int)i;
+      mpz_set_ui(*_ZINTptr,i1);
+      mpz_mul_2exp(*_ZINTptr,*_ZINTptr,32);
+      mpz_add_ui(*_ZINTptr,*_ZINTptr,i2);
+      if (signe)
+	mpz_neg(*_ZINTptr,*_ZINTptr);
+    }
+  }
+
 #ifdef INT128
   gen::gen(int128_t i) { 
 #ifdef COMPILE_FOR_STABILITY
@@ -1602,6 +1634,31 @@ namespace giac {
     return *this;
   }
   
+  double gen::to_double(GIAC_CONTEXT) const {
+    if (type==_DOUBLE_)
+      return _DOUBLE_val;
+    if (type==_INT_)
+      return double(val);
+    gen tmp=evalf_double(1,contextptr);
+    if (tmp.type==_DOUBLE_)
+      return tmp._DOUBLE_val;
+#ifdef NAN
+    return NAN;
+#else
+    double d=1.0;
+    d=d-d/double(1ULL<<53);
+    return d*2.0/d;
+#endif
+  }
+
+  bool gen::is_vector_of_size(size_t n) const {
+    return type==_VECT && _VECTptr->size()==n;
+  }
+
+  bool gen::is_identificateur_with_name(const char * s) const {
+    return type==_IDNT && strcmp(_IDNTptr->id_name,s)==0;
+  }
+
   
   int gen::to_int() const {
     switch (type ) {
@@ -2485,7 +2542,9 @@ namespace giac {
 #endif
 	evaled=rdiv(_FRACptr->num.evalf(level,contextptr),_FRACptr->den.evalf(level,contextptr),contextptr);
       return true;
-    case _FUNC: case _MOD: case _ROOT:
+    case _FUNC: 
+      return in_eval_func(*this,&evaled,contextptr);     
+    case _MOD: case _ROOT:
       return false; // replace in RPN mode
     case _EXT:
       evaled=alg_evalf(_EXTptr->eval(level,contextptr),(_EXTptr+1)->eval(level,contextptr),contextptr);
@@ -2805,6 +2864,15 @@ namespace giac {
     return true;
   }
 
+  bool vect_is_real(const vecteur & v,GIAC_CONTEXT){
+    const_iterateur it=v.begin(),itend=v.end();
+    for (;it!=itend;++it){
+      if (!it->is_real(contextptr)) 
+	return false;
+    }
+    return true;
+  }
+
   /* Checking */
   bool gen::is_real(GIAC_CONTEXT) const {
     switch (type) {
@@ -2814,6 +2882,8 @@ namespace giac {
       return (is_zero(*(_CPLXptr+1),contextptr));
     case _POLY:
       return poly_is_real(*_POLYptr);
+    case _VECT:
+      return vect_is_real(*_VECTptr,contextptr);
     default: 
       return is_zero(im(contextptr),contextptr);
     }
@@ -2990,7 +3060,7 @@ namespace giac {
 	  }
 	}
       }
-      if (equalposcomp(plot_sommets,_SYMBptr->sommet) || equalposcomp(analytic_sommets,_SYMBptr->sommet) || _SYMBptr->sommet==at_surd)
+      if (equalposcomp(plot_sommets,_SYMBptr->sommet) || equalposcomp(analytic_sommets,_SYMBptr->sommet) || _SYMBptr->sommet==at_surd || _SYMBptr->sommet==at_erf)
 	return new_ref_symbolic(symbolic(_SYMBptr->sommet,_SYMBptr->feuille.conj(contextptr)));
       else
 	return new_ref_symbolic(symbolic(at_conj,*this));
@@ -3302,6 +3372,12 @@ namespace giac {
     }
     if (u==at_Ci && is_zero(imf) && is_greater(ref,0,contextptr)){
       r=_Ci(ref,contextptr); return;
+    }
+    if (u==at_erf){ // works for analytic functions
+      gen conjf=symbolic(u,ref-cst_i*imf);
+      r=(s+conjf)/2;
+      i=-cst_i*(s-conjf)/2;
+      return;
     }
     r=new_ref_symbolic(symbolic(at_re,gen(s)));
     i=new_ref_symbolic(symbolic(at_im,gen(s)));
@@ -5978,7 +6054,7 @@ namespace giac {
   }
 
   // (-1)^n
-  static gen minus1pow(const gen & exponent,GIAC_CONTEXT){
+  static gen minus1pow(const gen & exponent,GIAC_CONTEXT,bool allow_recursion=true){
     if (exponent.type==_INT_)
       return (exponent.val%2)?-1:1;
     if (exponent.type==_ZINT){
@@ -6020,6 +6096,10 @@ namespace giac {
 	    even=true;
 	  if (!is_assumed_integer(v[i],contextptr))
 	    perhapsone=false;
+	}
+	if (allow_recursion){
+	  gen num1=_irem(makesequence(num,2*den),contextptr);
+	  if (num1!=num) return minus1pow(symb_prod(num1,symb_inv(den)),contextptr,false);
 	}
 	if (even && perhapsone)
 	  return 1;
@@ -7266,7 +7346,7 @@ namespace giac {
       if (is_undef(b))
 	return b;
       if (a.type==_STRNG || b.type==_STRNG)
-	return gensizeerr(contextptr);
+	return gensizeerr("string /");
       {
 	gen var1,var2,res1,res2;
 	if (is_algebraic_program(a,var1,res1)){
@@ -8202,7 +8282,7 @@ namespace giac {
     return superieur_egal(b,a,contextptr);
   }
 
-  static bool has_inf_or_undef(const gen & g){
+  bool has_inf_or_undef(const gen & g){
     if (g.type!=_VECT)
       return is_inf(g) || is_undef(g);
     const_iterateur it=g._VECTptr->begin(),itend=g._VECTptr->end();
@@ -8347,7 +8427,7 @@ namespace giac {
     case _FLOAT_:
       return a._FLOAT_val==giac_float(1);
     case _REAL:
-      return is_zero(a-1);
+      return is_exactly_zero(a-1);
     case _VECT:
       return a._VECTptr->size()==1 && is_one(a._VECTptr->front());
     case _POLY:
@@ -8376,7 +8456,7 @@ namespace giac {
     case _FLOAT_:
       return a._FLOAT_val==giac_float(-1);
     case _REAL:
-      return is_zero(a+1);
+      return is_exactly_zero(a+1);
     case _VECT:
       return a._VECTptr->size()==1 && is_minus_one(a._VECTptr->front());
     case _POLY:
@@ -9289,6 +9369,10 @@ namespace giac {
 	  if (power_basis_exp(*it,basis,expo)){
 	    isneg=!isneg;
 	    hasneg=true;
+	  }
+	  if (!vsorted.empty() && basis==vsorted.back()){
+	    vsorted.pop_back();
+	    expo+=1;
 	  }
 	  if (basis==precbasis)
 	    precexpo=precexpo+expo;
@@ -10926,12 +11010,22 @@ namespace giac {
 #endif // NSPIRE
       if (*endchar){
 #ifdef BCD
-      giac_float gf;
-      gf=strtobcd(s,(const char **)&endchar);
-      if (!*endchar)
-	return gf;
-      // if (abs_calc_mode(contextptr)==38) return gensizeerr(gettext("Invalid float"));
+	giac_float gf;
+	gf=strtobcd(s,(const char **)&endchar);
+	if (!*endchar)
+	  return gf;
+	for (int i=0;i<l;++i){
+	  unsigned si=(unsigned char)s[i];
+	  if (si==226 || si==194)
+	    return gf;
+	}
+	// if (abs_calc_mode(contextptr)==38) return gensizeerr(gettext("Invalid float"));
 #endif
+	for (int i=0;i<l;++i){
+	  unsigned si=(unsigned char)s[i];
+	  if (si==226 || si==194)
+	    return undef;
+	}
 	return gen(string(s),contextptr);
       }
       return gen(d);
@@ -12904,16 +12998,20 @@ namespace giac {
   }
 
 #ifdef ConnectivityKit
-  void gen::dbgprint() const { }
+  const char * gen::dbgprint() const { return "Done";}
 #else
 #if defined(VISUALC) && !defined(MS_SMART)
-  void gen::dbgprint() const { ATLTRACE2("%s\r\n", this->print(0).c_str()); }
+  const char * gen::dbgprint() const { ATLTRACE2("%s\r\n", this->print(0).c_str()); return "Done";}
 #else
-  void gen::dbgprint() const{    
+  const char * gen::dbgprint() const{    
     if (this->type==_POLY)
-      _POLYptr->dbgprint();
-    else
-      COUT << this->print(context0) << endl; 
+      return _POLYptr->dbgprint();
+    static std::string s;
+    s=this->print(context0);
+#if 0 // ndef NSPIRE
+    COUT << s << std::endl; 
+#endif
+    return s.c_str();
   }
 #endif
 #endif
@@ -12926,8 +13024,13 @@ namespace giac {
     return '<' + coeff.print(context0) + ',' + exponent.print(context0) + '>' ;
   }
 
-  void monome::dbgprint() const {
-    COUT << this->print();
+  const char * monome::dbgprint() const {
+    static std::string s;
+    s=this->print();
+#if 0 // ndef NSPIRE
+    COUT << s;
+#endif
+    return s.c_str();
   }
 
 #ifndef NSPIRE
@@ -15015,6 +15118,11 @@ namespace giac {
     if (calc_mode(&C)!=1 && last.is_symb_of_sommet(at_pnt)){
 #ifndef GIAC_GGB
       if (is3d(last)){
+	bool worker=false;
+	worker=EM_ASM_INT_V({
+	    if (Module.worker) return 1; else return 0;
+	});
+	if (worker) return "3d not supported if workers are enabled";
 	//giac_renderer(last.print(&C).c_str());
 	int n=giac_gen_renderer(g,&C);
 	S="gl3d "+print_INT_(n);

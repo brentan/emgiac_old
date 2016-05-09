@@ -2033,7 +2033,7 @@ namespace giac {
       return vecteur(0);
     if (vsize==2)
       return vecteur(1,rprec<=50?evalf(-v[1]/v[0],1,context0):accurate_evalf(-v[1]/v[0],rprec)); // ok
-    if (vsize==3 && !is_zero(v.back())){
+    if (vsize==3 && !is_exactly_zero(v.back())){
       gen b2=accurate_evalf(-v[1]/2,rprec);
       gen delta=accurate_evalf(b2*b2-v[0]*v[2],rprec); // ok
       gen r1,r2;
@@ -4572,7 +4572,7 @@ namespace giac {
     }
     if (debug_infolevel>2)
       CERR << CLOCK() << " lcm deno done" << endl;
-#ifndef GIAC_HAS_STO_38
+#if !defined(GIAC_HAS_STO_38) && !defined(EMCC)
     if (
 	//a.front()._VECTptr->size()>=7 &&
 	is_integer_matrice(a) && is_integer_matrice(btran) && mmult_int(a,btran,res)
@@ -5888,10 +5888,11 @@ namespace giac {
     return true;
   }
 
-  bool is_integer_vecteur(const vecteur & m){
+  bool is_integer_vecteur(const vecteur & m,bool intonly){
     const_iterateur it=m.begin(),itend=m.end();
     for (;it!=itend;++it){
       if (it->type==_INT_) continue;
+      if (intonly) return false;
       if (it->type==_ZINT) continue;
       if (it->type==_CPLX && is_exactly_zero(*(it->_CPLXptr+1))) continue;
       return false;
@@ -5900,10 +5901,10 @@ namespace giac {
     return true;
   }
 
-  bool is_integer_matrice(const matrice & m){
+  bool is_integer_matrice(const matrice & m,bool intonly){
     const_iterateur it=m.begin(),itend=m.end();
     for (;it!=itend;++it)
-      if (it->type!=_VECT || !is_integer_vecteur(*it->_VECTptr)) return false;
+      if (it->type!=_VECT || !is_integer_vecteur(*it->_VECTptr,intonly)) return false;
     return true;
   }
 
@@ -6352,7 +6353,7 @@ namespace giac {
     double eps=epsilon(contextptr);
     unsigned as=unsigned(a.size()),a0s=unsigned(a.front()._VECTptr->size());
     bool step_rref=false;
-    if (algorithm==RREF_GUESS && step_infolevel && as<5 && a0s<7){
+    if (algorithm==RREF_GUESS && step_infolevel(contextptr) && as<5 && a0s<7){
       algorithm=RREF_GAUSS_JORDAN;
       step_rref=true;
     }
@@ -6745,7 +6746,7 @@ namespace giac {
 	    res = *r2sym(res,lv,contextptr)._VECTptr;
 	    pivot1 = r2sym(pivot1,lv,contextptr);
 	  }
-	  gprintf(step_rrefpivot,gettext("Matrix %gen\nReducing column %gen using pivot %gen at row %gen"),makevecteur(res,c+1,pivot1,pivotline+1),contextptr);
+	  gprintf(step_rrefpivot,gettext("%gen\nReduce column %gen with pivot %gen at row %gen"),makevecteur(res,c+1,pivot1,pivotline+1),contextptr);
 	}
 	// exchange lines if needed
 	if (l!=pivotline){
@@ -6778,7 +6779,7 @@ namespace giac {
 		coeff1=r2sym(coeff1,lv,contextptr);
 		coeff2=r2sym(coeff2,lv,contextptr);
 	      }
-	      gprintf(step_rrefpivot0,gettext("Matrix %gen\nRow operation L%gen <- (%gen)*L%gen-(%gen)*L%gen"),makevecteur(res,l+1,coeff1,ltemp+1,coeff2,l+1),contextptr);
+	      gprintf(step_rrefpivot0,gettext("L%gen <- (%gen)*L%gen-(%gen)*L%gen on %gen"),makevecteur(ltemp+1,coeff1,ltemp+1,coeff2,l+1,res),contextptr);
 	    }
 	    if (ltemp!=l){
 	      if (algorithm!=RREF_GAUSS_JORDAN) // M[ltemp] = rdiv( pivot * M[ltemp] - M[ltemp][pivotcol]* M[l], bareiss);
@@ -6803,7 +6804,7 @@ namespace giac {
 		coeff1=r2sym(coeff1,lv,contextptr);
 		coeff2=r2sym(coeff2,lv,contextptr);
 	      }
-	      gprintf(step_rrefpivot0,gettext("Matrix %gen\nRow operation L%gen <- (%gen)*L%gen-(%gen)*L%gen"),makevecteur(res,l+1,coeff1,ltemp+1,coeff2,l+1),contextptr);
+	      gprintf(step_rrefpivot0,gettext("L%gen <- (%gen)*L%gen-(%gen)*L%gen on %gen"),makevecteur(ltemp+1,coeff1,ltemp+1,coeff2,l+1,res),contextptr);
 	    }
 	    if (algorithm!=RREF_GAUSS_JORDAN)
 	      linear_combination(pivot,M[ltemp],-M[ltemp][pivotcol],M[l],bareiss,M[ltemp],eps,(c+1)*(rref_or_det_or_lu>0));
@@ -12147,6 +12148,8 @@ namespace giac {
       }
     }
     m=minv(m,contextptr);
+    if (is_undef(m)) 
+      return false;
     p=mmult(*_trn(p,contextptr)._VECTptr,m);
     // set d to its diagonal
     for (int i=0;i<dim;++i){
@@ -12531,6 +12534,8 @@ namespace giac {
 	  ans=francis_schur(H,0,dim,P,2*SOLVER_MAX_ITERATE,eps,true,true,true,true,contextptr);
 	  std_matrix_gen2matrice_destroy(P,p);
 	  std_matrix_gen2matrice_destroy(H,d);
+	  if (abs_calc_mode(contextptr)==38)
+	    return ans && schur_eigenvectors(p,d,eps,contextptr);
 	  schur_eigenvectors(p,d,eps,contextptr);
 	  return ans;
 	}
@@ -13374,7 +13379,7 @@ namespace giac {
   bool mlu(const matrice & a0,vecteur & P,matrice & L,matrice & U,GIAC_CONTEXT){
     matrice a(a0);
     bool modular=false;
-    if (!is_squarematrix(a)){
+    if (!ckmatrix(a)){ // activate non-square matrix (instead of is_squarematrix)
       if (a.front().type==_VECT && !a.front()._VECTptr->empty() && (a.back()==at_irem || a.back()==at_ichinrem)){
 	modular=true;
 	a=*a.front()._VECTptr;
@@ -13401,7 +13406,7 @@ namespace giac {
       vecteur & v=*res[i]._VECTptr;
       L.push_back(new ref_vecteur(s));
       vecteur & wl=*L.back()._VECTptr;
-      for (int j=0;j<i;++j){ // L part
+      for (int j=0;j<i && j<C;++j){ // L part
 	wl[j]=v[j];
       }
       wl[i]=1;
@@ -14840,7 +14845,7 @@ namespace giac {
 	  nl=(*tmp._STRNGptr)[0];
       }
       if (s>3){
-	tmp=g[1];
+	tmp=g[3];
 	if (tmp.type==_STRNG && !tmp._STRNGptr->empty())
 	  decsep=(*tmp._STRNGptr)[0];
       }
@@ -16567,7 +16572,11 @@ namespace giac {
       CERR << CLOCK() << " iterate2 " << n1 << " " << n2 << endl;
     giac_double s,p; // s=sum of shifts, p=product
     giac_double ok=std::abs(H[n2-1][n2-2]/H[n2-1][n2-1]);
-    if (!in_recursion && H.size()>=50){
+    if (
+#ifdef GIAC_HAS_STO38 // otherwise p:=48*x*(1+x)^60 -(1+x)^60 +1; proot(p) crashes
+	0 &&
+#endif
+	!in_recursion && H.size()>=50){
       // search for a small coeff on the subdiagonal in the last elements
       int k=-1,ksmallest=-1;
       const double limite=0.5;giac_double savetest,smallest=-1;

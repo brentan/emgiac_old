@@ -884,7 +884,7 @@ namespace giac {
     surd2pow(g0,subst1,subst2,contextptr);
     gen g0_(subst(g0,subst1,subst2,false,contextptr)),g0mult(1);
     // apply inv to pow and *
-    g0_=applyinv(g0_,contextptr);
+    g0_=applyinv(g0_,contextptr); if (is_undef(g0_)) return false;
     if (x.type==_IDNT && g0_.is_symb_of_sommet(at_prod) && g0_._SYMBptr->feuille.type==_VECT){
       // extract csts
       vecteur v=*g0_._SYMBptr->feuille._VECTptr,v1,v2;
@@ -993,7 +993,11 @@ namespace giac {
     vecteur v=lop(g0,at_Dirac);
     if (!v.empty()){
       gen A,B,a0,b0;
+#ifdef GIAC_HAS_STO_38
+      identificateur t("tsumab_");
+#else
       identificateur t(" tsumab");
+#endif
       gen h=quotesubst(g0,v.front(),t,contextptr);
       if (!is_linear_wrt(h,t,A,B,contextptr))
 	return false;
@@ -1229,8 +1233,10 @@ namespace giac {
     }
     int eo=0;
     if (is_zero(gab) || is_zero(gm) ){
-      gm=subst(g0,x,x+(a+b)/2,false,contextptr);
-      eo=is_even_odd(gm,x,contextptr);
+      identificateur t("tintgab_");
+      gen tt(t);
+      gm=subst(g0,x,tt+(a+b)/2,false,contextptr);
+      eo=is_even_odd(gm,tt,contextptr);
     }
     if (eo==1){
       if (!intgab(g0,x,a,(a+b)/2,res,contextptr))
@@ -1470,7 +1476,11 @@ namespace giac {
       polynome lcoeffs;
       if (is_admissible_poly(s,intstep,lcoeffs,decals,contextptr)){
 	gen lcoeff=r2e(lcoeffs,v,contextptr);
+#ifdef GIAC_HAS_STO_38
+	identificateur idx("sumw_"); // identificateur idx(" x"); // 
+#else
 	identificateur idx(" sumw"); // identificateur idx(" x"); // 
+#endif
 	gen gx(idx); // ("` sumw`",contextptr); 
 	// parser instead of temporary otherwise bug with a:=1; ZT(f,z):=sum(f(n)/z^n,n,0,inf); ZT(k->c^k,z);  ZT;
 	// otherwise while purge(gx) happens, the string `sumw` is destroyed
@@ -1558,8 +1568,9 @@ namespace giac {
 	    Qg=sqrt(Qg,contextptr);
 	  else
 	    Qg=pow(Qg,inv(gen(r),contextptr),contextptr);
-	  // (g|x=a)*s(a)/p(a)/Qg^(r*a-R0)/(r*a-R0)!*sum(p(n)/s(n)*Qg^(r*n-R0)/(r*n-R0)!,n=a..inf);
-	  gen coeffa=limit(g*r2e(s,v,contextptr)/r2e(p,v,contextptr)/pow(Qg,r*a-R0,contextptr)/factorial(r*a.val-r0),*x._IDNTptr,a,1,contextptr);
+	  // (g|x=a)*s(a)/p(a)/Qg^(r*a-R0)*(r*a-R0)!*sum(p(n)/s(n)*Qg^(r*n-R0)/(r*n-R0)!,n=a..inf);
+	  gen coeffa=g*r2e(s,v,contextptr)/r2e(p,v,contextptr)/pow(Qg,r*a-R0,contextptr)*factorial(r*a.val-r0);
+	  coeffa=limit(coeffa,*x._IDNTptr,a,1,contextptr);
 	  // Set k=r*n-R0 and compute sum((p/s)((k+R0)/r)*X^k/k!,k=r*a-R0..inf)
 	  int d=p.degree(0);
 	  gen Pg=r2e(p,v,contextptr);
@@ -1573,9 +1584,10 @@ namespace giac {
 	  gen tmp=symb_horner(w,gx)*exp(gx,contextptr),remains;
 	  // substract sum(...,k=0..r*a-R0-1)
 	  for (int k=0;k<r*a.val-r0;++k){
-	    tmp -= subst(Pg,x,(k+R0)/r,false,contextptr)*pow(Qg,k)/factorial(k);
+	    // pow(Qg,k) replaced by pow(gx,k) for assume(x>0);somme(x^(4n+1)/(4n+1)!,n,1,inf);
+	    tmp -= subst(Pg,x,(k+R0)/r,false,contextptr)*pow(gx,k)/factorial(k);
 	  }
-	  // then keep terms which are = -R0 mod r = N
+	  // keep terms which are = -R0 mod r = N
 	  // for example if r=2 and R0 even, keep even terms
 	  // that is (f(X)+f(-X))/2
 	  // more generally take 
@@ -1656,6 +1668,29 @@ namespace giac {
       }
     }
     vecteur v=lvarx(g,x);
+    vecteur vD=lop(v,at_Kronecker);
+    if (!vD.empty()){
+      gen vD0=vD.front(),A,B,a,b;
+      if (is_linear_wrt(g,vD0,A,B,contextptr) && is_linear_wrt(vD0._SYMBptr->feuille,x,a,b,contextptr) && in_sumab(B,x,a_orig,b_orig,res,testi,false,contextptr)){
+	// sum(A*Kronecker(a*x+b),x,a_orig,b_orig)+res
+	gen xval=-b/a;
+	if (is_integer(xval) && is_greater(xval,a_orig,contextptr) && is_greater(b_orig,xval,contextptr))
+	  res += subst(A,x,xval,false,contextptr);
+	return true;
+      }
+    }
+    vD=lop(v,at_Heaviside);
+    if (!vD.empty()){
+      gen vD0=vD.front(),A,B,a,b;
+      if (is_linear_wrt(g,vD0,A,B,contextptr) && is_linear_wrt(vD0._SYMBptr->feuille,x,a,b,contextptr) && in_sumab(B,x,a_orig,b_orig,res,testi,false,contextptr)){
+	// sum(A*Heaviside(a*x+b),x,a_orig,b_orig)+res
+	gen xval=-b/a,resadd;
+	if (is_integer(xval) && is_strictly_positive(a,contextptr) && in_sumab(A,x,max(a_orig,xval,contextptr),b_orig,resadd,testi,false,contextptr)){
+	  res += resadd;
+	  return true;
+	}
+      }
+    }
     v=loptab(v,sincostan_tab);
     bool est_reel=testi?!has_i(g):true; 
     if (!v.empty()){
@@ -1713,7 +1748,8 @@ namespace giac {
 	res=0; R=inv(R,contextptr);
 	// add sum(1/k^pui,k,a,inf)
 	// -> 2*sum(1/(2*k)^pui,k,a/2,inf)=2^(1-pui)*sum(1/k^pui,k,a/2,inf)
-	res = res - _sum(makesequence(R,x,a,plus_inf),contextptr) + pow(2,1-pui,contextptr)*_sum(makesequence(R,x,(a.val+1)/2,plus_inf),contextptr);
+	res = - _sum(makesequence(R,x,a,plus_inf),contextptr) + pow(2,1-pui,contextptr)*_sum(makesequence(R,x,(a.val+1)/2,plus_inf),contextptr);
+	res = -res*subst(g/R,x,a,false,contextptr);
 	return true;
       }
       gen n=b-a;

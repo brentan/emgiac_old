@@ -651,7 +651,7 @@ namespace giac {
 	    break;
 	}
       }
-      if (!is_zero(coeffn)){
+      if (!is_exactly_zero(coeffn)){
 	// simplify inum and iden
 	bool hasnum=false,hasden=false;
 	for (int i=0;i<l_size;i++){
@@ -1005,8 +1005,21 @@ namespace giac {
 	else
 	  num=algebraic_EXTension(makevecteur(doubl,0),v);
       }
-      else 
+      else {
+	bool neg=false; 
+#if 1
+	gen numd;
+	if (has_evalf(num,numd,1,contextptr) && is_positive(-numd,contextptr))
+	  neg=true;
+	if (neg){
+	  num=-num;
+	  v.back()=-num;
+	}
+#endif
 	sym2rxrootnum(v,vecteur(l.begin()+embeddings,l.end()),num,tmpden,contextptr);
+	if (neg)
+	  num=cst_i*num;
+      }
     }
     // end else num integer
     // and eventually we embedd num 
@@ -1899,7 +1912,10 @@ namespace giac {
       }
       fn=c*fn;
     }
-    return rdiv(fn,fd,contextptr);
+    gen res=rdiv(fn,fd,contextptr);
+    if (has_inf_or_undef(res))
+      return fraction(fn,fd);
+    return res;
   }
 
   gen r2sym(const vecteur & v,const vecteur & l,GIAC_CONTEXT){
@@ -1918,7 +1934,7 @@ namespace giac {
       return gensizeerr(gettext("sym2poly.cc/ckdeg2_rootof"));
     vecteur & w = *pmin._VECTptr;
     int s=int(w.size());
-    if (s!=3)
+    if (s!=3)// || is_greater(linfnorm(pmin,contextptr),(1<<30),contextptr))
       return symb_rootof(p,r2sym(pmin,lt,ltend,contextptr),contextptr);
     if (p._VECTptr->size()!=2)
       return gensizeerr(gettext("sym2poly.cc/ckdeg2_rootof"));  
@@ -2065,7 +2081,10 @@ namespace giac {
     if (!ckmatrix(m))
       return gensizeerr(contextptr);
     m=mtran(m); // d-1 rows, d columns
+    int st=step_infolevel(contextptr);
+    step_infolevel(contextptr)=0;
     vecteur mk=mker(m,contextptr);
+    step_infolevel(contextptr)=st;
     gen pm(mk.front()); // min poly= 1st kernel element
     if (pm.type==_VECT){
       mk=*pm._VECTptr;
@@ -3436,7 +3455,8 @@ namespace giac {
     l.erase(l.begin());
     gen res;
     gen tmp2(polynome2poly1(temp,1));
-    res=l.empty()?tmp2:r2e(tmp2,l,contextptr); // (tmp2.type==_FRAC?gen(fraction(r2e(tmp2._FRACptr->num,l,contextptr),r2e(tmp2._FRACptr->den,l,contextptr))):r2e(tmp2,l,contextptr));
+    //res=l.empty()?tmp2:r2e(tmp2,l,contextptr); 
+    res=l.empty()?tmp2:((tmp2.type==_FRAC && tmp2._FRACptr->den.type==_VECT && tmp2._FRACptr->den._VECTptr->size()>1)?gen(fraction(r2e(tmp2._FRACptr->num,l,contextptr),r2e(tmp2._FRACptr->den,l,contextptr))):r2e(tmp2,l,contextptr));
     if (res.type==_FRAC && res._FRACptr->num.type==_VECT && res._FRACptr->den.type<_POLY){
       res=inv(res._FRACptr->den,contextptr)*res._FRACptr->num;
     }

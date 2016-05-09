@@ -635,6 +635,21 @@ extern "C" void Sleep(unsigned int miliSecond);
       _specialtexprint_double_=b;
   }
 
+  static bool _atan_tan_no_floor_=false; 
+  bool & atan_tan_no_floor(GIAC_CONTEXT){
+    if (contextptr && contextptr->globalptr )
+      return contextptr->globalptr->_atan_tan_no_floor_;
+    else
+      return _atan_tan_no_floor_;
+  }
+
+  void atan_tan_no_floor(bool b,GIAC_CONTEXT){
+    if (contextptr && contextptr->globalptr )
+      contextptr->globalptr->_atan_tan_no_floor_=b;
+    else
+      _atan_tan_no_floor_=b;
+  }
+
   static bool _lexer_close_parenthesis_=true; 
   bool & lexer_close_parenthesis(GIAC_CONTEXT){
     if (contextptr && contextptr->globalptr )
@@ -925,6 +940,21 @@ extern "C" void Sleep(unsigned int miliSecond);
       contextptr->globalptr->_series_flags_=b;
     else
       _series_flags_=b;
+  }
+
+  static int _step_infolevel_=0;
+  int & step_infolevel(GIAC_CONTEXT){
+    if (contextptr && contextptr->globalptr )
+      return contextptr->globalptr->_step_infolevel_;
+    else
+      return _step_infolevel_;
+  }
+
+  void step_infolevel(int b,GIAC_CONTEXT){
+    if (contextptr && contextptr->globalptr )
+      contextptr->globalptr->_step_infolevel_=b;
+    else
+      _step_infolevel_=b;
   }
 
   static bool _local_eval_=true;
@@ -1572,7 +1602,8 @@ extern "C" void Sleep(unsigned int miliSecond);
   int HENSEL_QUADRATIC_POWER=25;
   int KARAMUL_SIZE=17;
   int INT_KARAMUL_SIZE=300;
-  int FFTMUL_SIZE=10000; 
+  int FFTMUL_SIZE=100; 
+  int FFTMUL_INT_MAXBITS=4000;
   int MAX_ALG_EXT_ORDER_SIZE = 4;
   int MAX_COMMON_ALG_EXT_ORDER_SIZE = 16;
   int TRY_FU_UPRIME=5;
@@ -1603,7 +1634,8 @@ extern "C" void Sleep(unsigned int miliSecond);
   int HENSEL_QUADRATIC_POWER=25;
   int KARAMUL_SIZE=17;
   int INT_KARAMUL_SIZE=300;
-  int FFTMUL_SIZE=10000; 
+  int FFTMUL_SIZE=100; 
+  int FFTMUL_INT_MAXBITS=4000;
   int MAX_ALG_EXT_ORDER_SIZE = 6;
 #ifdef EMCC
   int MAX_COMMON_ALG_EXT_ORDER_SIZE = 16;
@@ -2534,9 +2566,9 @@ extern "C" void Sleep(unsigned int miliSecond);
      if (_epath != NULL && *_epath != 0
          && cygwin_posix_path_list_p (_epath)){
 #ifdef __x86_64__
-       int s = cygwin_conv_path (CCP_POSIX_TO_WIN_W , _epath, NULL, 0);
+       int s = cygwin_conv_path (CCP_POSIX_TO_WIN_A , _epath, NULL, 0);
        char * _win32path = (char *) malloc(s);
-       cygwin_conv_path(CCP_POSIX_TO_WIN_W,_epath, _win32path,s);
+       cygwin_conv_path(CCP_POSIX_TO_WIN_A,_epath, _win32path,s);
        s=strlen(_win32path);
 #else
        char * _win32path = (char *) malloc
@@ -3264,6 +3296,7 @@ extern "C" void Sleep(unsigned int miliSecond);
      ptr->globalptr->_complex_mode_=_complex_mode_;
      ptr->globalptr->_try_parse_i_=_try_parse_i_;
      ptr->globalptr->_specialtexprint_double_=_specialtexprint_double_;
+     ptr->globalptr->_atan_tan_no_floor_=_atan_tan_no_floor_;
      ptr->globalptr->_complex_variables_=_complex_variables_;
      ptr->globalptr->_increasing_power_=_increasing_power_;
      ptr->globalptr->_approx_mode_=_approx_mode_;
@@ -3276,6 +3309,7 @@ extern "C" void Sleep(unsigned int miliSecond);
      ptr->globalptr->_variables_are_files_=_variables_are_files_;
      ptr->globalptr->_bounded_function_no_=_bounded_function_no_;
      ptr->globalptr->_series_flags_=_series_flags_; // bit1= full simplify, bit2=1 for truncation
+     ptr->globalptr->_step_infolevel_=_step_infolevel_; // bit1= full simplify, bit2=1 for truncation
      ptr->globalptr->_local_eval_=_local_eval_;
      ptr->globalptr->_default_color_=_default_color_;
      ptr->globalptr->_epsilon_=_epsilon_<=0?1e-12:_epsilon_;
@@ -3683,10 +3717,10 @@ extern "C" void Sleep(unsigned int miliSecond);
 #endif
 #ifdef WITH_MYOSTREAM
 		     _ntl_on_(true),
-		     _lexer_close_parenthesis_(true),_rpn_mode_(false),_try_parse_i_(true),_specialtexprint_double_(false),_angle_mode_(0), _bounded_function_no_(0), _series_flags_(0x3),_default_color_(FL_BLACK), _epsilon_(1e-12), _proba_epsilon_(1e-15),  _show_axes_(1),_spread_Row_ (-1), _spread_Col_ (-1),_logptr_(&my_CERR),_prog_eval_level_val(1), _eval_level(DEFAULT_EVAL_LEVEL), _rand_seed(123457),_max_sum_sqrt_(3),_max_sum_add_(100000),_total_time_(0),_evaled_table_(0),_extra_ptr_(0)
+		     _lexer_close_parenthesis_(true),_rpn_mode_(false),_try_parse_i_(true),_specialtexprint_double_(false),_atan_tan_no_floor_(false),_angle_mode_(0), _bounded_function_no_(0), _series_flags_(0x3),_step_infolevel_(0),_default_color_(FL_BLACK), _epsilon_(1e-12), _proba_epsilon_(1e-15),  _show_axes_(1),_spread_Row_ (-1), _spread_Col_ (-1),_logptr_(&my_CERR),_prog_eval_level_val(1), _eval_level(DEFAULT_EVAL_LEVEL), _rand_seed(123457),_max_sum_sqrt_(3),_max_sum_add_(100000),_total_time_(0),_evaled_table_(0),_extra_ptr_(0)
 #else
 		     _ntl_on_(true),
-		     _lexer_close_parenthesis_(true),_rpn_mode_(false),_try_parse_i_(true),_specialtexprint_double_(false),_angle_mode_(0), _bounded_function_no_(0), _series_flags_(0x3),_default_color_(FL_BLACK), _epsilon_(1e-12), _proba_epsilon_(1e-15),  _show_axes_(1),_spread_Row_ (-1), _spread_Col_ (-1), 
+		     _lexer_close_parenthesis_(true),_rpn_mode_(false),_try_parse_i_(true),_specialtexprint_double_(false),_atan_tan_no_floor_(false),_angle_mode_(0), _bounded_function_no_(0), _series_flags_(0x3),_step_infolevel_(0),_default_color_(FL_BLACK), _epsilon_(1e-12), _proba_epsilon_(1e-15),  _show_axes_(1),_spread_Row_ (-1), _spread_Col_ (-1), 
 #ifdef EMCC
 		     _logptr_(&COUT), 
 #else
@@ -3742,9 +3776,11 @@ _prog_eval_level_val(1), _eval_level(DEFAULT_EVAL_LEVEL), _rand_seed(123457),_ma
      _increasing_power_=g._increasing_power_;
      _approx_mode_=g._approx_mode_;
      _angle_mode_=g._angle_mode_;
+     _atan_tan_no_floor_=g._atan_tan_no_floor_;
      _variables_are_files_=g._variables_are_files_;
      _bounded_function_no_=g._bounded_function_no_;
      _series_flags_=g._series_flags_; // bit1= full simplify, bit2=1 for truncation
+     _step_infolevel_=g._step_infolevel_; // bit1= full simplify, bit2=1 for truncation
      _local_eval_=g._local_eval_;
      _default_color_=g._default_color_;
      _epsilon_=g._epsilon_;
@@ -4740,6 +4776,7 @@ unsigned int ConvertUTF8toUTF16 (
     "Rem",
     "animate",
     "animation",
+    "archive",
     "autosimplify",
     "canonical_form",
     "cfactor",
@@ -4771,6 +4808,7 @@ unsigned int ConvertUTF8toUTF16 (
     "pow2exp",
     "powexpand",
     "propfrac",
+    "quote",
     "regroup",
     "reorder",
     "series",
@@ -4835,11 +4873,26 @@ unsigned int ConvertUTF8toUTF16 (
     return g;
   }
 
-  int step_infolevel=0;
   void (*my_gprintf)(unsigned special,const string & format,const vecteur & v,GIAC_CONTEXT)=0;
 
+#ifdef EMCC
+  static void newlinestobr(string &s,const string & add){
+    int l=int(add.size());
+    for (int i=0;i<l;++i){
+      if (add[i]=='\n')
+	s+="<br>";
+      else
+	s+=add[i];
+    }
+  }
+#else
+  static void newlinestobr(string &s,const string & add){
+    s+=add;
+  }
+#endif
+
   void gprintf(unsigned special,const string & format,const vecteur & v,GIAC_CONTEXT){
-    if (step_infolevel==0)
+    if (step_infolevel(contextptr)==0)
       return;
     if (my_gprintf){
       my_gprintf(special,format,v,contextptr);
@@ -4847,16 +4900,32 @@ unsigned int ConvertUTF8toUTF16 (
     }
     string s;
     int pos=0;
+#ifdef EMCC
+    *logptr(contextptr) << char(2) << endl; // start mixed text/mathml
+#endif
     for (unsigned i=0;i<v.size();++i){
       int p=int(format.find("%gen",pos));
       if (p<0 || p>=int(format.size()))
 	break;
-      s += format.substr(pos,p-pos);
+      newlinestobr(s,format.substr(pos,p-pos));
+#ifdef EMCC
+      gen tmp;
+      if (v[i].is_symb_of_sommet(at_pnt))
+	tmp=_svg(v[i],contextptr);
+      else
+	tmp=_mathml(makesequence(v[i],1),contextptr);
+      s = s+((tmp.type==_STRNG)?(*tmp._STRNGptr):v[i].print(contextptr));
+#else
       s += v[i].print(contextptr);
+#endif
       pos=p+4;
     }
-    s += format.substr(pos,format.size()-pos);
+    newlinestobr(s,format.substr(pos,format.size()-pos));
     *logptr(contextptr) << s << endl;
+#ifdef EMCC
+    *logptr(contextptr) << char(3) << endl; // end mixed text/mathml
+    *logptr(contextptr) << endl;
+#endif
   }
 
   void gprintf(const string & format,const vecteur & v,GIAC_CONTEXT){
