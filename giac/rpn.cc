@@ -765,7 +765,8 @@ namespace giac {
 	  gen g=identificateur(it->first);
 	  if (!equalposcomp(*keywordsptr,g)){
 	    if (val){
-	      g=symb_sto(it->second,g);
+	      g=symbolic(at_equal,makesequence(g,it->second));
+	      //g=symb_sto(it->second,g);
 	    }
 	    res.push_back(g);
 	  }
@@ -1511,8 +1512,21 @@ namespace giac {
     vecteur v(gen2vecteur(args));
     gen v0=v[0];
     v=*eval(v,eval_level(contextptr),contextptr)._VECTptr;
-    if (v.size()!=4 || v0.type!=_IDNT)
-      return _mid(v,contextptr);
+    if (v0.type!=_IDNT){
+      if (v.size()<3)
+	return gendimerr(contextptr);
+      if (ckmatrix(v[0]))
+	return _subMat(gen(makevecteur(v[0],v[1],v[2]),_SEQ__VECT),contextptr);
+      int shift = xcas_mode(contextptr)!=0 || abs_calc_mode(contextptr)==38;
+      if (v[0].type==_VECT && v[1].type==_INT_ && v[2].type==_INT_){
+	vecteur & w =*v[0]._VECTptr;
+	int v2=v[1].val-shift, v3=v[2].val-shift;
+	if (v2<=v3 && v2>=0 && v3<int(w.size()))
+	  return gen(vecteur(w.begin()+v2,w.begin()+v3+1),v[1].subtype);
+      }
+    }
+    if (v.size()<4)
+      return gendimerr(contextptr);
     v[2]=_floor(v[2],contextptr);
     v[3]=_floor(v[3],contextptr);
     if (ckmatrix(v[1]))
@@ -1869,8 +1883,13 @@ namespace giac {
     ++taylorxn;
     newx=idx;
     gen tmp=subst(v[0],x,newx,false,contextptr);
-    tmp=eval(tmp,eval_level(contextptr),contextptr);
-    v[0]=tmp=subst(tmp,x,newx,false,contextptr);
+    gen tmp1=eval(tmp,eval_level(contextptr),contextptr);
+    if (!is_undef(tmp1))
+      tmp=tmp1;
+    tmp1=subst(tmp,x,newx,false,contextptr);
+    if (!is_undef(tmp1))
+      tmp=tmp1;
+    v[0]=tmp;
     v[1]=newx;
     int s=int(v.size());
     for (int i=2;i<s;++i)
@@ -2994,6 +3013,28 @@ namespace giac {
   static define_unary_function_eval (__VIEWS,&_VIEWS,_VIEWS_s);
   define_unary_function_ptr5( at_VIEWS ,alias_at_VIEWS,&__VIEWS,_QUOTE_ARGUMENTS,T_RETURN);
   
+#ifdef USE_GMP_REPLACEMENTS
+  unsigned long long mpz_get_ull(mpz_t n){
+    return 0; // FIXME!!!!
+  }
+#else
+  unsigned long long mpz_get_ull(mpz_t n){
+    unsigned int lo, hi;
+    mpz_t tmp;
+    
+    mpz_init( tmp );
+    mpz_mod_2exp( tmp, n, 64 );   /* tmp = (lower 64 bits of n) */
+    
+    lo = mpz_get_ui( tmp );       /* lo = tmp & 0xffffffff */ 
+    mpz_div_2exp( tmp, tmp, 32 ); /* tmp >>= 32 */
+    hi = mpz_get_ui( tmp );       /* hi = tmp & 0xffffffff */
+
+    mpz_clear( tmp );
+
+    return (((unsigned long long)hi) << 32) + lo;
+  }
+#endif
+
   gen _pointer(const gen & args,GIAC_CONTEXT){
     if (args.type!=_VECT || args._VECTptr->size()!=2)
       return gensizeerr(contextptr);
@@ -3001,8 +3042,10 @@ namespace giac {
       return gentypeerr(contextptr);
     if (args._VECTptr->front().type==_INT_)
       return gen((void *)(unsigned long)args._VECTptr->front().val, args._VECTptr->back().val);
-    if (args._VECTptr->front().type==_ZINT)
-      return gensizeerr("64 bits pointer I/O not yet implemented");
+    if (args._VECTptr->front().type==_ZINT){
+      unsigned long u=mpz_get_ull(*args._ZINTptr);
+      return gen((void *)u,args._VECTptr->back().val);
+    }
     return gentypeerr(contextptr);
   }
   static const char _pointer_s[]="pointer";
@@ -3239,7 +3282,14 @@ namespace giac {
   static const char _testfunc_s[]="testfunc";
   static define_unary_function_eval(__testfunc,&_testfunc,_testfunc_s);
   define_unary_function_ptr5( at_testfunc ,alias_at_testfunc,&__testfunc,0,true);
+#else
 
+  gen _testfunc(const gen & g0,GIAC_CONTEXT){
+    return g0;
+  }
+  static const char _testfunc_s[]="testfunc";
+  static define_unary_function_eval(__testfunc,&_testfunc,_testfunc_s);
+  define_unary_function_ptr5( at_testfunc ,alias_at_testfunc,&__testfunc,0,true);
 #endif // old code not used anymore
 
 #ifdef DOUBLEVAL
@@ -4261,7 +4311,7 @@ namespace giac {
     // "LQ",
     // "LSQ",
     "LU",
-    "MAKELIST",
+    //"MAKELIST",
     "MAKEMAT",
     // "MANT",
     "MAX",
@@ -4340,7 +4390,7 @@ namespace giac {
     "TEXPAND",
     //"TRACE",
     "TRN",
-    "TRUNCATE",
+    //"TRUNCATE",
     //"UTPC",
     //"UTPF",
     //"UTPN",

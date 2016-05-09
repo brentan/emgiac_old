@@ -248,7 +248,8 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
   extern int HENSEL_QUADRATIC_POWER; // above #steps do quadratic Hensel lift
   extern int KARAMUL_SIZE; // Use Karatsuba multiplication if degree is >
   extern int INT_KARAMUL_SIZE; // Use Karatsuba multiplication if degree is >
-  extern int FFTMUL_SIZE; // Currently adapted to (x+1)^n
+  extern int FFTMUL_SIZE; // minimal size for fft mult of poly
+  extern int FFTMUL_INT_MAXBITS; // max number of bits for fft mult of int poly 
   // Should be lower for larger coeff
   extern int MAX_ALG_EXT_ORDER_SIZE; // x^1/d extension not algebraic if d>
   extern int MAX_COMMON_ALG_EXT_ORDER_SIZE;
@@ -525,9 +526,11 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
     bool _rpn_mode_;
     bool _try_parse_i_;
     bool _specialtexprint_double_;
+    bool _atan_tan_no_floor_;
     int _angle_mode_;
     int _bounded_function_no_;
     int _series_flags_; // bit1= full simplify, bit2=1 for truncation, bit3=atan does not rewrite sin/cos to tan
+    int _step_infolevel_; 
     int _default_color_;
     double _epsilon_;
     double _proba_epsilon_; // if not 0, probabilistic algo may be used
@@ -672,6 +675,9 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
   bool & specialtexprint_double(GIAC_CONTEXT);
   void specialtexprint_double(bool b,GIAC_CONTEXT);
 
+  bool & atan_tan_no_floor(GIAC_CONTEXT);
+  void atan_tan_no_floor(bool b,GIAC_CONTEXT);
+
   bool & do_lnabs(GIAC_CONTEXT);
   void do_lnabs(bool b,GIAC_CONTEXT);
 
@@ -736,6 +742,9 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
 
   int & series_flags(GIAC_CONTEXT);
   void series_flags(int b,GIAC_CONTEXT);
+
+  int & step_infolevel(GIAC_CONTEXT);
+  void step_infolevel(int b,GIAC_CONTEXT);
 
   bool & local_eval(GIAC_CONTEXT);
   void local_eval(bool b,GIAC_CONTEXT);
@@ -946,7 +955,6 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
 
   gen add_autosimplify(const gen & g,GIAC_CONTEXT);
 
-  extern int step_infolevel;
   extern void (*my_gprintf)(unsigned special,const std::string & format,const vecteur & v,GIAC_CONTEXT);
   void gprintf(const std::string & format,const vecteur & v,GIAC_CONTEXT);
   void gprintf(unsigned special,const std::string & format,const vecteur & v,GIAC_CONTEXT);

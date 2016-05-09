@@ -76,7 +76,9 @@ using namespace std;
 u32 PrimeGetNow();
 extern "C" uint32_t mainThreadStack[];
 #else
-//#include <time.h>
+#ifndef BESTA_OS
+#include <time.h>
+#endif
 #endif
 
 #ifndef NO_NAMESPACE_GIAC
@@ -835,7 +837,7 @@ namespace giac {
     default_args(a,b,contextptr);
     bool warn=false;
 #ifndef GIAC_HAS_STO_38
-    if (logptr(contextptr))
+    if (logptr(contextptr) && calc_mode(contextptr)!=1)
       warn=true;
 #endif
     if (warn){
@@ -1780,13 +1782,11 @@ namespace giac {
     }
     return g;
   }
-  static bool ck_is_one(const gen & g){
+  static bool ck_is_one(gen & g){
     if (is_one(g))
       return true;
     if (g.type>_POLY){
-#ifndef NO_STDEXCEPT
-      setsizeerr(gettext("Unable to eval test in loop : ")+g.print());
-#endif
+      g=gensizeerr(gettext("Unable to eval test in loop : ")+g.print());
       return false; // this will stop the loop in caller
     }
     return false;
@@ -1844,6 +1844,7 @@ namespace giac {
     int save_current_instruction=debug_ptr(newcontextptr)->current_instruction;
     int eval_lev=eval_level(newcontextptr);
     debug_struct * dbgptr=debug_ptr(newcontextptr);
+    gen testf;
 #ifndef NO_STDEXCEPT
     try {
 #endif
@@ -1871,9 +1872,9 @@ namespace giac {
 	index_name=test._SYMBptr->feuille._VECTptr->front();
       }
       for (equaltosto(initialisation,contextptr).eval(eval_lev,newcontextptr);
-	   for_in?set_for_in(counter,for_in,for_in_v,for_in_s,index_name,newcontextptr):ck_is_one(test.eval(eval_lev,newcontextptr).evalf(1,newcontextptr));
+	   for_in?set_for_in(counter,for_in,for_in_v,for_in_s,index_name,newcontextptr):ck_is_one( (testf=test.eval(eval_lev,newcontextptr).evalf(1,newcontextptr)) );
 	   ++counter,(test.val?increment.eval(eval_lev,newcontextptr):0)){
-	if (interrupted)
+	if (interrupted || is_undef(testf))
 	  break;
 	dbgptr->current_instruction=save_current_instruction;
 	findlabel=false;
@@ -1954,6 +1955,8 @@ namespace giac {
 #endif
     if (bound)
       leave(protect,loop_var,newcontextptr);
+    if (is_undef(testf))
+      return testf;
     return res==at_break?string2gen("breaked",false):res;
   }
 
@@ -2675,6 +2678,8 @@ namespace giac {
   // static gen symb_prepend(const gen & args){  return symbolic(at_prepend,args); }
   gen _prepend(const gen & args,GIAC_CONTEXT){
     if ( args.type==_STRNG &&  args.subtype==-1) return  args;
+    if (args.type==_VECT && args._VECTptr->size()==2 && args._VECTptr->front().type==_STRNG && args._VECTptr->back().type==_STRNG)
+      return args._VECTptr->back()+args._VECTptr->front();
     if ( (args.type!=_VECT) || (!args._VECTptr->size()) || (args._VECTptr->front().type!=_VECT) )
       return gensizeerr(contextptr);
     gen debut=args._VECTptr->front();
@@ -2928,16 +2933,40 @@ namespace giac {
   }
   static gen rand_integer_interval(const gen & x1,const gen & x2,GIAC_CONTEXT){
     static gen rand_max_plus_one=gen(rand_max2)+1;
-    if (is_strictly_positive(x1-x2,contextptr))
+    gen x2x1=x2-x1;
+    if (!is_positive(x2x1,contextptr))
       return rand_integer_interval(x2,x1,contextptr);
-    int n=(x2-x1).bindigits()/gen(rand_max2).bindigits()+1;
-    // Make n random numbers
+    int n=x2x1.bindigits()/gen(rand_max2).bindigits()+1;
     gen res=zero;
+#ifndef USE_GMP_REPLACEMENTS
+    if (unsigned(rand_max2)==(1u<<31)-1){
+      mpz_t tmp;
+      mpz_init(tmp);
+      for (int i=0;i<n;++i){
+	mpz_mul_2exp(tmp,tmp,31);
+	mpz_add_ui(tmp,tmp,giac_rand(contextptr));
+      }
+      if (x2x1.type==_INT_)
+	mpz_mul_si(tmp,tmp,x2x1.val);
+      else
+	mpz_mul(tmp,tmp,*x2x1._ZINTptr);
+      mpz_tdiv_q_2exp(tmp,tmp,31*n);
+      if (x1.type==_INT_){
+	if (x1.val>0) mpz_add_ui(tmp,tmp,x1.val); else mpz_sub_ui(tmp,tmp,-x1.val);
+      }
+      else
+	mpz_add(tmp,tmp,*x1._ZINTptr);
+      res=tmp;
+      mpz_clear(tmp);
+      return res;
+    }
+#endif
+    // Make n random numbers
     for (int i=0;i<n;++i)
       res=rand_max_plus_one*res+giac_rand(contextptr);
     // Now res is in [0,(RAND_MAX+1)^n-1]
     // Rescale in x1..x2
-    return x1+_iquo(makevecteur(res*(x2-x1),pow(rand_max_plus_one,n)),contextptr);
+    return x1+_iquo(makevecteur(res*x2x1,pow(rand_max_plus_one,n)),contextptr);
   }
   gen rand_interval(const vecteur & v,bool entier,GIAC_CONTEXT){
     static gen rand_max_plus_one=gen(rand_max2)+1;
@@ -5266,7 +5295,7 @@ namespace giac {
 #if 0 // def NSPIRE
     return g;
 #endif
-    if (g.type!=_SYMB || g._SYMBptr->sommet==at_program || g._SYMBptr->sommet==at_pnt || g._SYMBptr->sommet==at_animation || g._SYMBptr->sommet==at_unit || g._SYMBptr->sommet==at_integrate || g._SYMBptr->sommet==at_superieur_strict || g._SYMBptr->sommet==at_superieur_egal || g._SYMBptr->sommet==at_inferieur_strict || g._SYMBptr->sommet==at_inferieur_egal || g._SYMBptr->sommet==at_and || g._SYMBptr->sommet==at_ou || g._SYMBptr->sommet==at_et || g._SYMBptr->sommet==at_not || g._SYMBptr->sommet==at_xor || g._SYMBptr->sommet==at_piecewise)
+    if (g.type!=_SYMB || g._SYMBptr->sommet==at_program || g._SYMBptr->sommet==at_pnt || g._SYMBptr->sommet==at_animation || g._SYMBptr->sommet==at_unit || g._SYMBptr->sommet==at_integrate || g._SYMBptr->sommet==at_superieur_strict || g._SYMBptr->sommet==at_superieur_egal || g._SYMBptr->sommet==at_inferieur_strict || g._SYMBptr->sommet==at_inferieur_egal || g._SYMBptr->sommet==at_and || g._SYMBptr->sommet==at_ou || g._SYMBptr->sommet==at_et || g._SYMBptr->sommet==at_not || g._SYMBptr->sommet==at_xor || g._SYMBptr->sommet==at_piecewise || g._SYMBptr->sommet==at_archive)
       return g;
     if (is_equal(g))
       return apply_to_equal(g,simplifier,contextptr);
@@ -5356,7 +5385,7 @@ namespace giac {
     vecteur v=*args._VECTptr;
     int subtype;
     gen f;
-    bool usersort=v.size()==2 && v[0].type==_VECT 
+    bool usersort=v.size()==2 && v[0].type==_VECT && v[1].type!=_VECT
       // && args.subtype==_SEQ__VECT
       ;
     if (usersort){
@@ -5628,10 +5657,16 @@ namespace giac {
     }
     if (s<2)
       return gensizeerr(contextptr);
-    gen & f=v[1];
+    gen f=v[1];
     gen g=v.front();
     if (f.is_symb_of_sommet(at_unit)){
-      return chk_not_unit(mksa_reduce(evalf(g/f,1,contextptr),contextptr))*f;
+      if (f._SYMBptr->feuille.type==_VECT && f._SYMBptr->feuille._VECTptr->size()==2)
+	f=symbolic(at_unit,makesequence(1,f._SYMBptr->feuille._VECTptr->back()));
+      g=chk_not_unit(mksa_reduce(evalf(g/f,1,contextptr),contextptr));
+      g=evalf_double(g,1,contextptr);
+      if (g.type!=_DOUBLE_ && g.type!=_CPLX && g.type!=_FLOAT_)
+	return gensizeerr(gettext("Some units could not be converted to MKSA"));
+      return g*f;
     }
     if (s==2 && f==at_interval)
       return convert_interval(g,int(decimal_digits(contextptr)*3.2),contextptr);
@@ -5744,6 +5779,13 @@ namespace giac {
     }
 #endif
     if (f.type==_INT_ && f.val>=0) {
+      if (f.val==_CONFRAC){
+	if (g.type==_VECT)
+	  return _dfc2f(g,contextptr);
+	g=evalf_double(g,1,contextptr);
+	if (g.type==_DOUBLE_)
+	  return vector_int_2_vecteur(float2continued_frac(g._DOUBLE_val,epsilon(contextptr)));
+      }
       int i=f.val;
       if (f.val==_FRAC && f.subtype==_INT_TYPE)
 	return exact(g,contextptr);
@@ -5751,6 +5793,8 @@ namespace giac {
 	if (g.type==_VECT && !g._VECTptr->empty()){
 	  // check if g is a list of [coeff,[index]]
 	  vecteur & w=*g._VECTptr;
+	  if (w.front().type!=_VECT)
+	    return change_subtype(g,_POLY1__VECT);
 	  if (w.front().type==_VECT && w.front()._VECTptr->size()==2 && w.front()._VECTptr->back().type==_VECT){
 	    unsigned dim=unsigned(w.front()._VECTptr->back()._VECTptr->size());
 	    iterateur it=w.begin(),itend=w.end();
@@ -8346,9 +8390,9 @@ namespace giac {
       it=unit_conversion_map().find(s.c_str());
     }
     if (it==itend)
-      return makevecteur(res*find_or_make_symbol("_"+s,false,contextptr));
+      return makevecteur(operator_times(res,find_or_make_symbol("_"+s,false,contextptr),contextptr));
     vecteur v=mksa_unit2vecteur(it->second);
-    v[0]=res*v[0];
+    v[0]=operator_times(res,v[0],contextptr);
     return v;
   }
 
@@ -8362,7 +8406,7 @@ namespace giac {
       vecteur res0=mksa_convert(v[1],contextptr);
       vecteur res1=mksa_convert(v[0],contextptr);
       vecteur res=addvecteur(res0,res1);
-      res.front()=res0.front()*res1.front();
+      res.front()=operator_times(res0.front(),res1.front(),contextptr);
       return res;
     }
     if (g._SYMBptr->sommet==at_inv){
@@ -8382,7 +8426,7 @@ namespace giac {
       res[0]=pow(res[0],e,contextptr);
       int s=int(res.size());
       for (int i=1;i<s;++i)
-	res[i]=e*res[i];
+	res[i]=operator_times(e,res[i],contextptr);
       return res;
     }
     if (g._SYMBptr->sommet==at_prod){
@@ -8394,7 +8438,7 @@ namespace giac {
       const_iterateur it=v.begin(),itend=v.end();
       for (;it!=itend;++it){
 	vecteur tmp(mksa_convert(*it,contextptr));
-	res[0]=res[0]*tmp[0];
+	res[0]=operator_times(res[0],tmp[0],contextptr);
 	iterateur it=res.begin()+1,itend=res.end(),jt=tmp.begin()+1,jtend=tmp.end();
 	for (;it!=itend && jt!=jtend;++it,++jt)
 	  *it=*it+*jt;

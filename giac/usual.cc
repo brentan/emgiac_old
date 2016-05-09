@@ -703,6 +703,8 @@ namespace giac {
     }
     // if (e.is_symb_of_sommet(at_inv)) return sign(e._SYMBptr->feuille,contextptr)*cst_pi/2-atan(e._SYMBptr->feuille,contextptr);
     if (e.is_symb_of_sommet(at_tan)){
+      if (atan_tan_no_floor(contextptr))
+	return e._SYMBptr->feuille;
       gen tmp=cst_pi;
       if(!angle_radian(contextptr))
       {
@@ -1006,6 +1008,18 @@ namespace giac {
       f=*it;
       ++it;
       m=it->val;
+#ifndef USE_GMP_REPLACEMENTS
+      if (f.type==_ZINT && mpz_perfect_power_p(*f._ZINTptr)){
+	int nbits=mpz_sizeinbase(*f._ZINTptr,2);
+	gen h=accurate_evalf(f,nbits);
+	h=pow(h,inv(d,contextptr),contextptr);
+	h=_floor(h,contextptr);
+	if (pow(h,d,contextptr)==f){
+	  f=h;
+	  m=m*d;
+	}
+      }
+#endif
       if (m%d)
 	simpl = simpl*pow(f,m%d,contextptr);
       for (k=0;k<m/d;++k)
@@ -6017,10 +6031,10 @@ namespace giac {
   static gen ceiltofloor(const gen & g,GIAC_CONTEXT){
     return -symbolic(at_floor,-g);
   }
-  gen ceil2floor(const gen & g,GIAC_CONTEXT){
+  gen ceil2floor(const gen & g,GIAC_CONTEXT,bool quotesubst){
     const vector< const unary_function_ptr *> ceil_v(1,at_ceil);
     const vector< gen_op_context > ceil2floor_v(1,ceiltofloor);
-    return subst(g,ceil_v,ceil2floor_v,false,contextptr);
+    return subst(g,ceil_v,ceil2floor_v,quotesubst,contextptr);
   }
 
   // static symbolic symb_round(const gen & a){    return symbolic(at_round,a);  }
@@ -8121,6 +8135,8 @@ namespace giac {
 #endif
   define_unary_function_ptr5( at_erfs ,alias_at_erfs,&__erfs,0,true);
   static gen erf_replace(const gen & g,GIAC_CONTEXT){
+    if (has_i(g))
+      return 1-symbolic(at_exp,-ratnormal(g*g))*_erfs(g,contextptr);
     return symbolic(at_sign,g)*(1-symbolic(at_exp,-g*g)*_erfs(symbolic(at_abs,g),contextptr));
   }
   static gen taylor_erf (const gen & lim_point,const int ordre,const unary_function_ptr & f, int direction,gen & shift_coeff,GIAC_CONTEXT){
