@@ -563,24 +563,6 @@ namespace giac {
   static define_unary_function_eval (__alog10,&giac::alog10,_alog10_s);
   define_unary_function_ptr5( at_alog10 ,alias_at_alog10,&__alog10,0,true);
 
-  gen _atan2(const gen & g, GIAC_CONTEXT) {  
-    if (g.type==_VECT && g.subtype==_SEQ__VECT && g._VECTptr->size()==2){
-      vecteur & v=*g._VECTptr;
-      #ifdef SWIFT_CALCS_OPTIONS
-        gen e2 = _usimplify_base(v.front(), contextptr);
-        gen e1 = _usimplify_base(v.back(), contextptr);
-      #else
-        gen e2 = v.front();
-        gen e1 = v.back();
-      #endif
-      return arg(makecomplex(e1, e2), contextptr);
-    }
-    return gensizeerr(contextptr);
-  }
-  static const char _atan2_s []="atan2"; 
-  static define_unary_function_eval (__atan2,&_atan2,_atan2_s);
-  define_unary_function_ptr5( at_atan2 ,alias_at_atan2,&__atan2,0,true);
-
   symbolic symb_atan(const gen & e){
     return symbolic(at_atan,e);
   }

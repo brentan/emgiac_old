@@ -6201,6 +6201,17 @@ static define_unary_function_eval (__os_version,&_os_version,_os_version_s);
   static define_unary_function_eval (__coth,&_coth,_coth_s);
   define_unary_function_ptr5( at_coth ,alias_at_coth,&__coth,0,true);
 
+#ifdef SWIFT_CALCS_OPTIONS
+  gen _atan2(const gen & g, GIAC_CONTEXT) {  
+    if (g.type==_VECT && g.subtype==_SEQ__VECT && g._VECTptr->size()==2){
+      vecteur & v=*g._VECTptr;
+      gen e2 = _usimplify_base(v.front(), contextptr);
+      gen e1 = _usimplify_base(v.back(), contextptr);
+      return arg(makecomplex(e1, e2), contextptr);
+    }
+    return gensizeerr(contextptr);
+  }
+#else
   gen _atan2(const gen & args,GIAC_CONTEXT){
     if (args.type!=_VECT)
       return gensizeerr(contextptr);
@@ -6209,6 +6220,7 @@ static define_unary_function_eval (__os_version,&_os_version,_os_version_s);
       return arg(args._VECTptr->back()+cst_i*args._VECTptr->front(),contextptr);
     return gensizeerr(contextptr); //apply(args,_atan2,contextptr);
   }
+#endif
   static const char _atan2_s []="atan2";
   static define_unary_function_eval (__atan2,&_atan2,_atan2_s);
   define_unary_function_ptr5( at_atan2 ,alias_at_atan2,&__atan2,0,true);
