@@ -1387,6 +1387,7 @@
 {"unitV",13,9,0,*((ulonglong *) at_unitV)},
 {"unquote",13,9,0,*((ulonglong *) at_unquote)},
 {"usimplify",13,9,0,*((ulonglong *) at_usimplify)},
+{"usimplify_base",13,9,0,*((ulonglong *) at_usimplify_base)},
 {"valuation",13,9,0,*((ulonglong *) at_valuation)},
 {"vandermonde",13,9,0,*((ulonglong *) at_vandermonde)},
 {"variance",13,9,0,*((ulonglong *) at_variance)},

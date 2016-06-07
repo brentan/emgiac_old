@@ -1208,6 +1208,7 @@
 *((size_t *) at_unitV),
 *((size_t *) at_unquote),
 *((size_t *) at_usimplify),
+*((size_t *) at_usimplify_base),
 *((size_t *) at_valuation),
 *((size_t *) at_vandermonde),
 *((size_t *) at_variance),

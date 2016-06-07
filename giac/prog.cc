@@ -9015,8 +9015,45 @@ namespace giac {
     if ( g.type==_STRNG &&  g.subtype==-1) return g;
     if (g.type==_VECT)
       return apply(g,_usimplify_base,contextptr);
-    if (!g.is_symb_of_sommet(at_unit)) 
+    if (!g.is_symb_of_sommet(at_unit)) {
+      if (g.type!=_SYMB)
+        return g;
+      if (g._SYMBptr->sommet==at_inv)
+        return inv(_usimplify_base(g._SYMBptr->feuille, contextptr),contextptr);
+      if (g._SYMBptr->sommet==at_pow) {
+        gen & f=g._SYMBptr->feuille;
+        if (f.type!=_VECT||f._VECTptr->size()!=2)
+          return vecteur(1,gensizeerr(contextptr));
+        return pow(_usimplify_base(f._VECTptr->front(), contextptr), f._VECTptr->back(), contextptr);
+      }
+      if (g._SYMBptr->sommet==at_prod){
+        gen & f=g._SYMBptr->feuille;
+        if (f.type!=_VECT)
+          return _usimplify_base(f, contextptr);
+        vecteur & v=*f._VECTptr;
+        gen out = plus_one;
+        const_iterateur it=v.begin(),itend=v.end();
+        for (;it!=itend;++it){
+          out = operator_times(out, _usimplify_base(*it, contextptr), contextptr);
+        }
+        return out;
+      }
+      #ifdef SWIFT_CALCS_OPTIONS
+        if (g._SYMBptr->sommet==at_plus) {
+          gen & f=g._SYMBptr->feuille;
+          if (f.type!=_VECT)
+            return _usimplify_base(f, contextptr);
+          gen out = zero;
+          for (unsigned i=0;i<f._VECTptr->size();++i){
+            out = operator_plus(out, _usimplify_base((*f._VECTptr)[i], contextptr), contextptr);
+          }
+          return out;
+        }
+        if (g._SYMBptr->sommet==at_neg) 
+          return operator_times(minus_one, _usimplify_base(g._SYMBptr->feuille, contextptr), contextptr);
+      #endif
       return g;
+    }
     vecteur v = unit_convert(g, true, contextptr);
     if (is_undef(v)) return v;
     int ss=int(v.size());
@@ -9030,6 +9067,9 @@ namespace giac {
     if(all_zero) return v[0];
     return g;
   }
+  static const char _usimplify_base_s []="usimplify_base";
+  static define_unary_function_eval (__usimplify_base,&_usimplify_base,_usimplify_base_s);
+  define_unary_function_ptr5( at_usimplify_base ,alias_at_usimplify_base,&__usimplify_base,0,true);
 
   vecteur combine_units_routine(const gen & g, const gen pow, GIAC_CONTEXT) {
     vecteur v_out;
