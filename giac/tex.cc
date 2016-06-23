@@ -1346,7 +1346,10 @@ namespace giac {
       }
     #else
       if((opstring.length() == 0) && (l == 2)) {
-        s = gen2tex((*(feu._VECTptr))[0],contextptr);
+        if(need_parenthesis((*(feu._VECTptr))[0]))
+          s = "\\left(" + gen2tex((*(feu._VECTptr))[0],contextptr) + "\\right)";
+        else
+          s = gen2tex((*(feu._VECTptr))[0],contextptr);
         s += " \\Unit{";
         giac::unit_mode = true;
         s += gen2tex((*(feu._VECTptr))[1],contextptr);

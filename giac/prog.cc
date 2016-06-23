@@ -7522,200 +7522,200 @@ namespace giac {
     return symbolic(at_unit,makevecteur(1,mksa_register(s,equiv)));
   }
   // fundemental metric units
-  const mksa_unit __m_unit={1,1,0,0,0,0,0,0,0};
-  const mksa_unit __kg_unit={1,0,1,0,0,0,0,0,0};
-  const mksa_unit __s_unit={1,0,0,1,0,0,0,0,0};
-  const mksa_unit __A_unit={1,0,0,0,1,0,0,0,0};
-  const mksa_unit __K_unit={1,0,0,0,0,1,0,0,0};
-  const mksa_unit __mol_unit={1,0,0,0,0,0,1,0,0};
-  const mksa_unit __cd_unit={1,0,0,0,0,0,0,1,0};
-  const mksa_unit __E_unit={1,0,0,0,0,0,0,0,1};  // CURRENCY- Euro to Franc are only 2 defined.  Perhaps a way in future to define more/define the exchange rate on the fly?
-  const mksa_unit __Bq_unit={1,0,0,-1,0,0,0,0,0};
-  const mksa_unit __C_unit={1,0,0,1,1,0,0,0,0};
-  const mksa_unit __F_unit={1,-2,-1,4,2,0,0,0,0};
-  const mksa_unit __Gy_unit={1,2,0,-2,0,0,0,0,0};
-  const mksa_unit __H_unit={1,2,1,-2,-2,0,0,0,0};
-  const mksa_unit __Hz_unit={1,0,0,-1,0,0,0,0,0};
-  const mksa_unit __J_unit={1,2,1,-2,0,0,0,0,0};
-  const mksa_unit __mho_unit={1,-2,-1,3,2,0,0,0,0};
-  const mksa_unit __N_unit={1,1,1,-2,0,0,0,0,0};
-  const mksa_unit __Ohm_unit={1,2,1,-3,-2,0,0,0,0};
-  const mksa_unit __Pa_unit={1,-1,1,-2,0,0,0,0,0};
-  const mksa_unit __rad_unit={1,0,0,0,0,0,0,0,0};
-  const mksa_unit __S_unit={1,-2,-1,3,2,0,0,0,0};
-  const mksa_unit __Sv_unit={1,2,0,-2,0,0,0,0,0};
-  const mksa_unit __T_unit={1,0,1,-2,-1,0,0,0,0};
-  const mksa_unit __V_unit={1,2,1,-3,-1,0,0,0,0};
-  const mksa_unit __W_unit={1,2,1,-3,0,0,0,0,0};
-  const mksa_unit __Wb_unit={1,2,1,-2,-1,0,0,0,0};
+  const mksa_unit __m_unit={1,1,0,0,0,0,0,0,0,0};
+  const mksa_unit __kg_unit={1,0,1,0,0,0,0,0,0,0};
+  const mksa_unit __s_unit={1,0,0,1,0,0,0,0,0,0};
+  const mksa_unit __A_unit={1,0,0,0,1,0,0,0,0,0};
+  const mksa_unit __K_unit={1,0,0,0,0,1,0,0,0,0};
+  const mksa_unit __mol_unit={1,0,0,0,0,0,1,0,0,0};
+  const mksa_unit __cd_unit={1,0,0,0,0,0,0,1,0,0};
+  const mksa_unit __E_unit={1,0,0,0,0,0,0,0,1,0};  // CURRENCY- Euro to Franc are only 2 defined.  Perhaps a way in future to define more/define the exchange rate on the fly?
+  const mksa_unit __Bq_unit={1,0,0,-1,0,0,0,0,0,0};
+  const mksa_unit __C_unit={1,0,0,1,1,0,0,0,0,0};
+  const mksa_unit __F_unit={1,-2,-1,4,2,0,0,0,0,0};
+  const mksa_unit __Gy_unit={1,2,0,-2,0,0,0,0,0,0};
+  const mksa_unit __H_unit={1,2,1,-2,-2,0,0,0,0,0};
+  const mksa_unit __Hz_unit={1,0,0,-1,0,0,0,0,0,0};
+  const mksa_unit __J_unit={1,2,1,-2,0,0,0,0,0,0};
+  const mksa_unit __mho_unit={1,-2,-1,3,2,0,0,0,0,0};
+  const mksa_unit __N_unit={1,1,1,-2,0,0,0,0,0,0};
+  const mksa_unit __Ohm_unit={1,2,1,-3,-2,0,0,0,0,0};
+  const mksa_unit __Pa_unit={1,-1,1,-2,0,0,0,0,0,0};
+  const mksa_unit __rad_unit={1,0,0,0,0,0,0,0,0,1};
+  const mksa_unit __S_unit={1,-2,-1,3,2,0,0,0,0,0};
+  const mksa_unit __Sv_unit={1,2,0,-2,0,0,0,0,0,0};
+  const mksa_unit __T_unit={1,0,1,-2,-1,0,0,0,0,0};
+  const mksa_unit __V_unit={1,2,1,-3,-1,0,0,0,0,0};
+  const mksa_unit __W_unit={1,2,1,-3,0,0,0,0,0,0};
+  const mksa_unit __Wb_unit={1,2,1,-2,-1,0,0,0,0,0};
 
-  const mksa_unit __Angstrom_unit={1e-10,1,0,0,0,0,0,0,0};
-  const mksa_unit __Btu_unit={1055.05585262,2,1,-2,0,0,0,0,0};
-  const mksa_unit __Curie_unit={3.7e10,0,0,-1,0,0,0,0,0};
-  const mksa_unit __FF_unit={.152449017237,0,0,0,0,0,0,0,1};
-  const mksa_unit __Fdy_unit={96485.3365,0,0,1,1,0,0,0,0};
-  const mksa_unit __Gal={0.01,1,0,-2,0,0,0,0,0};
-  const mksa_unit __HFCC_unit={1400,1,0,0,0,0,0,0,0};
-  const mksa_unit __L_unit={0.001,3,0,0,0,0,0,0,0};
-  const mksa_unit __P_unit={.1,-1,1,-1,0,0,0,0,0};
-  const mksa_unit __R_unit={0.000258,0,-1,1,1,0,0,0,0};
-  const mksa_unit __Rankine_unit={5./9,0,0,0,0,1,0,0,0};
-  const mksa_unit __St_unit={0.0001,2,0,-1,0,0,0,0,0};
-  const mksa_unit __Wh_unit={3600,2,1,-2,0,0,0,0,0};
-  const mksa_unit __a_unit={100,2,0,0,0,0,0,0,0};
-  const mksa_unit __acre_unit={4046.87260987,2,0,0,0,0,0,0,0};
-  const mksa_unit __arcmin_unit={2.90888208666e-4,0,0,0,0,0,0,0,0};
-  const mksa_unit __arcs_unit={4.8481368111e-6,0,0,0,0,0,0,0,0};
-  const mksa_unit __atm_unit={101325.0,-1,1,-2,0,0,0,0,0};
-  const mksa_unit __au_unit={1.495979e11,1,0,0,0,0,0,0,0};
-  const mksa_unit __b_unit={1e-28,2,0,0,0,0,0,0,0};
-  const mksa_unit __bar_unit={1e5,-1,1,-2,0,0,0,0,0};
-  const mksa_unit __bbl_unit={.158987294928,3,0,0,0,0,0,0,0};
-  const mksa_unit __bblep_unit={.158987294928*0.857*41.76e9,2,1,-2,0,0,0,0,0};
-  const mksa_unit __boe_unit={.158987294928*0.857*41.76e9,2,1,-2,0,0,0,0,0};
-  const mksa_unit __bu={0.036368736,3,0,0,0,0,0,0,0};
-  const mksa_unit __buUS={0.03523907,3,0,0,0,0,0,0,0};
-  const mksa_unit __cal_unit={4.1868,2,1,-2,0,0,0,0,0};
-  const mksa_unit __cf_unit={1.08e6,2,1,-2,0,0,0,0,0};
-  const mksa_unit __chain_unit={20.1168402337,1,0,0,0,0,0,0,0};
-  const mksa_unit __ct_unit={0.0002,0,1,0,0,0,0,0,0};
-  const mksa_unit __dB_unit={1,0,0,0,0,0,0,0,0};
-  const mksa_unit __d_unit={86400,0,0,1,0,0,0,0,0};
-  const mksa_unit __deg_unit={1.74532925199e-2,0,0,0,0,0,0,0,0};
-  // const mksa_unit __degreeF_unit={5./9,0,0,0,0,1,0,0,0};
-  const mksa_unit __dyn_unit={1e-5,1,1,-2,0,0,0,0,0};
-  const mksa_unit __eV_unit={1.60217733e-19,2,1,-2,0,0,0,0,0};
-  const mksa_unit __erg_unit={1e-7,2,1,-2,0,0,0,0,0};
-  const mksa_unit __fath_unit={1.82880365761,1,0,0,0,0,0,0,0};
-  const mksa_unit __fbm_unit={0.002359737216,3,0,0,0,0,0,0,0};
-  const mksa_unit __fc_unit={10.7639104167,1,0,0,0,0,0,0,0};
-  const mksa_unit __fermi_unit={1e-15,1,0,0,0,0,0,0,0};
-  const mksa_unit __flam_unit={3.42625909964,-2,0,0,0,0,0,1,0};
-  const mksa_unit __fm_unit={1.82880365761,1,0,0,0,0,0,0,0};
-  const mksa_unit __ft_unit={0.3048,1,0,0,0,0,0,0,0};
-  const mksa_unit __ftUS_unit={0.304800609601,1,0,0,0,0,0,0,0};
-  const mksa_unit __g_unit={1e-3,0,1,0,0,0,0,0,0};
-  const mksa_unit __galC_unit={0.00454609,3,0,0,0,0,0,0,0};
-  const mksa_unit __galUK_unit={0.004546092,3,0,0,0,0,0,0,0};
-  const mksa_unit __galUS_unit={0.003785411784,3,0,0,0,0,0,0,0};
-  const mksa_unit __cu_unit={0.000236588236373,3,0,0,0,0,0,0,0};
-  const mksa_unit __gf_unit={0.00980665,1,1,-2,0,0,0,0,0};
-  const mksa_unit __gmol_unit={1,0,0,0,0,0,1,0,0};
-  const mksa_unit __gon_unit={1.57079632679e-2,0,0,0,0,0,0,0};
-  const mksa_unit __grad_unit={1.57079632679e-2,0,0,0,0,0,0,0,0};
-  const mksa_unit __grain_unit={0.00006479891,0,1,0,0,0,0,0,0};
-  const mksa_unit __h_unit={3600,0,0,1,0,0,0,0,0};
-  const mksa_unit __ha_unit={10000,2,0,0,0,0,0,0,0};
-  const mksa_unit __hp_unit={745.699871582,2,1,-3,0,0,0,0,0};
-  const mksa_unit __in_unit={0.0254,1,0,0,0,0,0,0,0};
-  const mksa_unit __inH2O_unit={248.84,-1,1,-2,0,0,0,0,0};
-  const mksa_unit __inHg_unit={3386.38815789,-1,1,-2,0,0,0,0,0};
-  const mksa_unit __j_unit={86400,0,0,1,0,0,0,0,0};
-  const mksa_unit __kip_unit={4448.22161526,1,1,-2,0,0,0,0,0};
-  const mksa_unit __knot_unit={0.51444444444,1,0,-1,0,0,0,0,0};
-  const mksa_unit __kph_unit={0.2777777777777,1,0,-1,0,0,0,0,0};
-  const mksa_unit __l_unit={0.001,3,0,0,0,0,0,0,0};
-  const mksa_unit __lam_unit={3183.09886184,-2,0,0,0,0,0,1,0};
-  const mksa_unit __lb_unit={0.45359237,0,1,0,0,0,0,0,0};
-  const mksa_unit __lbf_unit={4.44922161526,1,1,-2,0,0,0,0,0};
-  const mksa_unit __lbmol_unit={453.59237,0,0,0,0,0,1,0,0};
-  const mksa_unit __lbt_unit={0.3732417216,0,1,0,0,0,0,0,0};
-  const mksa_unit __lep_unit={0.857*41.76e6,2,1,-2,0,0,0,0,0};
-  const mksa_unit __liqpt_unit={0.000473176473,3,0,0,0,0,0,0,0};
-  const mksa_unit __lyr_unit={9.46052840488e15,1,0,0,0,0,0,0,0};
-  const mksa_unit __mi_unit={1609.344,1,0,0,0,0,0,0,0};
-  const mksa_unit __miUS_unit={1609.34721869,1,0,0,0,0,0,0,0};
-  const mksa_unit __mil_unit={0.0000254,1,0,0,0,0,0,0,0};
-  const mksa_unit __mile_unit={1609.344,1,0,0,0,0,0,0,0};
-  const mksa_unit __mille_unit={1852,1,0,0,0,0,0,0,0};
-  const mksa_unit __mn_unit={60,0,0,1,0,0,0,0,0};
-  const mksa_unit __mmHg_unit={133.322368421,-1,1,-2,0,0,0,0,0};
-  const mksa_unit __molK_unit={1,0,0,0,0,1,1,0,0};
-  const mksa_unit __mph_unit={0.44704,1,0,-1,0,0,0,0,0};
-  const mksa_unit __nmi_unit={1852,1,0,0,0,0,0,0,0};
-  const mksa_unit __oz_unit={0.028349523125,0,1,0,0,0,0,0,0};
-  const mksa_unit __ozUK_unit={2.8413075e-5,3,0,0,0,0,0,0,0};
-  const mksa_unit __ozfl_unit={2.95735295625e-5,3,0,0,0,0,0,0,0};
-  const mksa_unit __ozt_unit={0.0311034768,0,1,0,0,0,0,0,0};
-  const mksa_unit __pc_unit={3.08567818585e16,1,0,0,0,0,0,0,0};
-  const mksa_unit __pcf_unit={16.01846337396,-3,1,0,0,0,0,0,0};
-  const mksa_unit __pdl_unit={0.138254954376,1,1,-2,0,0,0,0,0};
-  const mksa_unit __pk_unit={0.0088097675,3,0,0,0,0,0,0,0};
-  const mksa_unit __psi_unit={6894.75729317,-1,1,-2,0,0,0,0,0};
-  const mksa_unit __ksi_unit={6894757.29317,-1,1,-2,0,0,0,0,0};
-  const mksa_unit __pt_unit={0.000473176473,3,0,0,0,0,0,0,0};
-  const mksa_unit __ptUK_unit={0.0005682615,3,0,0,0,0,0,0,0};
-  const mksa_unit __qt_unit={0.000946359246,3,0,0,0,0,0,0,0};
-  const mksa_unit __rd_unit={0.01,2,0,-2,0,0,0,0,0};
-  const mksa_unit __rem_unit={0.01,2,0,-2,0,0,0,0,0};
-  const mksa_unit __rod_unit={5.02921005842,1,0,0,0,0,0,0,0};
-  const mksa_unit __rpm_unit={0.0166666666667,0,0,-1,0,0,0,0,0};
-  const mksa_unit __sb_unit={10000,-2,0,0,0,0,0,1,0};
-  const mksa_unit __slug_unit={14.5939029372,0,1,0,0,0,0,0,0};
-  const mksa_unit __st_unit={1,3,0,0,0,0,0,0,0};
-  const mksa_unit __t_unit={1000,0,1,0,0,0,0,0,0};
-  const mksa_unit __tbsp_unit={1.47867647813e-5,3,0,0,0,0,0,0,0};
-  const mksa_unit __tec_unit={41.76e9/1.5,2,1,-2,0,0,0,0,0};
-  const mksa_unit __tep_unit={41.76e9,2,1,-2,0,0,0,0,0};
-  const mksa_unit __tepC_unit={830,1,0,0,0,0,0,0,0};
-  const mksa_unit __tepcC_unit={1000,1,0,0,0,0,0,0,0};
-  const mksa_unit __tepgC_unit={650,1,0,0,0,0,0,0,0};
-  const mksa_unit __tex={1e-6,-1,1,0,0,0,0,0,0};
-  const mksa_unit __therm_unit={105506000,2,1,-2,0,0,0,0,0};
-  const mksa_unit __toe_unit={41.76e9,2,1,-2,0,0,0,0,0};
-  const mksa_unit __ton_unit={907.18474,0,1,0,0,0,0,0,0};
-  const mksa_unit __tonUK_unit={1016.0469088,0,1,0,0,0,0,0,0};
-  const mksa_unit __torr_unit={133.322368421,-1,1,-2,0,0,0,0,0};
-  const mksa_unit __tr_unit={2*M_PI,0,0,0,0,0,0,0,0};
-  const mksa_unit __tsp_unit={4.928921614571597e-6,3,0,0,0,0,0,0,0};
-  const mksa_unit __u_unit={1.6605402e-27,0,1,0,0,0,0,0,0};
-  const mksa_unit __yd_unit={0.9144,1,0,0,0,0,0,0,0};
-  const mksa_unit __yr_unit={31556925.9747,0,0,1,0,0,0,0,0};
-  const mksa_unit __micron_unit={1e-6,1,0,0,0,0,0,0,0};
+  const mksa_unit __Angstrom_unit={1e-10,1,0,0,0,0,0,0,0,0};
+  const mksa_unit __Btu_unit={1055.05585262,2,1,-2,0,0,0,0,0,0};
+  const mksa_unit __Curie_unit={3.7e10,0,0,-1,0,0,0,0,0,0};
+  const mksa_unit __FF_unit={.152449017237,0,0,0,0,0,0,0,1,0};
+  const mksa_unit __Fdy_unit={96485.3365,0,0,1,1,0,0,0,0,0};
+  const mksa_unit __Gal={0.01,1,0,-2,0,0,0,0,0,0};
+  const mksa_unit __HFCC_unit={1400,1,0,0,0,0,0,0,0,0};
+  const mksa_unit __L_unit={0.001,3,0,0,0,0,0,0,0,0};
+  const mksa_unit __P_unit={.1,-1,1,-1,0,0,0,0,0,0};
+  const mksa_unit __R_unit={0.000258,0,-1,1,1,0,0,0,0,0};
+  const mksa_unit __Rankine_unit={5./9,0,0,0,0,1,0,0,0,0};
+  const mksa_unit __St_unit={0.0001,2,0,-1,0,0,0,0,0,0};
+  const mksa_unit __Wh_unit={3600,2,1,-2,0,0,0,0,0,0};
+  const mksa_unit __a_unit={100,2,0,0,0,0,0,0,0,0};
+  const mksa_unit __acre_unit={4046.87260987,2,0,0,0,0,0,0,0,0};
+  const mksa_unit __arcmin_unit={2.90888208666e-4,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __arcs_unit={4.8481368111e-6,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __atm_unit={101325.0,-1,1,-2,0,0,0,0,0,0};
+  const mksa_unit __au_unit={1.495979e11,1,0,0,0,0,0,0,0,0};
+  const mksa_unit __b_unit={1e-28,2,0,0,0,0,0,0,0,0};
+  const mksa_unit __bar_unit={1e5,-1,1,-2,0,0,0,0,0,0};
+  const mksa_unit __bbl_unit={.158987294928,3,0,0,0,0,0,0,0,0};
+  const mksa_unit __bblep_unit={.158987294928*0.857*41.76e9,2,1,-2,0,0,0,0,0,0};
+  const mksa_unit __boe_unit={.158987294928*0.857*41.76e9,2,1,-2,0,0,0,0,0,0};
+  const mksa_unit __bu={0.036368736,3,0,0,0,0,0,0,0,0};
+  const mksa_unit __buUS={0.03523907,3,0,0,0,0,0,0,0,0};
+  const mksa_unit __cal_unit={4.1868,2,1,-2,0,0,0,0,0,0};
+  const mksa_unit __cf_unit={1.08e6,2,1,-2,0,0,0,0,0,0};
+  const mksa_unit __chain_unit={20.1168402337,1,0,0,0,0,0,0,0,0};
+  const mksa_unit __ct_unit={0.0002,0,1,0,0,0,0,0,0,0};
+  const mksa_unit __dB_unit={1,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __d_unit={86400,0,0,1,0,0,0,0,0,0};
+  const mksa_unit __deg_unit={1.74532925199e-2,0,0,0,0,0,0,0,0,1};
+  // const mksa_unit __degreeF_unit={5./9,0,0,0,0,1,0,0,0,0};
+  const mksa_unit __dyn_unit={1e-5,1,1,-2,0,0,0,0,0,0};
+  const mksa_unit __eV_unit={1.60217733e-19,2,1,-2,0,0,0,0,0,0};
+  const mksa_unit __erg_unit={1e-7,2,1,-2,0,0,0,0,0,0};
+  const mksa_unit __fath_unit={1.82880365761,1,0,0,0,0,0,0,0,0};
+  const mksa_unit __fbm_unit={0.002359737216,3,0,0,0,0,0,0,0,0};
+  const mksa_unit __fc_unit={10.7639104167,1,0,0,0,0,0,0,0,0};
+  const mksa_unit __fermi_unit={1e-15,1,0,0,0,0,0,0,0,0};
+  const mksa_unit __flam_unit={3.42625909964,-2,0,0,0,0,0,1,0,0};
+  const mksa_unit __fm_unit={1.82880365761,1,0,0,0,0,0,0,0,0};
+  const mksa_unit __ft_unit={0.3048,1,0,0,0,0,0,0,0,0};
+  const mksa_unit __ftUS_unit={0.304800609601,1,0,0,0,0,0,0,0,0};
+  const mksa_unit __g_unit={1e-3,0,1,0,0,0,0,0,0,0};
+  const mksa_unit __galC_unit={0.00454609,3,0,0,0,0,0,0,0,0};
+  const mksa_unit __galUK_unit={0.004546092,3,0,0,0,0,0,0,0,0};
+  const mksa_unit __galUS_unit={0.003785411784,3,0,0,0,0,0,0,0,0};
+  const mksa_unit __cu_unit={0.000236588236373,3,0,0,0,0,0,0,0,0};
+  const mksa_unit __gf_unit={0.00980665,1,1,-2,0,0,0,0,0,0};
+  const mksa_unit __gmol_unit={1,0,0,0,0,0,1,0,0,0};
+  const mksa_unit __gon_unit={1.57079632679e-2,0,0,0,0,0,0,0,1};
+  const mksa_unit __grad_unit={1.57079632679e-2,0,0,0,0,0,0,0,0,1};
+  const mksa_unit __grain_unit={0.00006479891,0,1,0,0,0,0,0,0,0};
+  const mksa_unit __h_unit={3600,0,0,1,0,0,0,0,0,0};
+  const mksa_unit __ha_unit={10000,2,0,0,0,0,0,0,0,0};
+  const mksa_unit __hp_unit={745.699871582,2,1,-3,0,0,0,0,0,0};
+  const mksa_unit __in_unit={0.0254,1,0,0,0,0,0,0,0,0};
+  const mksa_unit __inH2O_unit={248.84,-1,1,-2,0,0,0,0,0,0};
+  const mksa_unit __inHg_unit={3386.38815789,-1,1,-2,0,0,0,0,0,0};
+  const mksa_unit __j_unit={86400,0,0,1,0,0,0,0,0,0};
+  const mksa_unit __kip_unit={4448.22161526,1,1,-2,0,0,0,0,0,0};
+  const mksa_unit __knot_unit={0.51444444444,1,0,-1,0,0,0,0,0,0};
+  const mksa_unit __kph_unit={0.2777777777777,1,0,-1,0,0,0,0,0,0};
+  const mksa_unit __l_unit={0.001,3,0,0,0,0,0,0,0,0};
+  const mksa_unit __lam_unit={3183.09886184,-2,0,0,0,0,0,1,0,0};
+  const mksa_unit __lb_unit={0.45359237,0,1,0,0,0,0,0,0,0};
+  const mksa_unit __lbf_unit={4.44922161526,1,1,-2,0,0,0,0,0,0};
+  const mksa_unit __lbmol_unit={453.59237,0,0,0,0,0,1,0,0,0};
+  const mksa_unit __lbt_unit={0.3732417216,0,1,0,0,0,0,0,0,0};
+  const mksa_unit __lep_unit={0.857*41.76e6,2,1,-2,0,0,0,0,0,0};
+  const mksa_unit __liqpt_unit={0.000473176473,3,0,0,0,0,0,0,0,0};
+  const mksa_unit __lyr_unit={9.46052840488e15,1,0,0,0,0,0,0,0,0};
+  const mksa_unit __mi_unit={1609.344,1,0,0,0,0,0,0,0,0};
+  const mksa_unit __miUS_unit={1609.34721869,1,0,0,0,0,0,0,0,0};
+  const mksa_unit __mil_unit={0.0000254,1,0,0,0,0,0,0,0,0};
+  const mksa_unit __mile_unit={1609.344,1,0,0,0,0,0,0,0,0};
+  const mksa_unit __mille_unit={1852,1,0,0,0,0,0,0,0,0};
+  const mksa_unit __mn_unit={60,0,0,1,0,0,0,0,0,0};
+  const mksa_unit __mmHg_unit={133.322368421,-1,1,-2,0,0,0,0,0,0};
+  const mksa_unit __molK_unit={1,0,0,0,0,1,1,0,0,0};
+  const mksa_unit __mph_unit={0.44704,1,0,-1,0,0,0,0,0,0};
+  const mksa_unit __nmi_unit={1852,1,0,0,0,0,0,0,0,0};
+  const mksa_unit __oz_unit={0.028349523125,0,1,0,0,0,0,0,0,0};
+  const mksa_unit __ozUK_unit={2.8413075e-5,3,0,0,0,0,0,0,0,0};
+  const mksa_unit __ozfl_unit={2.95735295625e-5,3,0,0,0,0,0,0,0,0};
+  const mksa_unit __ozt_unit={0.0311034768,0,1,0,0,0,0,0,0,0};
+  const mksa_unit __pc_unit={3.08567818585e16,1,0,0,0,0,0,0,0,0};
+  const mksa_unit __pcf_unit={16.01846337396,-3,1,0,0,0,0,0,0,0};
+  const mksa_unit __pdl_unit={0.138254954376,1,1,-2,0,0,0,0,0,0};
+  const mksa_unit __pk_unit={0.0088097675,3,0,0,0,0,0,0,0,0};
+  const mksa_unit __psi_unit={6894.75729317,-1,1,-2,0,0,0,0,0,0};
+  const mksa_unit __ksi_unit={6894757.29317,-1,1,-2,0,0,0,0,0,0};
+  const mksa_unit __pt_unit={0.000473176473,3,0,0,0,0,0,0,0,0};
+  const mksa_unit __ptUK_unit={0.0005682615,3,0,0,0,0,0,0,0,0};
+  const mksa_unit __qt_unit={0.000946359246,3,0,0,0,0,0,0,0,0};
+  const mksa_unit __rd_unit={0.01,2,0,-2,0,0,0,0,0,0};
+  const mksa_unit __rem_unit={0.01,2,0,-2,0,0,0,0,0,0};
+  const mksa_unit __rod_unit={5.02921005842,1,0,0,0,0,0,0,0,0};
+  const mksa_unit __rpm_unit={0.0166666666667,0,0,-1,0,0,0,0,0,0};
+  const mksa_unit __sb_unit={10000,-2,0,0,0,0,0,1,0,0};
+  const mksa_unit __slug_unit={14.5939029372,0,1,0,0,0,0,0,0,0};
+  const mksa_unit __st_unit={1,3,0,0,0,0,0,0,0,0};
+  const mksa_unit __t_unit={1000,0,1,0,0,0,0,0,0,0};
+  const mksa_unit __tbsp_unit={1.47867647813e-5,3,0,0,0,0,0,0,0,0};
+  const mksa_unit __tec_unit={41.76e9/1.5,2,1,-2,0,0,0,0,0,0};
+  const mksa_unit __tep_unit={41.76e9,2,1,-2,0,0,0,0,0,0};
+  const mksa_unit __tepC_unit={830,1,0,0,0,0,0,0,0,0};
+  const mksa_unit __tepcC_unit={1000,1,0,0,0,0,0,0,0,0};
+  const mksa_unit __tepgC_unit={650,1,0,0,0,0,0,0,0,0};
+  const mksa_unit __tex={1e-6,-1,1,0,0,0,0,0,0,0};
+  const mksa_unit __therm_unit={105506000,2,1,-2,0,0,0,0,0,0};
+  const mksa_unit __toe_unit={41.76e9,2,1,-2,0,0,0,0,0,0};
+  const mksa_unit __ton_unit={907.18474,0,1,0,0,0,0,0,0,0};
+  const mksa_unit __tonUK_unit={1016.0469088,0,1,0,0,0,0,0,0,0};
+  const mksa_unit __torr_unit={133.322368421,-1,1,-2,0,0,0,0,0,0};
+  const mksa_unit __tr_unit={2*M_PI,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __tsp_unit={4.928921614571597e-6,3,0,0,0,0,0,0,0,0};
+  const mksa_unit __u_unit={1.6605402e-27,0,1,0,0,0,0,0,0,0};
+  const mksa_unit __yd_unit={0.9144,1,0,0,0,0,0,0,0,0};
+  const mksa_unit __yr_unit={31556925.9747,0,0,1,0,0,0,0,0,0};
+  const mksa_unit __micron_unit={1e-6,1,0,0,0,0,0,0,0,0};
 
-  const mksa_unit __hbar_unit={1.05457266e-34,2,1,-1,0,0,0,0};        
-  const mksa_unit __c_unit={299792458,1,0,-1,0,0,0,0};        
-  const mksa_unit __g__unit={9.80665,1,0,-2,0,0,0,0};       
-  const mksa_unit __IO_unit={1e-12,0,1,-3,0,0,0,0}; 
-  const mksa_unit __epsilonox_unit={3.9,0,0,0,0,0,0,0}; 
-  const mksa_unit __epsilonsi_unit={11.9,0,0,0,0,0,0,0,0}; 
-  const mksa_unit __qepsilon0_unit={1.4185979e-30,-3,-1,5,3,0,0,0}; 
-  const mksa_unit __epsilon0q_unit={55263469.6,-3,-1,3,1,0,0,0}; 
-  const mksa_unit __kq_unit={8.617386e-5,2,1,-3,-1,-1,0,0}; 
-  const mksa_unit __c3_unit={.002897756,1,0,0,0,1,0,0}; 
-  const mksa_unit __lambdac_unit={ 0.00242631058e-9,1,0,0,0,0,0,0,0}; 
-  const mksa_unit __f0_unit={2.4179883e14,0,0,-1,0,0,0,0}; 
-  const mksa_unit __lambda0_unit={1239.8425e-9,1,0,0,0,0,0,0}; 
-  const mksa_unit __muN_unit={5.0507866e-27,2,0,0,1,0,0,0}; 
-  const mksa_unit __muB_unit={ 9.2740154e-24,2,0,0,1,0,0,0}; 
-  const mksa_unit __a0_unit={.0529177249e-9,1,0,0,0,0,0,0}; 
-  const mksa_unit __Rinfinity_unit={10973731.534,-1,0,0,0,0,0,0}; 
-  const mksa_unit __Faraday_unit={96485.309,0,0,1,1,0,-1,0}; 
-  const mksa_unit __phi_unit={2.06783461e-15,2,1,-2,-1,0,0,0};
-  const mksa_unit __alpha_unit={7.29735308e-3,0,0,0,0,0,0,0}; 
-  const mksa_unit __mpme_unit={1836.152701,0,0,0,0,0,0,0}; 
-  const mksa_unit __mp_unit={1.6726231e-27,0,1,0,0,0,0,0}; 
-  const mksa_unit __qme_unit={1.75881962e11,0,-1,1,1,0,0,0};
-  const mksa_unit __me_unit={9.1093897e-31,0,1,0,0,0,0,0}; 
-  const mksa_unit __qe_unit={1.60217733e-19,0,0,1,1,0,0,0};
-  const mksa_unit __h__unit={6.6260755e-34,2,1,-1,0,0,0,0}; 
-  const mksa_unit __G_unit={6.67259e-11,3,-1,-2,0,0,0,0}; 
-  const mksa_unit __mu0_unit={1.25663706144e-6,1,1,-2,-2,0,0,0}; 
-  const mksa_unit __epsilon0_unit={8.85418781761e-12,-3,-1,4,2,0,0,0}; 
-  const mksa_unit __sigma_unit={ 5.67051e-8,0,1,-3,0,-4,0,0}; 
-  const mksa_unit __StdP_unit={101325.0,-1,1,-2,0,0,0,0}; 
-  const mksa_unit __StdT_unit={273.15,0,0,0,0,1,0,0}; 
-  const mksa_unit __R__unit={8.31451,2,1,-2,0,-1,-1,0}; 
-  const mksa_unit __Vm_unit={22.4141e-3,3,0,0,0,0,-1,0}; 
-  const mksa_unit __k_unit={1.380658e-23,2,1,-2,0,-1,0,0}; 
-  const mksa_unit __NA_unit={6.0221367e23,0,0,0,0,0,-1,0}; 
-  const mksa_unit __mSun_unit={1.989e30,0,1,0,0,0,0,0}; 
-  const mksa_unit __RSun_unit={6.955e8,1,0,0,0,0,0,0}; 
-  const mksa_unit __PSun_unit={3.846e26,2,1,-3,0,0,0,0}; 
-  const mksa_unit __mEarth_unit={5.9736e24,0,1,0,0,0,0,0}; 
-  const mksa_unit __REarth_unit={6.371e6,1,0,0,0,0,0,0}; 
-  const mksa_unit __sd_unit={8.61640905e4,0,0,1,0,0,0,0}; 
-  const mksa_unit __syr_unit={3.15581498e7,0,0,1,0,0,0,0}; 
+  const mksa_unit __hbar_unit={1.05457266e-34,2,1,-1,0,0,0,0,0};        
+  const mksa_unit __c_unit={299792458,1,0,-1,0,0,0,0,0};        
+  const mksa_unit __g__unit={9.80665,1,0,-2,0,0,0,0,0};       
+  const mksa_unit __IO_unit={1e-12,0,1,-3,0,0,0,0,0}; 
+  const mksa_unit __epsilonox_unit={3.9,0,0,0,0,0,0,0,0}; 
+  const mksa_unit __epsilonsi_unit={11.9,0,0,0,0,0,0,0,0,0}; 
+  const mksa_unit __qepsilon0_unit={1.4185979e-30,-3,-1,5,3,0,0,0,0}; 
+  const mksa_unit __epsilon0q_unit={55263469.6,-3,-1,3,1,0,0,0,0}; 
+  const mksa_unit __kq_unit={8.617386e-5,2,1,-3,-1,-1,0,0,0}; 
+  const mksa_unit __c3_unit={.002897756,1,0,0,0,1,0,0,0}; 
+  const mksa_unit __lambdac_unit={ 0.00242631058e-9,1,0,0,0,0,0,0,0,0}; 
+  const mksa_unit __f0_unit={2.4179883e14,0,0,-1,0,0,0,0,0}; 
+  const mksa_unit __lambda0_unit={1239.8425e-9,1,0,0,0,0,0,0,0}; 
+  const mksa_unit __muN_unit={5.0507866e-27,2,0,0,1,0,0,0,0}; 
+  const mksa_unit __muB_unit={ 9.2740154e-24,2,0,0,1,0,0,0,0}; 
+  const mksa_unit __a0_unit={.0529177249e-9,1,0,0,0,0,0,0,0}; 
+  const mksa_unit __Rinfinity_unit={10973731.534,-1,0,0,0,0,0,0,0}; 
+  const mksa_unit __Faraday_unit={96485.309,0,0,1,1,0,-1,0,0}; 
+  const mksa_unit __phi_unit={2.06783461e-15,2,1,-2,-1,0,0,0,0};
+  const mksa_unit __alpha_unit={7.29735308e-3,0,0,0,0,0,0,0,0}; 
+  const mksa_unit __mpme_unit={1836.152701,0,0,0,0,0,0,0,0}; 
+  const mksa_unit __mp_unit={1.6726231e-27,0,1,0,0,0,0,0,0}; 
+  const mksa_unit __qme_unit={1.75881962e11,0,-1,1,1,0,0,0,0};
+  const mksa_unit __me_unit={9.1093897e-31,0,1,0,0,0,0,0,0}; 
+  const mksa_unit __qe_unit={1.60217733e-19,0,0,1,1,0,0,0,0};
+  const mksa_unit __h__unit={6.6260755e-34,2,1,-1,0,0,0,0,0}; 
+  const mksa_unit __G_unit={6.67259e-11,3,-1,-2,0,0,0,0,0}; 
+  const mksa_unit __mu0_unit={1.25663706144e-6,1,1,-2,-2,0,0,0,0}; 
+  const mksa_unit __epsilon0_unit={8.85418781761e-12,-3,-1,4,2,0,0,0,0}; 
+  const mksa_unit __sigma_unit={ 5.67051e-8,0,1,-3,0,-4,0,0,0}; 
+  const mksa_unit __StdP_unit={101325.0,-1,1,-2,0,0,0,0,0}; 
+  const mksa_unit __StdT_unit={273.15,0,0,0,0,1,0,0,0}; 
+  const mksa_unit __R__unit={8.31451,2,1,-2,0,-1,-1,0,0}; 
+  const mksa_unit __Vm_unit={22.4141e-3,3,0,0,0,0,-1,0,0}; 
+  const mksa_unit __k_unit={1.380658e-23,2,1,-2,0,-1,0,0,0}; 
+  const mksa_unit __NA_unit={6.0221367e23,0,0,0,0,0,-1,0,0}; 
+  const mksa_unit __mSun_unit={1.989e30,0,1,0,0,0,0,0,0}; 
+  const mksa_unit __RSun_unit={6.955e8,1,0,0,0,0,0,0,0}; 
+  const mksa_unit __PSun_unit={3.846e26,2,1,-3,0,0,0,0,0}; 
+  const mksa_unit __mEarth_unit={5.9736e24,0,1,0,0,0,0,0,0}; 
+  const mksa_unit __REarth_unit={6.371e6,1,0,0,0,0,0,0,0}; 
+  const mksa_unit __sd_unit={8.61640905e4,0,0,1,0,0,0,0,0}; 
+  const mksa_unit __syr_unit={3.15581498e7,0,0,1,0,0,0,0,0}; 
 
   // table of alpha-sorted units
   const mksa_unit * const unitptr_tab[]={
@@ -8277,7 +8277,7 @@ namespace giac {
     mergevecteur(
       makevecteur(_N_unit,_Ohm_unit,_Pa_unit,_J_unit,_T_unit),
       makevecteur(_C_unit,_F_unit,_H_unit,_Hz_unit)),
-     makevecteur(_V_unit,_W_unit,_Wb_unit)
+     makevecteur(_V_unit,_W_unit,_Wb_unit,_rad_unit)
     ));
   vecteur & usual_units() {
     return *usual_units_ptr;
@@ -8292,8 +8292,8 @@ namespace giac {
 
   static vecteur mksa_unit2vecteur(const mksa_unit * tmp){
     vecteur v;
-    if (tmp->K==0 && tmp->mol==0 && tmp->cd==0){
-      if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==0){
+    if (tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0 && tmp->E==0){
+      if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0){
         v.push_back(tmp->coeff);
       }
       else {
@@ -8306,7 +8306,7 @@ namespace giac {
       }
     }
     else {
-      v.reserve(9);
+      v.reserve(10);
       v.push_back(tmp->coeff);
       v.push_back(tmp->m);
       v.push_back(tmp->kg);
@@ -8316,6 +8316,7 @@ namespace giac {
       v.push_back(tmp->mol);
       v.push_back(tmp->cd);
       v.push_back(tmp->E);
+      v.push_back(tmp->d);
     }
     return v;
   }
@@ -8339,8 +8340,10 @@ namespace giac {
       coeff = coeff / std::pow(defaults.mol,tmp->mol);
     if(tmp->cd != 0) 
       coeff = coeff / std::pow(defaults.cd,tmp->cd);
-    if (tmp->K==0 && tmp->mol==0 && tmp->cd==0){
-      if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==0){
+    if(tmp->d != 0) 
+      coeff = coeff / std::pow(defaults.d,tmp->d);
+    if (tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0 && tmp->E==0){
+      if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0){
         v.push_back(coeff);
       }
       else {
@@ -8353,7 +8356,7 @@ namespace giac {
       }
     }
     else {
-      v.reserve(9);
+      v.reserve(10);
       v.push_back(coeff);
       v.push_back(tmp->m);
       v.push_back(tmp->kg);
@@ -8363,6 +8366,7 @@ namespace giac {
       v.push_back(tmp->mol);
       v.push_back(tmp->cd);
       v.push_back(tmp->E);
+      v.push_back(tmp->d);
     }
     return v;
   }
@@ -8383,7 +8387,7 @@ namespace giac {
   unit_convert_out unit_convert_routine(const identificateur & g, bool mksa, GIAC_CONTEXT) {
     unit_convert_out output;
     output.coeff = 1.0;
-    mksa_unit blank_unit={0,0,0,0,0,0,0,0,0};
+    mksa_unit blank_unit={0,0,0,0,0,0,0,0,0,0};
     output.mksa_vector = &blank_unit;
     string s=g.print(contextptr);
     // Find prefix in unit
@@ -8501,6 +8505,7 @@ namespace giac {
         v = mksa_unit2vecteur(it->second);
     else
         v = default_unit_unit2vecteur(it->second);
+
     v[0]=operator_times(res, v[0], contextptr);
     res_d=res_d * it->second->coeff;
     output.coeff = res_d;
@@ -8587,11 +8592,11 @@ namespace giac {
         for (unsigned i=0;i<f._VECTptr->size();++i){
           vecteur tmp(unit_convert((*f._VECTptr)[i], mksa, contextptr));
           int s=int(tmp.size());
-          for (int j=s;j<9;++j)
+          for (int j=s;j<10;++j)
             tmp.push_back(zero);
           if(i == 0) {
             // First loop, seed res with tmp
-            for (int j=1;j<9;++j)
+            for (int j=1;j<10;++j)
               res.push_back(tmp[j]);
           } else {
             // Second+ loop, make sure unit dimensions match, if not just return the input directly (we don't throw an error as there could be variable in the input, like 'x + 1_in')
@@ -8718,6 +8723,11 @@ namespace giac {
         if(exponent != 0)
           length += sprintf(outstr + length, "*u__E^(%f)", exponent);
       }
+      if (s>9) {
+        exponent = unitpow_double(_rad_unit,v[9]);
+        if(exponent != 0)
+          length += sprintf(outstr + length, "*u__rad^(%f)", exponent);
+      }
       return symb_prod(mksa_remove_base(g,contextptr), gen(outstr,contextptr));
     }
     static const char _mksa_var_s []="mksa_var";
@@ -8750,6 +8760,8 @@ namespace giac {
         res = res * unitpow(_cd_unit,v[7]);
       if (s>8)
         res = res * unitpow(_E_unit,v[8]);
+      if (s>9)
+        res = res * unitpow(_rad_unit,v[9]);
       if (is_one(res))
         return plus_one;
       else
@@ -8775,7 +8787,7 @@ namespace giac {
   #endif
 
   // Set the default return units for various dimensions
-  static unit_system _default_unit_ = {1,1,1,1,1,1,1,1, _m_unit, _kg_unit, _s_unit, _A_unit, _K_unit, _mol_unit, _cd_unit, _E_unit};
+  static unit_system _default_unit_ = {1,1,1,1,1,1,1,1,1, _m_unit, _kg_unit, _s_unit, _A_unit, _K_unit, _mol_unit, _cd_unit, _E_unit,_rad_unit};
   unit_system & default_unit(){
     return _default_unit_;
   }
@@ -8797,6 +8809,8 @@ namespace giac {
           return _default_unit_.cd_base;
         case 8:
           return _default_unit_.E_base;
+        case 9:
+          return _default_unit_.d_base;
       }
       return zero;
   }
@@ -8834,6 +8848,10 @@ namespace giac {
         _default_unit_.E = d;
         _default_unit_.E_base = g;
         break;
+      case 9:
+        _default_unit_.d = d;
+        _default_unit_.d_base = g;
+        break;
     }  
   }
 
@@ -8843,30 +8861,33 @@ namespace giac {
       const mksa_unit * tmp = mksa_convert_unit(*g._IDNTptr,contextptr);
       bool base_unit = false;
       int index;
-      if (tmp->m==1 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==0 && tmp->K==0 && tmp->mol==0 && tmp->cd==0) {
+      if (tmp->m==1 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==0 && tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0) {
         base_unit = true;
         index = 1;
-      } else if (tmp->m==0 && tmp->kg==1 && tmp->s==0 && tmp->A==0 && tmp->E==0 && tmp->K==0 && tmp->mol==0 && tmp->cd==0) {
+      } else if (tmp->m==0 && tmp->kg==1 && tmp->s==0 && tmp->A==0 && tmp->E==0 && tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0) {
         base_unit = true;
         index = 2;
-      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==1 && tmp->A==0 && tmp->E==0 && tmp->K==0 && tmp->mol==0 && tmp->cd==0) {
+      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==1 && tmp->A==0 && tmp->E==0 && tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0) {
         base_unit = true;
         index = 3;
-      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==1 && tmp->E==0 && tmp->K==0 && tmp->mol==0 && tmp->cd==0) {
+      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==1 && tmp->E==0 && tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0) {
         base_unit = true;
         index = 4;
-      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==0 && tmp->K==1 && tmp->mol==0 && tmp->cd==0) {
+      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==0 && tmp->K==1 && tmp->mol==0 && tmp->cd==0 && tmp->d==0) {
         base_unit = true;
         index = 5;
-      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==0 && tmp->K==0 && tmp->mol==1 && tmp->cd==0) {
+      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==0 && tmp->K==0 && tmp->mol==1 && tmp->cd==0 && tmp->d==0) {
         base_unit = true;
         index = 6;
-      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==0 && tmp->K==0 && tmp->mol==0 && tmp->cd==1) {
+      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==0 && tmp->K==0 && tmp->mol==0 && tmp->cd==1 && tmp->d==0) {
         base_unit = true;
         index = 7;
-      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==1 && tmp->K==0 && tmp->mol==0 && tmp->cd==0) {
+      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==1 && tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0) {
         base_unit = true;
         index = 8;
+      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==0 && tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==1) {
+        base_unit = true;
+        index = 9;
       } 
       if(base_unit) 
         default_unit(g, mksa_convert_coeff(*g._IDNTptr,contextptr), index);
@@ -8876,7 +8897,7 @@ namespace giac {
       vecteur & v=*g._SYMBptr->feuille._VECTptr;
       return set_units(v[1], contextptr);
     }  
-    vecteur v = makevecteur(_default_unit_.m_base, _default_unit_.kg_base, _default_unit_.s_base, _default_unit_.A_base, _default_unit_.K_base, _default_unit_.mol_base, _default_unit_.cd_base, _default_unit_.E_base);
+    vecteur v = makevecteur(_default_unit_.m_base, _default_unit_.kg_base, _default_unit_.s_base, _default_unit_.A_base, _default_unit_.K_base, _default_unit_.mol_base, _default_unit_.cd_base, _default_unit_.E_base, _default_unit_.d_base);
     const_iterateur it=usual_units().begin(),itend=usual_units().end();
     for (;it!=itend;++it)
       v.push_back(*it);
@@ -8952,6 +8973,12 @@ namespace giac {
       else
         num = num * unitpow(default_unit(8),v[8]);
     }
+    if (s>9) {
+      if(is_greater(0, v[9], contextptr))
+        den = den * unitpow(default_unit(9),-1*v[9]);
+      else
+        num = num * unitpow(default_unit(9),v[9]);
+    }
     if(is_one(num) && is_one(den))
       return res1;
     else if(is_one(num))
@@ -8989,6 +9016,8 @@ namespace giac {
       res = res * unitpow(_cd_unit,v[7]);
     if (s>8)
       res = res * unitpow(_E_unit,v[8]);
+    if (s>9)
+      res = res * unitpow(_rad_unit,v[9]);
     if (is_one(res))
       return res1;
     else
@@ -9009,32 +9038,48 @@ namespace giac {
   static const char _ufactor_s []="ufactor";
   static define_unary_function_eval (__ufactor,&_ufactor,_ufactor_s);
   define_unary_function_ptr5( at_ufactor ,alias_at_ufactor,&__ufactor,0,true);
-  
-  // Will simply look to see if passed unit is really of dimension 0 (_m/_in, etc), useful for cos() etc where we need to remove units if possible
+
+  gen _usimplify_angle(const gen & g,GIAC_CONTEXT) {
+    return _usimplify_base_function(g, true, contextptr);
+  }
   gen _usimplify_base(const gen & g,GIAC_CONTEXT) {
+    return _usimplify_base_function(g, false, contextptr);
+  }
+  // Will simply look to see if passed unit is really of dimension 0 (_m/_in, etc), useful for cos() etc where we need to remove units if possible (angle mode will strip _rad, _deg, and _grad and convert to current default angle)
+  gen _usimplify_base_function(const gen & g, const bool angle_mode, GIAC_CONTEXT) {
     if ( g.type==_STRNG &&  g.subtype==-1) return g;
-    if (g.type==_VECT)
-      return apply(g,_usimplify_base,contextptr);
+    if (g.type==_VECT) {
+      const_iterateur it=g._VECTptr->begin(),itend=g._VECTptr->end();
+      vecteur v;
+      v.reserve(itend-it);
+      for (;it!=itend;++it){
+        gen tmp=_usimplify_base_function(*it,angle_mode, contextptr);
+        if (is_undef(tmp))
+          return gen2vecteur(tmp);
+        v.push_back(tmp);
+      }
+      return gen(v,g.subtype);
+    }
     if (!g.is_symb_of_sommet(at_unit)) {
       if (g.type!=_SYMB)
         return g;
       if (g._SYMBptr->sommet==at_inv)
-        return inv(_usimplify_base(g._SYMBptr->feuille, contextptr),contextptr);
+        return inv(_usimplify_base_function(g._SYMBptr->feuille, angle_mode, contextptr),contextptr);
       if (g._SYMBptr->sommet==at_pow) {
         gen & f=g._SYMBptr->feuille;
         if (f.type!=_VECT||f._VECTptr->size()!=2)
           return vecteur(1,gensizeerr(contextptr));
-        return pow(_usimplify_base(f._VECTptr->front(), contextptr), f._VECTptr->back(), contextptr);
+        return pow(_usimplify_base_function(f._VECTptr->front(), angle_mode, contextptr), f._VECTptr->back(), contextptr);
       }
       if (g._SYMBptr->sommet==at_prod){
         gen & f=g._SYMBptr->feuille;
         if (f.type!=_VECT)
-          return _usimplify_base(f, contextptr);
+          return _usimplify_base_function(f, angle_mode, contextptr);
         vecteur & v=*f._VECTptr;
         gen out = plus_one;
         const_iterateur it=v.begin(),itend=v.end();
         for (;it!=itend;++it){
-          out = operator_times(out, _usimplify_base(*it, contextptr), contextptr);
+          out = operator_times(out, _usimplify_base_function(*it, angle_mode, contextptr), contextptr);
         }
         return out;
       }
@@ -9042,15 +9087,15 @@ namespace giac {
         if (g._SYMBptr->sommet==at_plus) {
           gen & f=g._SYMBptr->feuille;
           if (f.type!=_VECT)
-            return _usimplify_base(f, contextptr);
+            return _usimplify_base_function(f, angle_mode, contextptr);
           gen out = zero;
           for (unsigned i=0;i<f._VECTptr->size();++i){
-            out = operator_plus(out, _usimplify_base((*f._VECTptr)[i], contextptr), contextptr);
+            out = operator_plus(out, _usimplify_base_function((*f._VECTptr)[i], angle_mode, contextptr), contextptr);
           }
           return out;
         }
         if (g._SYMBptr->sommet==at_neg) 
-          return operator_times(minus_one, _usimplify_base(g._SYMBptr->feuille, contextptr), contextptr);
+          return operator_times(minus_one, _usimplify_base_function(g._SYMBptr->feuille, angle_mode, contextptr), contextptr);
       #endif
       return g;
     }
@@ -9058,11 +9103,26 @@ namespace giac {
     if (is_undef(v)) return v;
     int ss=int(v.size());
     bool all_zero = true;
+    bool is_angle = false;
+
     for (int i=1;i<ss;++i) {
+      if((i == 9) && all_zero && !is_greater(abs(v[i]-1, contextptr), 1e-6, contextptr)) 
+        is_angle = true;
       if(is_greater(abs(v[i], contextptr), 1e-6, contextptr)) {
         all_zero = false;
         break;
       }
+    }
+    if(angle_mode && is_angle) {
+      vecteur & v2=*g._SYMBptr->feuille._VECTptr;
+      if(is_one(gen(v2[1] == (angle_radian(contextptr)?_rad_unit:(angle_degree(contextptr)?_deg_unit:_grad_unit)))))
+        return v2[0];
+      if(angle_radian(contextptr))
+        return v[0];
+      else if(angle_degree(contextptr)) 
+        return v[0] / 1.74532925199e-2;
+      else
+        return v[0] / 1.57079632679e-2;
     }
     if(all_zero) return v[0];
     return g;
@@ -9079,7 +9139,7 @@ namespace giac {
       int l = int(v.size());
       for(int i=1; i<l; ++i)
         v[i] = operator_times(v[i], pow, contextptr);
-      for(int i=l; i<9; ++i)
+      for(int i=l; i<10; ++i)
         v.push_back(zero);
       v.push_back(pow);
       v[0] = *g._IDNTptr;
@@ -9124,7 +9184,7 @@ namespace giac {
       vecteur v = combine_units_routine(vv[1], plus_one, contextptr);
       int l=int(v.size());
       if(l < 2) return g;
-      // v is an array of unit vectors, where element 0 is the unit, and elements 1-9 are the mksa_unit vector for each dimension
+      // v is an array of unit vectors, where element 0 is the unit, and elements 1-10 are the mksa_unit vector for each dimension
       gen coeff = vv[0];
       vecteur output_units;
       const_iterateur it=v.begin(),itend=v.end();
@@ -9136,7 +9196,7 @@ namespace giac {
         gen frac = zero;
         l = int(output_units.size());
         for(int j=0; j<l; j++) {
-          for(int i=1; i<9; i++) {
+          for(int i=1; i<10; i++) {
             if(is_greater(abs(output_units[j][i], contextptr), 1e-6, contextptr) && is_greater(abs((*it)[i], contextptr), 1e-6, contextptr)) {
               if(is_zero(frac)) frac = (*it)[i] / output_units[j][i];
               else if(is_greater(abs(frac - (*it)[i] / output_units[j][i], contextptr), 1e-6, contextptr)) {
@@ -9153,9 +9213,9 @@ namespace giac {
           }
           if(!is_zero(frac)) { //Matches already added unit 
             vecteur output_unit = gen2vecteur(output_units[j]);
-            output_unit[9] = operator_plus(output_unit[9], (*it)[9], contextptr);
+            output_unit[10] = operator_plus(output_unit[10], (*it)[10], contextptr);
             output_units[j] = output_unit;
-            coeff = operator_times(coeff, pow(_usimplify_base(symbolic(at_unit,makevecteur(1,operator_times(output_units[j][0], inv((*it)[0], contextptr), contextptr))), contextptr), operator_times(minus_one,(*it)[9],contextptr), contextptr), contextptr);
+            coeff = operator_times(coeff, pow(_usimplify_base(symbolic(at_unit,makevecteur(1,operator_times(output_units[j][0], inv((*it)[0], contextptr), contextptr))), contextptr), operator_times(minus_one,(*it)[10],contextptr), contextptr), contextptr);
             break;
           }
         }
@@ -9165,14 +9225,14 @@ namespace giac {
       l = int(output_units.size());
       gen out = plus_one;
       for(int j=0; j<l; j++) {
-        if (is_one(output_units[j][9]))
+        if (is_one(output_units[j][10]))
           out = operator_times(out, output_units[j][0], contextptr);
-        else if(is_minus_one(output_units[j][9]))
+        else if(is_minus_one(output_units[j][10]))
           out = operator_times(out, inv(output_units[j][0],contextptr), contextptr);
-        else if(is_greater(output_units[j][9], zero, contextptr))
-          out = operator_times(out, pow(output_units[j][0], output_units[j][9], contextptr), contextptr);
+        else if(is_greater(output_units[j][10], zero, contextptr))
+          out = operator_times(out, pow(output_units[j][0], output_units[j][10], contextptr), contextptr);
         else
-          out = operator_times(out, inv(pow(output_units[j][0], -1*output_units[j][9], contextptr), contextptr), contextptr);
+          out = operator_times(out, inv(pow(output_units[j][0], -1*output_units[j][10], contextptr), contextptr), contextptr);
       }
       return symbolic(at_unit,makevecteur(coeff, out));
     }
@@ -9226,8 +9286,23 @@ namespace giac {
     if (is_undef(v)) return v;
     gen res1=v[0];
     int ss=int(v.size());
-    for (int i=ss;i<9;++i)
+    bool all_zero = true;
+    bool is_angle = false;
+    for (int i=1;i<ss;++i) {
+      if((i < 9) && is_greater(abs(v[i], contextptr), 1e-6, contextptr)) {
+        all_zero = false;
+        break;
+      } else if((i == 9) && !is_greater(abs(v[i]-1, contextptr), 1e-6, contextptr)) 
+        is_angle= true;
+    }
+    for (int i=ss;i<10;++i)
       v.push_back(zero);
+    // Test if this unit is an angle or no units
+    if(all_zero && is_angle) {
+      vecteur & v2=*g._SYMBptr->feuille._VECTptr;
+      if(is_one(gen(v2[1] == (angle_radian(contextptr)?_rad_unit:(angle_degree(contextptr)?_deg_unit:_grad_unit)))))
+        return g;
+    }
     // Test if this unit has the same dimensions as a 'usual' unit (proper or inverse)
     v[0]=plus_one;
     const_iterateur it=usual_units().begin(),itend=usual_units().end();
@@ -9240,10 +9315,10 @@ namespace giac {
         tmp=mksa_unit2vecteur(unit_conversion_map()[s.substr(1,s.size()-1).c_str()]); 
       vecteur tmp_i;
       ss=int(tmp.size());
-      for (int i=ss;i<9;++i)
+      for (int i=ss;i<10;++i)
         tmp.push_back(zero);
       tmp_i.push_back(plus_one);
-      for (int i = 1;i < 9;++i)
+      for (int i = 1;i < 10;++i)
         tmp_i.push_back(operator_times(tmp[i], minus_one, contextptr));
       tmp[0]=plus_one;  
       if (tmp==v) // If a 'usual unit' matches the unit dimension of the unit being simplified, convert to the 'usual_unit'
@@ -9272,7 +9347,7 @@ namespace giac {
       else  
         tmp=mksa_unit2vecteur(unit_conversion_map()[s.substr(1,s.size()-1).c_str()]); 
       ss=int(tmp.size());
-      for (int i=ss;i<9;++i)
+      for (int i=ss;i<10;++i)
         tmp.push_back(zero);
       for (int j=0;j<2;j++){
         vecteur vw;
@@ -9280,7 +9355,7 @@ namespace giac {
           vw=addvecteur(v,tmp);
         else
           vw=subvecteur(v,tmp);
-        for (int i=1;i<9;++i){
+        for (int i=1;i<10;++i){
           if (is_greater(1e-6,abs(vw[i],contextptr),contextptr))
             continue;
           if (pos) {
@@ -9311,7 +9386,7 @@ namespace giac {
       else  
         tmp=mksa_unit2vecteur(unit_conversion_map()[s.substr(1,s.size()-1).c_str()]); 
       ss=int(tmp.size());
-      for (int i=ss;i<9;++i)
+      for (int i=ss;i<10;++i)
         tmp.push_back(zero);
       it2=usual_units().begin();
       for (;it2!=itend;++it2){
@@ -9323,7 +9398,7 @@ namespace giac {
         else  
           tmp2=mksa_unit2vecteur(unit_conversion_map()[s2.substr(1,s2.size()-1).c_str()]); 
         ss=int(tmp2.size());
-        for (int i=ss;i<9;++i)
+        for (int i=ss;i<10;++i)
           tmp2.push_back(zero);
         for (int j=0;j<4;j++){
           vecteur vw;
@@ -9336,7 +9411,7 @@ namespace giac {
           else
             vw=subvecteur(v, subvecteur(tmp,tmp2));
           pos = 0;
-          for (int i=1;i<9;++i){
+          for (int i=1;i<10;++i){
             if (is_greater(1e-6,abs(vw[i],contextptr),contextptr))
               continue;
             pos=1;
@@ -9367,7 +9442,7 @@ namespace giac {
       else  
         tmp=mksa_unit2vecteur(unit_conversion_map()[s.substr(1,s.size()-1).c_str()]); 
       ss=int(tmp.size());
-      for (int i=ss;i<9;++i)
+      for (int i=ss;i<10;++i)
         tmp.push_back(zero);
       for (int j=0;j<2;j++){
         vecteur vw;
@@ -9375,7 +9450,7 @@ namespace giac {
           vw=addvecteur(v,tmp);
         else
           vw=subvecteur(v,tmp);
-        for (int i=1;i<9;++i){
+        for (int i=1;i<10;++i){
           if (is_greater(1e-6,abs(vw[i],contextptr),contextptr))
             continue;
           if (pos) {

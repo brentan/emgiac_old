@@ -590,6 +590,7 @@ namespace giac {
     float mol;
     float cd;
     float E;
+    float d;
   };
   struct unit_system {
     double m;
@@ -600,6 +601,7 @@ namespace giac {
     double mol;
     double cd;
     double E;
+    double d;
     gen m_base;
     gen kg_base;
     gen s_base;
@@ -608,6 +610,7 @@ namespace giac {
     gen mol_base;
     gen cd_base;
     gen E_base;
+    gen d_base;
   };
   unit_system & default_unit();
   extern const mksa_unit * const unitptr_tab[]; // table of units alpha-sorted
@@ -648,6 +651,8 @@ namespace giac {
   gen _ufactor(const gen & g,GIAC_CONTEXT);
   gen _usimplify(const gen & g,GIAC_CONTEXT);
   gen _usimplify_base(const gen & g,GIAC_CONTEXT);
+  gen _usimplify_angle(const gen & g,GIAC_CONTEXT);
+  gen _usimplify_base_function(const gen & g,const bool angle_mode, GIAC_CONTEXT);
 
   extern const mksa_unit __m_unit;
   extern const mksa_unit __kg_unit;
@@ -876,6 +881,7 @@ namespace giac {
   // extern gen _°_unit;
   extern gen _d_unit;
   extern gen _dB_unit;
+  extern gen _deg_unit;
   extern gen _dyn_unit;
   extern gen _erg_unit;
   extern gen _eV_unit;
