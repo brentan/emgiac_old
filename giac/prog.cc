@@ -28,6 +28,7 @@ using namespace std;
 #include <cstdlib>
 #include <algorithm>
 #include "prog.h"
+#include "emscripten.h"
 #include "identificateur.h"
 #include "symbolic.h"
 #include "usual.h"
@@ -8277,7 +8278,7 @@ namespace giac {
     mergevecteur(
       makevecteur(_N_unit,_Ohm_unit,_Pa_unit,_J_unit,_T_unit),
       makevecteur(_C_unit,_F_unit,_H_unit,_Hz_unit)),
-     makevecteur(_V_unit,_W_unit,_Wb_unit,_rad_unit)
+     makevecteur(_V_unit,_W_unit,_Wb_unit)
     ));
   vecteur & usual_units() {
     return *usual_units_ptr;
@@ -8290,7 +8291,7 @@ namespace giac {
   }
 #endif
 
-  static vecteur mksa_unit2vecteur(const mksa_unit * tmp){
+  static vecteur mksa_unit2vecteur(const mksa_unit * tmp){ // NEED TO USE CURRENT ANGLE MODE TO CHANGE TO APPROPRIATE ANGLE UNIT??
     vecteur v;
     if (tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0 && tmp->E==0){
       if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0){
@@ -8505,6 +8506,20 @@ namespace giac {
         v = mksa_unit2vecteur(it->second);
     else
         v = default_unit_unit2vecteur(it->second);
+    if (it->second->K==0 && it->second->mol==0 && it->second->cd==0 && it->second->d==1 && it->second->E==0 && it->second->m==0 && it->second->kg==0 && it->second->s==0 && it->second->A==0) {
+      // This is an angle.  MKSA or default should 'be' whatever the current angle mode is:
+
+      // Test for conversion and use symoblics instead to keep things in symbolic notation
+      if(it->second->coeff == 1.0) v[0] = plus_one;
+      if(it->second->coeff == 1.74532925199e-2) v[0] = deg2rad_e;
+      if(it->second->coeff == 1.57079632679e-2) v[0] = grad2rad_e;
+      if(angle_degree(contextptr))
+        v[0] = operator_times(v[0],rad2deg_e,contextptr);
+      else if(!angle_radian(contextptr))
+        v[0] = operator_times(v[0],rad2grad_e,contextptr);
+      if(is_greater(1e-6, abs(v[0]-1), contextptr))
+        v[0] = plus_one;
+    }
 
     v[0]=operator_times(res, v[0], contextptr);
     res_d=res_d * it->second->coeff;
@@ -8542,7 +8557,7 @@ namespace giac {
       vecteur res0=unit_convert(v[1], mksa, contextptr);
       vecteur res1=unit_convert(v[0], mksa, contextptr);
       vecteur res=addvecteur(res0,res1);
-      res.front()=operator_times(res0.front(),res1.front(),contextptr);
+      res.front()=normal(operator_times(res0.front(),res1.front(),contextptr),contextptr);
       return res;
     }
     if (g._SYMBptr->sommet==at_inv){
@@ -8676,8 +8691,6 @@ namespace giac {
         return apply(g,mksa_to_var,contextptr);
       vecteur v(mksa_convert(g,contextptr));
       if (is_undef(v)) return v;
-      gen res1=v[0];
-      gen res=plus_one;
       int s=int(v.size());
       int length = 0;
       double exponent;
@@ -8723,10 +8736,16 @@ namespace giac {
         if(exponent != 0)
           length += sprintf(outstr + length, "*u__E^(%f)", exponent);
       }
-      if (s>9) {
+      if (s>9) { // The 'MKSA' angle unit is dependant on whatever the current angle mode is
         exponent = unitpow_double(_rad_unit,v[9]);
-        if(exponent != 0)
-          length += sprintf(outstr + length, "*u__rad^(%f)", exponent);
+        if(exponent != 0) {
+          if(angle_radian(contextptr))
+            length += sprintf(outstr + length, "*u__rad^(%f)", exponent);
+          else if(angle_degree(contextptr))
+            length += sprintf(outstr + length, "*u__deg^(%f)", exponent);
+          else
+            length += sprintf(outstr + length, "*u__grad^(%f)", exponent);
+        }
       }
       return symb_prod(mksa_remove_base(g,contextptr), gen(outstr,contextptr));
     }
@@ -8760,8 +8779,11 @@ namespace giac {
         res = res * unitpow(_cd_unit,v[7]);
       if (s>8)
         res = res * unitpow(_E_unit,v[8]);
-      if (s>9)
-        res = res * unitpow(_rad_unit,v[9]);
+      if (s>9) { // MKSA angle is based on current angle mode
+        if(angle_radian(contextptr)) res = res * unitpow(_rad_unit,v[9]);
+        else if(angle_degree(contextptr)) res = res * unitpow(_deg_unit,v[9]);
+        else res = res * unitpow(_grad_unit,v[9]); 
+      }
       if (is_one(res))
         return plus_one;
       else
@@ -8791,7 +8813,7 @@ namespace giac {
   unit_system & default_unit(){
     return _default_unit_;
   }
-  gen default_unit(int index) {
+  gen default_unit(int index, GIAC_CONTEXT) {
       switch(index) {
         case 1:
           return _default_unit_.m_base;
@@ -8810,7 +8832,9 @@ namespace giac {
         case 8:
           return _default_unit_.E_base;
         case 9:
-          return _default_unit_.d_base;
+          if(angle_radian(contextptr)) return _rad_unit;
+          else if(angle_degree(contextptr)) return _deg_unit;
+          else return _grad_unit;
       }
       return zero;
   }
@@ -8847,10 +8871,6 @@ namespace giac {
       case 8:
         _default_unit_.E = d;
         _default_unit_.E_base = g;
-        break;
-      case 9:
-        _default_unit_.d = d;
-        _default_unit_.d_base = g;
         break;
     }  
   }
@@ -8927,57 +8947,57 @@ namespace giac {
     int s=int(v.size());
     if (s>2) {
       if(is_greater(0, v[2], contextptr))
-        den = den * unitpow(default_unit(2),-1*v[2]);
+        den = den * unitpow(default_unit(2, contextptr),-1*v[2]);
       else
-        num = num * unitpow(default_unit(2),v[2]);
+        num = num * unitpow(default_unit(2, contextptr),v[2]);
     }
     if (s>1) {
       if(is_greater(0, v[1], contextptr))
-        den = den * unitpow(default_unit(1),-1*v[1]);
+        den = den * unitpow(default_unit(1, contextptr),-1*v[1]);
       else
-        num = num * unitpow(default_unit(1),v[1]);
+        num = num * unitpow(default_unit(1, contextptr),v[1]);
     }
     if (s>3) {
       if(is_greater(0, v[3], contextptr))
-        den = den * unitpow(default_unit(3),-1*v[3]);
+        den = den * unitpow(default_unit(3, contextptr),-1*v[3]);
       else
-        num = num * unitpow(default_unit(3),v[3]);
+        num = num * unitpow(default_unit(3, contextptr),v[3]);
     }
     if (s>4) {
       if(is_greater(0, v[4], contextptr))
-        den = den * unitpow(default_unit(4),-1*v[4]);
+        den = den * unitpow(default_unit(4, contextptr),-1*v[4]);
       else
-        num = num * unitpow(default_unit(4),v[4]);
+        num = num * unitpow(default_unit(4, contextptr),v[4]);
     }
     if (s>5) {
       if(is_greater(0, v[5], contextptr))
-        den = den * unitpow(default_unit(5),-1*v[5]);
+        den = den * unitpow(default_unit(5, contextptr),-1*v[5]);
       else
-        num = num * unitpow(default_unit(5),v[5]);
+        num = num * unitpow(default_unit(5, contextptr),v[5]);
     }
     if (s>6) {
       if(is_greater(0, v[6], contextptr))
-        den = den * unitpow(default_unit(6),-1*v[6]);
+        den = den * unitpow(default_unit(6, contextptr),-1*v[6]);
       else
-        num = num * unitpow(default_unit(6),v[6]);
+        num = num * unitpow(default_unit(6, contextptr),v[6]);
     }
     if (s>7) {
       if(is_greater(0, v[7], contextptr))
-        den = den * unitpow(default_unit(7),-1*v[7]);
+        den = den * unitpow(default_unit(7, contextptr),-1*v[7]);
       else
-        num = num * unitpow(default_unit(7),v[7]);
+        num = num * unitpow(default_unit(7, contextptr),v[7]);
     }
     if (s>8) {
       if(is_greater(0, v[8], contextptr))
-        den = den * unitpow(default_unit(8),-1*v[8]);
+        den = den * unitpow(default_unit(8, contextptr),-1*v[8]);
       else
-        num = num * unitpow(default_unit(8),v[8]);
+        num = num * unitpow(default_unit(8, contextptr),v[8]);
     }
     if (s>9) {
       if(is_greater(0, v[9], contextptr))
-        den = den * unitpow(default_unit(9),-1*v[9]);
+        den = den * unitpow(default_unit(9, contextptr),-1*v[9]);
       else
-        num = num * unitpow(default_unit(9),v[9]);
+        num = num * unitpow(default_unit(9, contextptr),v[9]);
     }
     if(is_one(num) && is_one(den))
       return res1;
@@ -9016,8 +9036,11 @@ namespace giac {
       res = res * unitpow(_cd_unit,v[7]);
     if (s>8)
       res = res * unitpow(_E_unit,v[8]);
-    if (s>9)
-      res = res * unitpow(_rad_unit,v[9]);
+    if (s>9) { // MKSA andle is based on current angle mode: BRENTAN, make this work
+      if(angle_radian(contextptr)) res = res * unitpow(_rad_unit,v[9]);
+      else if(angle_degree(contextptr)) res = res * unitpow(_deg_unit,v[9]);
+      else res = res * unitpow(_grad_unit,v[9]);
+    }
     if (is_one(res))
       return res1;
     else
@@ -9040,6 +9063,8 @@ namespace giac {
   define_unary_function_ptr5( at_ufactor ,alias_at_ufactor,&__ufactor,0,true);
 
   gen _usimplify_angle(const gen & g,GIAC_CONTEXT) {
+std::string data = "console.log('NEED TO REMOVE u__rad and u__deg and u__grad: " + gen2string(g) + "');";
+emscripten_run_script(data.data());
     return _usimplify_base_function(g, true, contextptr);
   }
   gen _usimplify_base(const gen & g,GIAC_CONTEXT) {
@@ -9081,7 +9106,7 @@ namespace giac {
         for (;it!=itend;++it){
           out = operator_times(out, _usimplify_base_function(*it, angle_mode, contextptr), contextptr);
         }
-        return out;
+        return normal(out,contextptr);
       }
       #ifdef SWIFT_CALCS_OPTIONS
         if (g._SYMBptr->sommet==at_plus) {
@@ -9113,17 +9138,7 @@ namespace giac {
         break;
       }
     }
-    if(angle_mode && is_angle) {
-      vecteur & v2=*g._SYMBptr->feuille._VECTptr;
-      if(is_one(gen(v2[1] == (angle_radian(contextptr)?_rad_unit:(angle_degree(contextptr)?_deg_unit:_grad_unit)))))
-        return v2[0];
-      if(angle_radian(contextptr))
-        return v[0];
-      else if(angle_degree(contextptr)) 
-        return v[0] / 1.74532925199e-2;
-      else
-        return v[0] / 1.57079632679e-2;
-    }
+    if(angle_mode && is_angle) return v[0];
     if(all_zero) return v[0];
     return g;
   }
@@ -9240,10 +9255,13 @@ namespace giac {
   }
 
   gen _usimplify(const gen & g,GIAC_CONTEXT){
+std::string data = "console.log('USIMPLIFY: " + gen2string(g) + "');";
+emscripten_run_script(data.data());
     if ( g.type==_STRNG &&  g.subtype==-1) return  g;
     if (g.type==_VECT)
       return apply(g,_usimplify,contextptr);
     if (!g.is_symb_of_sommet(at_unit)) {
+emscripten_run_script("console.log('NOT UNIT');");
       if (g.type!=_SYMB)
         return g;
       if (g._SYMBptr->sommet==at_inv)
@@ -9264,7 +9282,9 @@ namespace giac {
         for (;it!=itend;++it){
           out = operator_times(out, _usimplify(*it, contextptr), contextptr);
         }
-        return out;
+std::string data3 = "console.log('PRODUCT: " + gen2string(out) + " --- " + gen2string(normal(out,contextptr)) + "');";
+emscripten_run_script(data3.data());
+        return normal(out,contextptr);
       }
       #ifdef SWIFT_CALCS_OPTIONS
         if (g._SYMBptr->sommet==at_plus) {
@@ -9283,6 +9303,8 @@ namespace giac {
       return g;
     }
     vecteur v = unit_convert(g, false, contextptr);
+std::string data2 = "console.log('UNIT: " + gen2string(v) + "');";
+emscripten_run_script(data2.data());
     if (is_undef(v)) return v;
     gen res1=v[0];
     int ss=int(v.size());
@@ -9294,6 +9316,8 @@ namespace giac {
         break;
       } else if((i == 9) && !is_greater(abs(v[i]-1, contextptr), 1e-6, contextptr)) 
         is_angle= true;
+      else if(i == 9) 
+        all_zero = false;
     }
     for (int i=ss;i<10;++i)
       v.push_back(zero);
@@ -9302,7 +9326,9 @@ namespace giac {
       vecteur & v2=*g._SYMBptr->feuille._VECTptr;
       if(is_one(gen(v2[1] == (angle_radian(contextptr)?_rad_unit:(angle_degree(contextptr)?_deg_unit:_grad_unit)))))
         return g;
-    }
+    } else if(all_zero)
+      return g;
+emscripten_run_script("console.log('PAST ANGLE MODE');");
     // Test if this unit has the same dimensions as a 'usual' unit (proper or inverse)
     v[0]=plus_one;
     const_iterateur it=usual_units().begin(),itend=usual_units().end();
