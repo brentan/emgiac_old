@@ -218,8 +218,10 @@ namespace giac {
   extern const unary_function_ptr * const  at_args;
 
   vecteur lidnt_with_at(const gen & args);
+  vecteur lidnt_no_unit(const gen & args);
   vecteur lidnt(const gen & args);
   void lidnt(const gen & args,vecteur & res,bool with_at);
+  void lidnt(const gen & args,vecteur & res,bool with_at,bool no_unit);
 
   gen _lname(const gen & args,GIAC_CONTEXT);
   extern const unary_function_ptr * const  at_lname;

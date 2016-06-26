@@ -4609,32 +4609,33 @@ namespace giac {
     if (a.is_symb_of_sommet(at_unit)){
       if (is_zero(b))
 	return a;
-      if (b.is_symb_of_sommet(at_unit)){
+      if (b.is_symb_of_sommet(at_unit) && lidnt_no_unit(a).empty() && lidnt_no_unit(b).empty()){
 	vecteur & va=*a._SYMBptr->feuille._VECTptr;
 	vecteur & vb=*b._SYMBptr->feuille._VECTptr;
 	if (va[1]==vb[1])
 	  return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),va[1])));
 	gen g=mksa_reduce(vb[1]/va[1],contextptr);
 	gen tmp=chk_not_unit(g);
-	if (is_undef(tmp)) return tmp;
+	if (is_undef(tmp))
+          return tmp;
 	return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],operator_times(g,vb[0],contextptr),contextptr),va[1])));
       }
-      if (lidnt(b).empty()){
+      if (lidnt_no_unit(a).empty() && lidnt(b).empty()){ 
 	gen g=mksa_reduce(a,contextptr);
 	gen tmp=chk_not_unit(g);
 	if (is_undef(tmp)) return tmp;
 	return g+b;
-      }
+      } 
     }
     if (b.is_symb_of_sommet(at_unit)){
       if (is_zero(a))
 	return b;
-      if (lidnt(a).empty()){
+      if (lidnt(a).empty() && lidnt_no_unit(b).empty()){ 
 	gen g=mksa_reduce(b,contextptr);
 	gen tmp=chk_not_unit(g);
 	if (is_undef(tmp)) return tmp;
 	return a+g;
-      }
+      } 
     }
     if (a.is_approx()){
       gen b1;
@@ -6536,11 +6537,11 @@ namespace giac {
 	return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_times(va[0],v[0],contextptr),res)));
       }
       else {
-	if (lidnt(b).empty())
+	//if (lidnt(b).empty()) //BRENTAN
 	  return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_times(va[0],b,contextptr),va[1])));
       }
     }
-    if (b.is_symb_of_sommet(at_unit) && lidnt(a).empty()){
+    if (b.is_symb_of_sommet(at_unit)){// && lidnt(a).empty()){ //BRENTAN
       vecteur & v=*b._SYMBptr->feuille._VECTptr;
       return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_times(a,v[0],contextptr),v[1])));
     }
