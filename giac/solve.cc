@@ -1598,6 +1598,9 @@ namespace giac {
     vecteur eid=lidnt(e);
     if (eid.size()==1 && lvar(e)==eid)
       return sol; // it was a univariate polynomial equation, no need to check
+#ifdef SWIFT_CALCS_OPTIONS
+      remove_angle_mode(true, contextptr); 
+#endif
     for (unsigned i=0;i<sol.size();++i){
       gen tmp=subst(e,x,sol[i],false,contextptr);
 #ifdef HAVE_LIBMPFR
@@ -1614,6 +1617,9 @@ namespace giac {
       if ((tmp.type>_CPLX && tmp.type!=_FLOAT_) || is_greater(1e-6,abs(tmp,contextptr),contextptr))
 	res.push_back(sol[i]);
     }
+#ifdef SWIFT_CALCS_OPTIONS
+      remove_angle_mode(false, contextptr); 
+#endif
     return res;
   }
 

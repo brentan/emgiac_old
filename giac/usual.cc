@@ -569,6 +569,20 @@ namespace giac {
   static gen atanasln(const gen & e,GIAC_CONTEXT){
     return plus_one_half*cst_i*ln(rdiv(cst_i+e,cst_i-e,contextptr),contextptr);
   }
+  gen add_trig_unit(const gen & e, const gen & u, GIAC_CONTEXT) {
+#ifdef SWIFT_CALCS_OPTIONS
+    if(mksareduce_mode(contextptr))
+      return mksa_remove_base(symbolic(at_unit, makevecteur(e, u)), contextptr);
+    else if(remove_angle_mode(contextptr) && mksavariable_mode(contextptr))
+      return e; // No need to add u__rad just to then remove it
+    else if(mksavariable_mode(contextptr))
+      return mksa_to_var(symbolic(at_unit, makevecteur(e, u)), contextptr);
+    else
+      return symbolic(at_unit, makevecteur(e, u));
+#else
+    return e;
+#endif
+  }
   gen atan(const gen & e_in,GIAC_CONTEXT){
     #ifdef SWIFT_CALCS_OPTIONS
       gen e0 = _usimplify_base(e_in, contextptr);
@@ -589,29 +603,29 @@ namespace giac {
       double res=std::atan(e._DOUBLE_val);
 #endif
       if (angle_radian(contextptr)) 
-	return symbolic(at_unit,makevecteur(res,_rad_unit));
+	return add_trig_unit(res,_rad_unit, contextptr);
       else if(angle_degree(contextptr))
-	      return symbolic(at_unit,makevecteur(res*rad2deg_d,_deg_unit));
+	      return add_trig_unit(res*rad2deg_d,_deg_unit, contextptr);
       else
-        return symbolic(at_unit,makevecteur(res*rad2grad_d,_grad_unit));
+        return add_trig_unit(res*rad2grad_d,_grad_unit, contextptr);
     }
     if (e.type==_REAL){
       if (angle_radian(contextptr)) 
-	return symbolic(at_unit,makevecteur(e._REALptr->atan(),_rad_unit));
+	return add_trig_unit(e._REALptr->atan(),_rad_unit, contextptr);
       else if(angle_degree(contextptr))
-	      return symbolic(at_unit,makevecteur(180*e._REALptr->atan()/cst_pi,_deg_unit));
+	      return add_trig_unit(180*e._REALptr->atan()/cst_pi,_deg_unit, contextptr);
       //grad
       else
-        return symbolic(at_unit,makevecteur(200*e._REALptr->atan()/cst_pi,_grad_unit));
+        return add_trig_unit(200*e._REALptr->atan()/cst_pi,_grad_unit, contextptr);
     }
     if ( (e.type==_CPLX) && (e.subtype || e._CPLXptr->type==_REAL || e._CPLXptr->type==_FLOAT_)){
       if (angle_radian(contextptr)) 
-	return symbolic(at_unit,makevecteur(no_context_evalf(atanasln(e,contextptr)),_rad_unit));
+	return add_trig_unit(no_context_evalf(atanasln(e,contextptr)),_rad_unit, contextptr);
       else if(angle_degree(contextptr))
-	      return symbolic(at_unit,makevecteur(no_context_evalf(atanasln(e,contextptr))*gen(rad2deg_d),_deg_unit));
+	      return add_trig_unit(no_context_evalf(atanasln(e,contextptr))*gen(rad2deg_d),_deg_unit, contextptr);
       //grad
       else
-        return symbolic(at_unit,makevecteur(no_context_evalf(atanasln(e, contextptr))*gen(rad2grad_d),_grad_unit));
+        return add_trig_unit(no_context_evalf(atanasln(e, contextptr))*gen(rad2grad_d),_grad_unit, contextptr);
     }
     if (is_squarematrix(e))
       return analytic_apply(at_atan,*e._VECTptr,contextptr);
@@ -621,57 +635,57 @@ namespace giac {
       return e;
     if (is_one(e)){
       if (angle_radian(contextptr)) 
-	return symbolic(at_unit,makevecteur(rdiv(cst_pi,4,contextptr),_rad_unit));
+	return add_trig_unit(rdiv(cst_pi,4,contextptr),_rad_unit, contextptr);
       else if(angle_degree(contextptr))
-      return symbolic(at_unit,makevecteur(45,_deg_unit));
+      return add_trig_unit(45,_deg_unit, contextptr);
       //grad
       else
-        return symbolic(at_unit,makevecteur(50,_grad_unit));
+        return add_trig_unit(50,_grad_unit, contextptr);
     }
     if (is_minus_one(e)){
       if (angle_radian(contextptr)) 
-	return symbolic(at_unit,makevecteur(rdiv(-cst_pi,4,contextptr),_rad_unit));
+	return add_trig_unit(rdiv(-cst_pi,4,contextptr),_rad_unit, contextptr);
       else if(angle_degree(contextptr))
-      return symbolic(at_unit,makevecteur(-45,_deg_unit));
+      return add_trig_unit(-45,_deg_unit, contextptr);
       //grad
       else
-        return symbolic(at_unit,makevecteur(-50,_grad_unit));
+        return add_trig_unit(-50,_grad_unit, contextptr);
     }
     if (e==plus_sqrt3_3){
       if (angle_radian(contextptr)) 
-	return symbolic(at_unit,makevecteur(rdiv(cst_pi,6,contextptr),_rad_unit));
+	return add_trig_unit(rdiv(cst_pi,6,contextptr),_rad_unit, contextptr);
       else if(angle_degree(contextptr))
-      return symbolic(at_unit,makevecteur(30,_deg_unit));
+      return add_trig_unit(30,_deg_unit, contextptr);
       //grad
       else
-        return symbolic(at_unit,makevecteur(rdiv(100,3),_grad_unit)); //100/3 grads
+        return add_trig_unit(rdiv(100,3),_grad_unit, contextptr); //100/3 grads
     }
     if (e==plus_sqrt3){
       if (angle_radian(contextptr)) 
-	return symbolic(at_unit,makevecteur(rdiv(cst_pi,3,contextptr),_rad_unit));
+	return add_trig_unit(rdiv(cst_pi,3,contextptr),_rad_unit, contextptr);
       else if(angle_degree(contextptr))
-      return symbolic(at_unit,makevecteur(60,_deg_unit));
+      return add_trig_unit(60,_deg_unit, contextptr);
       //grad
       else
-        return symbolic(at_unit,makevecteur(rdiv(200,3),_grad_unit)); //200/3 grads
+        return add_trig_unit(rdiv(200,3),_grad_unit, contextptr); //200/3 grads
     }
     if (e==plus_inf){
       if (angle_radian(contextptr)) 
-	return symbolic(at_unit,makevecteur(cst_pi_over_2,_rad_unit));
+	return add_trig_unit(cst_pi_over_2,_rad_unit, contextptr);
       else if(angle_degree(contextptr))
-      return symbolic(at_unit,makevecteur(90,_deg_unit));
+      return add_trig_unit(90,_deg_unit, contextptr);
       //grad
       else
-        return symbolic(at_unit,makevecteur(100,_grad_unit));
+        return add_trig_unit(100,_grad_unit, contextptr);
     }
     if (e==minus_inf){
       if (angle_radian(contextptr)) 
-	return symbolic(at_unit,makevecteur(-cst_pi_over_2,_rad_unit));
+	return add_trig_unit(-cst_pi_over_2,_rad_unit, contextptr);
       else if(angle_degree(contextptr))
-      return symbolic(at_unit,makevecteur(-90,_deg_unit));
+      return add_trig_unit(-90,_deg_unit, contextptr);
       //grad
       else
-        return symbolic(at_unit,makevecteur(-100,_grad_unit));
+        return add_trig_unit(-100,_grad_unit, contextptr);
     }
     if (is_undef(e))
       return e;
@@ -689,9 +703,9 @@ namespace giac {
 	  normal(horner(makevecteur(-5,60,-126,60,-5),e*e),contextptr)==0){
 	int res=int(std::floor(std::atan(std::abs(ed))*10/M_PI+.5));
 	if (res%2)
-	  return (ed>0?res:-res)*(angle_radian(contextptr)?symbolic(at_unit,makevecteur(cst_pi/10,_rad_unit)):(angle_degree(contextptr)?symbolic(at_unit,makevecteur(gen(18),_deg_unit)):symbolic(at_unit,makevecteur(gen(20),_grad_unit)))); //grad
+	  return (ed>0?res:-res)*(angle_radian(contextptr)?add_trig_unit(cst_pi/10,_rad_unit, contextptr):(angle_degree(contextptr)?add_trig_unit(gen(18),_deg_unit, contextptr):add_trig_unit(gen(20),_grad_unit, contextptr))); //grad
 	else
-	  return (ed>0?res/2:-res/2)*(angle_radian(contextptr)?symbolic(at_unit,makevecteur(cst_pi/5,_rad_unit)):(angle_degree(contextptr)?symbolic(at_unit,makevecteur(gen(36),_deg_unit)):symbolic(at_unit,makevecteur(gen(40),_grad_unit)))); //grad
+	  return (ed>0?res/2:-res/2)*(angle_radian(contextptr)?add_trig_unit(cst_pi/5,_rad_unit, contextptr):(angle_degree(contextptr)?add_trig_unit(gen(36),_deg_unit, contextptr):add_trig_unit(gen(40),_grad_unit, contextptr))); //grad
       }
       edh=horner(makevecteur(-3,55,-198,198,-55,3),tmp*tmp);
       if (std::abs(edh._DOUBLE_val)<1e-7){      
@@ -699,13 +713,13 @@ namespace giac {
 	int den=12;
 	int g=gcd(res,den);
 	res /=g; den /=g;
-	return (ed>0?res:-res)*(angle_radian(contextptr)?symbolic(at_unit,makevecteur(cst_pi/den,_rad_unit)):(angle_degree(contextptr)?symbolic(at_unit,makevecteur(gen(15*g),_deg_unit)):symbolic(at_unit,makevecteur(rdiv(50,3)*gen(g),_grad_unit)))); //grad   50/3*g grads
+	return (ed>0?res:-res)*(angle_radian(contextptr)?add_trig_unit(cst_pi/den,_rad_unit, contextptr):(angle_degree(contextptr)?add_trig_unit(gen(15*g),_deg_unit, contextptr):add_trig_unit(rdiv(50,3)*gen(g),_grad_unit, contextptr))); //grad   50/3*g grads
       }
       edh=horner(makevecteur(1,-6,1),ed*ed);
       if (std::abs(edh._DOUBLE_val)<1e-7 &&
 	  normal(horner(makevecteur(1,-6,1),e*e),contextptr)==0){
 	int res=int(std::floor(std::atan(std::abs(ed))*8/M_PI+.5));
-	return (ed>0?res:-res)*(angle_radian(contextptr)?symbolic(at_unit,makevecteur(cst_pi/8,_rad_unit)):(angle_degree(contextptr)?symbolic(at_unit,makevecteur(gen(45)/2,_deg_unit)):symbolic(at_unit,makevecteur(gen(25),_grad_unit)))); //grad 
+	return (ed>0?res:-res)*(angle_radian(contextptr)?add_trig_unit(cst_pi/8,_rad_unit, contextptr):(angle_degree(contextptr)?add_trig_unit(gen(45)/2,_deg_unit, contextptr):add_trig_unit(gen(25),_grad_unit, contextptr))); //grad 
       }
     }
     if ((e.type==_SYMB) && (e._SYMBptr->sommet==at_neg))
@@ -724,14 +738,14 @@ namespace giac {
     if (e.is_symb_of_sommet(at_tan)){
       if (atan_tan_no_floor(contextptr))
 	return e._SYMBptr->feuille;
-      gen tmp=symbolic(at_unit,makevecteur(cst_pi,_rad_unit));
+      gen tmp=add_trig_unit(cst_pi,_rad_unit, contextptr);
       if(!angle_radian(contextptr))
       {
         if(angle_degree(contextptr))
-	  tmp=symbolic(at_unit,makevecteur(180,_deg_unit));
+	  tmp=add_trig_unit(180,_deg_unit, contextptr);
         //grad
         else
-          tmp = symbolic(at_unit,makevecteur(200,_grad_unit));
+          tmp = add_trig_unit(200,_grad_unit, contextptr);
       }
       gen tmp2=evalf(e._SYMBptr->feuille,1,contextptr);
       if (tmp2.type<_IDNT)
@@ -749,15 +763,15 @@ namespace giac {
       gen test=(1+t)/(1-t);
       test=ratnormal(e/test);
       if (is_one(test))
-	return atan(symbolic(at_tan,symbolic(at_unit,makevecteur(cst_pi/4,_rad_unit))+atan(t,contextptr)),contextptr);
+	return atan(symbolic(at_tan,add_trig_unit(cst_pi/4,_rad_unit, contextptr)+atan(t,contextptr)),contextptr);
       if (is_minus_one(test))
-	return -atan(symbolic(at_tan,symbolic(at_unit,makevecteur(cst_pi/4,_rad_unit))+atan(t,contextptr)),contextptr);
+	return -atan(symbolic(at_tan,add_trig_unit(cst_pi/4,_rad_unit, contextptr)+atan(t,contextptr)),contextptr);
       test=(-1+t)/(1+t);
       test=ratnormal(e/test);
       if (is_one(test))
-	return atan(symbolic(at_tan,symbolic(at_unit,makevecteur(-cst_pi/4,_rad_unit))+atan(t,contextptr)),contextptr);
+	return atan(symbolic(at_tan,add_trig_unit(-cst_pi/4,_rad_unit, contextptr)+atan(t,contextptr)),contextptr);
       if (is_minus_one(test))
-	return -atan(symbolic(at_tan,symbolic(at_unit,makevecteur(-cst_pi/4,_rad_unit))+atan(t,contextptr)),contextptr);
+	return -atan(symbolic(at_tan,add_trig_unit(-cst_pi/4,_rad_unit, contextptr)+atan(t,contextptr)),contextptr);
     }
     return symb_atan(e);
   }
@@ -2087,31 +2101,31 @@ namespace giac {
 	double d=std::asin(e._DOUBLE_val);
 #endif
 	if (angle_radian(contextptr)) 
-	  return symbolic(at_unit,makevecteur(d,_rad_unit));
+	  return add_trig_unit(d,_rad_unit, contextptr);
   else if(angle_degree(contextptr))
-	  return symbolic(at_unit,makevecteur(d*rad2deg_d,_deg_unit));
+	  return add_trig_unit(d*rad2deg_d,_deg_unit, contextptr);
   //grad
 	else
-    return symbolic(at_unit,makevecteur(d*rad2grad_d,_grad_unit));
+    return add_trig_unit(d*rad2grad_d,_grad_unit, contextptr);
       }
     }
     if (e.type==_REAL){
       if (angle_radian(contextptr)) 
-	return symbolic(at_unit,makevecteur(e._REALptr->asin(),_rad_unit));
+	return add_trig_unit(e._REALptr->asin(),_rad_unit, contextptr);
       else if(angle_degree(contextptr))
-	      return symbolic(at_unit,makevecteur(180*e._REALptr->asin()/cst_pi,_deg_unit));
+	      return add_trig_unit(180*e._REALptr->asin()/cst_pi,_deg_unit, contextptr);
       //grad
       else
-        return symbolic(at_unit,makevecteur(200*e._REALptr->asin()/cst_pi,_grad_unit));
+        return add_trig_unit(200*e._REALptr->asin()/cst_pi,_grad_unit, contextptr);
     }
     if ( e.type==_DOUBLE_ || (e.type==_CPLX && (e.subtype || e._CPLXptr->type==_FLOAT_ || e._CPLXptr->type==_REAL)) ){
       if (angle_radian(contextptr)) 
-	return symbolic(at_unit,makevecteur(no_context_evalf(asinasln(e,contextptr)),_rad_unit));
+	return add_trig_unit(no_context_evalf(asinasln(e,contextptr)),_rad_unit, contextptr);
       else if(angle_degree(contextptr))
-	      return symbolic(at_unit,makevecteur(no_context_evalf(asinasln(e,contextptr))*gen(rad2deg_d),_deg_unit));
+	      return add_trig_unit(no_context_evalf(asinasln(e,contextptr))*gen(rad2deg_d),_deg_unit, contextptr);
       //grad
       else
-        return symbolic(at_unit,makevecteur(no_context_evalf(asinasln(e,contextptr))*gen(rad2grad_d),_grad_unit));
+        return add_trig_unit(no_context_evalf(asinasln(e,contextptr))*gen(rad2grad_d),_grad_unit, contextptr);
     }
     if (is_squarematrix(e))
       return analytic_apply(at_asin,*e._VECTptr,contextptr);
@@ -2122,12 +2136,12 @@ namespace giac {
     if (is_one(e)){
       if (is_zero(e)) fonction_bidon();
       if (angle_radian(contextptr))
-	return symbolic(at_unit,makevecteur(cst_pi_over_2,_rad_unit));
+	return add_trig_unit(cst_pi_over_2,_rad_unit, contextptr);
       else if(angle_degree(contextptr))
-      return symbolic(at_unit,makevecteur(90,_deg_unit));
+      return add_trig_unit(90,_deg_unit, contextptr);
       //grad
       else
-        return symbolic(at_unit,makevecteur(100,_grad_unit));
+        return add_trig_unit(100,_grad_unit, contextptr);
     }
     if (e==sin_pi_12 
 #ifndef VISUALC
@@ -2135,12 +2149,12 @@ namespace giac {
 #endif
 	){
       if (angle_radian(contextptr))
-	return symbolic(at_unit,makevecteur(rdiv(cst_pi,12,contextptr),_rad_unit));
+	return add_trig_unit(rdiv(cst_pi,12,contextptr),_rad_unit, contextptr);
       else if(angle_degree(contextptr))
-      return symbolic(at_unit,makevecteur(15,_deg_unit));
+      return add_trig_unit(15,_deg_unit, contextptr);
       //grad
       else
-        return symbolic(at_unit,makevecteur(rdiv(50, 3),_grad_unit)); //50/3 grads
+        return add_trig_unit(rdiv(50, 3),_grad_unit, contextptr); //50/3 grads
     }
     if (e==cos_pi_12 
 #ifndef VISUALC
@@ -2148,39 +2162,39 @@ namespace giac {
 #endif
 	){
       if (angle_radian(contextptr))
-	return symbolic(at_unit,makevecteur(5*cst_pi/12,_rad_unit));
+	return add_trig_unit(5*cst_pi/12,_rad_unit, contextptr);
       else if(angle_degree(contextptr))
-      return symbolic(at_unit,makevecteur(75,_deg_unit));
+      return add_trig_unit(75,_deg_unit, contextptr);
       //grad
       else
-        return symbolic(at_unit,makevecteur(rdiv(250,3),_grad_unit)); //250/3 grads
+        return add_trig_unit(rdiv(250,3),_grad_unit, contextptr); //250/3 grads
     }
     if (e==plus_sqrt3_2){
       if (angle_radian(contextptr))
-	return symbolic(at_unit,makevecteur(rdiv(cst_pi,3,contextptr),_rad_unit));
+	return add_trig_unit(rdiv(cst_pi,3,contextptr),_rad_unit, contextptr);
       else if(angle_degree(contextptr))
-      return symbolic(at_unit,makevecteur(60,_deg_unit));
+      return add_trig_unit(60,_deg_unit, contextptr);
       //grad
       else
-        return symbolic(at_unit,makevecteur(rdiv(200,3),_grad_unit)); //200/3 grads
+        return add_trig_unit(rdiv(200,3),_grad_unit, contextptr); //200/3 grads
     }
     if (e==plus_sqrt2_2){
       if (angle_radian(contextptr)) 
-	return symbolic(at_unit,makevecteur(rdiv(cst_pi,4,contextptr),_rad_unit));
+	return add_trig_unit(rdiv(cst_pi,4,contextptr),_rad_unit, contextptr);
       else if(angle_degree(contextptr))
-      return symbolic(at_unit,makevecteur(45,_deg_unit));
+      return add_trig_unit(45,_deg_unit, contextptr);
       //grad
       else
-        return symbolic(at_unit,makevecteur(50,_grad_unit));
+        return add_trig_unit(50,_grad_unit, contextptr);
     }
     if (e==plus_one_half){
       if (angle_radian(contextptr)) 
-	return symbolic(at_unit,makevecteur(rdiv(cst_pi,6,contextptr),_rad_unit));
+	return add_trig_unit(rdiv(cst_pi,6,contextptr),_rad_unit, contextptr);
       else if(angle_degree(contextptr))
-      return symbolic(at_unit,makevecteur(30,_deg_unit));
+      return add_trig_unit(30,_deg_unit, contextptr);
       //grad
       else
-        return symbolic(at_unit,makevecteur(rdiv(100,3),_grad_unit)); //100/3 grads
+        return add_trig_unit(rdiv(100,3),_grad_unit, contextptr); //100/3 grads
     }
     gen edg=evalf_double(e,1,contextptr);
     if (edg.type==_DOUBLE_){
@@ -2191,9 +2205,9 @@ namespace giac {
 	  normal(horner(makevecteur(256,-512,336,-80,5),e*e),contextptr)==0){
 	int res=int(std::floor(std::asin(std::abs(ed))*10/M_PI+.5));
 	if (res%2)
-	  return angle_radian(contextptr)?symbolic(at_unit,makevecteur((ed>0?res:-res)*cst_pi/10,_rad_unit)):(angle_degree(contextptr)?symbolic(at_unit,makevecteur((ed>0?res:-res)*gen(18),_deg_unit)):symbolic(at_unit,makevecteur((ed>0?res:-res)*gen(20),_grad_unit))); //grad
+	  return angle_radian(contextptr)?add_trig_unit((ed>0?res:-res)*cst_pi/10,_rad_unit, contextptr):(angle_degree(contextptr)?add_trig_unit((ed>0?res:-res)*gen(18),_deg_unit, contextptr):add_trig_unit((ed>0?res:-res)*gen(20),_grad_unit, contextptr)); //grad
 	else
-	  return angle_radian(contextptr)?symbolic(at_unit,makevecteur((ed>0?res/2:-res/2)*cst_pi/5,_rad_unit)):(angle_degree(contextptr)?symbolic(at_unit,makevecteur((ed>0?res/2:-res/2)*gen(36),_deg_unit)):symbolic(at_unit,makevecteur((ed>0?res/2:-res/2)*gen(40),_grad_unit))); //grad
+	  return angle_radian(contextptr)?add_trig_unit((ed>0?res/2:-res/2)*cst_pi/5,_rad_unit, contextptr):(angle_degree(contextptr)?add_trig_unit((ed>0?res/2:-res/2)*gen(36),_deg_unit, contextptr):add_trig_unit((ed>0?res/2:-res/2)*gen(40),_grad_unit, contextptr)); //grad
       }
       edh=horner(makevecteur(512,-1280,1152,-448,70,-3),edg*edg);
       if (std::abs(edh._DOUBLE_val)<1e-9 &&
@@ -2202,7 +2216,7 @@ namespace giac {
 	int den=12;
 	int g=gcd(res,den);
 	res /=g; den /=g;
-	return angle_radian(contextptr)?symbolic(at_unit,makevecteur((ed>0?res:-res)*cst_pi/den,_rad_unit)):(angle_degree(contextptr)?symbolic(at_unit,makevecteur((ed>0?res:-res)*gen(15*g),_deg_unit)):symbolic(at_unit,makevecteur((ed>0?res:-res)*rdiv(50,3)*gen(g),_grad_unit))); //grad   50/3*g grads
+	return angle_radian(contextptr)?add_trig_unit((ed>0?res:-res)*cst_pi/den,_rad_unit, contextptr):(angle_degree(contextptr)?add_trig_unit((ed>0?res:-res)*gen(15*g),_deg_unit, contextptr):add_trig_unit((ed>0?res:-res)*rdiv(50,3)*gen(g),_grad_unit, contextptr)); //grad   50/3*g grads
       }
       edh=horner(makevecteur(64,-128,80,-16,1),edg*edg);
       if (std::abs(edh._DOUBLE_val)<1e-9 &&
@@ -2211,7 +2225,7 @@ namespace giac {
 	int den=8;
 	int g=gcd(res,den);
 	res /=g; den /=g;
-	return angle_radian(contextptr)?symbolic(at_unit,makevecteur((ed>0?res:-res)*cst_pi/den,_rad_unit)):(angle_degree(contextptr)?symbolic(at_unit,makevecteur((ed>0?res:-res)*gen(45*g)/2,_deg_unit)):symbolic(at_unit,makevecteur((ed>0?res:-res)*gen(25),_grad_unit))); //grad
+	return angle_radian(contextptr)?add_trig_unit((ed>0?res:-res)*cst_pi/den,_rad_unit, contextptr):(angle_degree(contextptr)?add_trig_unit((ed>0?res:-res)*gen(45*g)/2,_deg_unit, contextptr):add_trig_unit((ed>0?res:-res)*gen(25),_grad_unit, contextptr)); //grad
       }
     }
     if (is_undef(e))
@@ -2242,7 +2256,7 @@ namespace giac {
     if (is_equal(e))
       return apply_to_equal(e,asin,contextptr);
     if (lidnt(e).empty() && is_positive(e*e-1,contextptr))
-      return (angle_radian(contextptr)?symbolic(at_unit,makevecteur(plus_one,_rad_unit)):(angle_degree(contextptr)?symbolic(at_unit,makevecteur(rad2deg_g,_deg_unit)):symbolic(at_unit,makevecteur(rad2grad_g,_grad_unit))))*asinasln(e,contextptr);
+      return (angle_radian(contextptr)?add_trig_unit(plus_one,_rad_unit, contextptr):(angle_degree(contextptr)?add_trig_unit(rad2deg_g,_deg_unit, contextptr):add_trig_unit(rad2grad_g,_grad_unit, contextptr)))*asinasln(e,contextptr);
     return symb_asin(e);
   }
   static gen d_asin(const gen & args,GIAC_CONTEXT){
@@ -2314,42 +2328,42 @@ namespace giac {
 	double d=std::acos(e._DOUBLE_val);
 #endif
 	if (angle_radian(contextptr)) 
-	  return symbolic(at_unit,makevecteur(d,_rad_unit));
+	  return add_trig_unit(d,_rad_unit, contextptr);
   else if(angle_degree(contextptr))
-    return symbolic(at_unit,makevecteur(d*rad2deg_d,_deg_unit));
+    return add_trig_unit(d*rad2deg_d,_deg_unit, contextptr);
   //grad
 	else
-    return symbolic(at_unit,makevecteur(d*rad2grad_d,_grad_unit));
+    return add_trig_unit(d*rad2grad_d,_grad_unit, contextptr);
       }
     }
     if (e.type==_REAL){
       if (angle_radian(contextptr)) 
-	return symbolic(at_unit,makevecteur(e._REALptr->acos(),_rad_unit));
+	return add_trig_unit(e._REALptr->acos(),_rad_unit, contextptr);
       else if(angle_degree(contextptr))
-	      return symbolic(at_unit,makevecteur(180*e._REALptr->acos()/cst_pi,_deg_unit));
+	      return add_trig_unit(180*e._REALptr->acos()/cst_pi,_deg_unit, contextptr);
       //grad
       else
-        return symbolic(at_unit,makevecteur(200*e._REALptr->acos()/cst_pi,_grad_unit));
+        return add_trig_unit(200*e._REALptr->acos()/cst_pi,_grad_unit, contextptr);
     }
     if (e.type==_DOUBLE_ || e.type==_FLOAT_ || e.type==_REAL){
       gen res=cst_i*no_context_evalf(ln(sqrt(e*e-1,contextptr)+e,contextptr));
       if (angle_radian(contextptr)) 
-	return symbolic(at_unit,makevecteur(res,_rad_unit));
+	return add_trig_unit(res,_rad_unit, contextptr);
       else if(angle_degree(contextptr))
-	      return symbolic(at_unit,makevecteur(res*gen(rad2deg_d),_deg_unit));
+	      return add_trig_unit(res*gen(rad2deg_d),_deg_unit, contextptr);
       //grad
       else
-        return symbolic(at_unit,makevecteur(res*gen(rad2grad_d),_grad_unit));
+        return add_trig_unit(res*gen(rad2grad_d),_grad_unit, contextptr);
     }
     if ( e.type==_CPLX && (e.subtype || e._CPLXptr->type==_FLOAT_ || e._CPLXptr->type==_REAL) ){
       gen res=cst_pi/2-asinasln(e,contextptr); // -cst_i*no_context_evalf(ln(sqrt(e*e-1,contextptr)+e,contextptr));
       if (angle_radian(contextptr)) 
-	return symbolic(at_unit,makevecteur(res,_rad_unit));
+	return add_trig_unit(res,_rad_unit, contextptr);
       else if(angle_degree(contextptr))
-	      return symbolic(at_unit,makevecteur(res*gen(rad2deg_d),_deg_unit));
+	      return add_trig_unit(res*gen(rad2deg_d),_deg_unit, contextptr);
       //grad
       else
-        return symbolic(at_unit,makevecteur(res*gen(rad2grad_d),_grad_unit));
+        return add_trig_unit(res*gen(rad2grad_d),_grad_unit, contextptr);
     }
     if (is_squarematrix(e))
       return analytic_apply(at_acos,*e._VECTptr,contextptr);
@@ -2365,12 +2379,12 @@ namespace giac {
       return symb_acos(e);
     vecteur & v2=*g._SYMBptr->feuille._VECTptr;
     if (angle_radian(contextptr)) 
-      return symbolic(at_unit,makevecteur(normal(cst_pi_over_2 - v2[0],contextptr),_rad_unit));
+      return add_trig_unit(normal(cst_pi_over_2 - v2[0],contextptr),_rad_unit, contextptr);
     else if(angle_degree(contextptr))
-      return symbolic(at_unit,makevecteur(90 - v2[0],_deg_unit));
+      return add_trig_unit(90 - v2[0],_deg_unit, contextptr);
     //grad
     else
-      return symbolic(at_unit,makevecteur(100 - v2[0],_grad_unit));
+      return add_trig_unit(100 - v2[0],_grad_unit, contextptr);
   }
   static gen d_acos(const gen & args,GIAC_CONTEXT){
     gen g= -inv(recursive_normal(sqrt(1-pow(args,2),contextptr),contextptr),contextptr);
