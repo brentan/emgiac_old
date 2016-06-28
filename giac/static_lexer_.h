@@ -1208,7 +1208,9 @@
 *((size_t *) at_unitV),
 *((size_t *) at_unquote),
 *((size_t *) at_usimplify),
+#ifdef SWIFT_CALCS_OPTIONS
 *((size_t *) at_usimplify_base),
+#endif
 *((size_t *) at_valuation),
 *((size_t *) at_vandermonde),
 *((size_t *) at_variance),

@@ -529,6 +529,7 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
     #ifdef SWIFT_CALCS_OPTIONS
       bool _mksareduce_mode_;
       bool _mksavariable_mode_;
+      bool _remove_angle_mode_;
     #endif
     bool _atan_tan_no_floor_;
     int _angle_mode_;
@@ -734,6 +735,8 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
     void mksareduce_mode(bool b,GIAC_CONTEXT);
     bool & mksavariable_mode(GIAC_CONTEXT);
     void mksavariable_mode(bool b,GIAC_CONTEXT);
+    bool & remove_angle_mode(GIAC_CONTEXT);
+    void remove_angle_mode(bool b,GIAC_CONTEXT);
   #endif
 
   bool & show_point(GIAC_CONTEXT);

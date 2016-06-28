@@ -28,7 +28,6 @@ using namespace std;
 #include <cstdlib>
 #include <algorithm>
 #include "prog.h"
-#include "emscripten.h"
 #include "identificateur.h"
 #include "symbolic.h"
 #include "usual.h"
@@ -9079,206 +9078,206 @@ namespace giac {
   static define_unary_function_eval (__ufactor,&_ufactor,_ufactor_s);
   define_unary_function_ptr5( at_ufactor ,alias_at_ufactor,&__ufactor,0,true);
 
-  gen _usimplify_angle(const gen & g,GIAC_CONTEXT) {
-std::string data = "console.log('NEED TO REMOVE u__rad and u__deg and u__grad: " + gen2string(g) + "');";
-emscripten_run_script(data.data());
-    return _usimplify_base_function(g, true, contextptr);
-  }
-  gen _usimplify_base(const gen & g,GIAC_CONTEXT) {
-    return _usimplify_base_function(g, false, contextptr);
-  }
-  // Will simply look to see if passed unit is really of dimension 0 (_m/_in, etc), useful for cos() etc where we need to remove units if possible (angle mode will strip _rad, _deg, and _grad and convert to current default angle)
-  gen _usimplify_base_function(const gen & g, const bool angle_mode, GIAC_CONTEXT) {
-    if ( g.type==_STRNG &&  g.subtype==-1) return g;
-    if (g.type==_VECT) {
-      const_iterateur it=g._VECTptr->begin(),itend=g._VECTptr->end();
-      vecteur v;
-      v.reserve(itend-it);
-      for (;it!=itend;++it){
-        gen tmp=_usimplify_base_function(*it,angle_mode, contextptr);
-        if (is_undef(tmp))
-          return gen2vecteur(tmp);
-        v.push_back(tmp);
-      }
-      return gen(v,g.subtype);
+#ifdef SWIFT_CALCS_OPTIONS
+    // Will simply look to see if passed unit is really of dimension 0 (_m/_in, etc), useful for cos() etc where we need to remove units if possible (angle mode will strip _rad, _deg, and _grad and convert to current default angle)
+    gen _usimplify_angle(const gen & g,GIAC_CONTEXT) {
+      remove_angle_mode(true, contextptr);
+      gen out = _usimplify_base_function(eval(g,1,contextptr), true, contextptr);
+      remove_angle_mode(false, contextptr);
+      return out;
     }
-    if (!g.is_symb_of_sommet(at_unit)) {
-      if (g.type!=_SYMB)
+    gen _usimplify_base(const gen & g,GIAC_CONTEXT) {
+      return _usimplify_base_function(g, false, contextptr);
+    }
+    gen _usimplify_base_function(const gen & g, const bool angle_mode, GIAC_CONTEXT) {
+      if ( g.type==_STRNG &&  g.subtype==-1) return g;
+      if (g.type==_VECT) {
+        const_iterateur it=g._VECTptr->begin(),itend=g._VECTptr->end();
+        vecteur v;
+        v.reserve(itend-it);
+        for (;it!=itend;++it){
+          gen tmp=_usimplify_base_function(*it,angle_mode, contextptr);
+          if (is_undef(tmp))
+            return gen2vecteur(tmp);
+          v.push_back(tmp);
+        }
+        return gen(v,g.subtype);
+      }
+      if (!g.is_symb_of_sommet(at_unit)) {
+        if (g.type!=_SYMB)
+          return g;
+        if (g._SYMBptr->sommet==at_inv)
+          return inv(_usimplify_base_function(g._SYMBptr->feuille, angle_mode, contextptr),contextptr);
+        if (g._SYMBptr->sommet==at_pow) {
+          gen & f=g._SYMBptr->feuille;
+          if (f.type!=_VECT||f._VECTptr->size()!=2)
+            return vecteur(1,gensizeerr(contextptr));
+          return pow(_usimplify_base_function(f._VECTptr->front(), angle_mode, contextptr), f._VECTptr->back(), contextptr);
+        }
+        if (g._SYMBptr->sommet==at_prod){
+          gen & f=g._SYMBptr->feuille;
+          if (f.type!=_VECT)
+            return _usimplify_base_function(f, angle_mode, contextptr);
+          vecteur & v=*f._VECTptr;
+          gen out = plus_one;
+          const_iterateur it=v.begin(),itend=v.end();
+          for (;it!=itend;++it){
+            out = operator_times(out, _usimplify_base_function(*it, angle_mode, contextptr), contextptr);
+          }
+          return normal(out,contextptr);
+        }
+        #ifdef SWIFT_CALCS_OPTIONS
+          if (g._SYMBptr->sommet==at_plus) {
+            gen & f=g._SYMBptr->feuille;
+            if (f.type!=_VECT)
+              return _usimplify_base_function(f, angle_mode, contextptr);
+            gen out = zero;
+            for (unsigned i=0;i<f._VECTptr->size();++i){
+              out = operator_plus(out, _usimplify_base_function((*f._VECTptr)[i], angle_mode, contextptr), contextptr);
+            }
+            return out;
+          }
+          if (g._SYMBptr->sommet==at_neg) 
+            return operator_times(minus_one, _usimplify_base_function(g._SYMBptr->feuille, angle_mode, contextptr), contextptr);
+        #endif
         return g;
-      if (g._SYMBptr->sommet==at_inv)
-        return inv(_usimplify_base_function(g._SYMBptr->feuille, angle_mode, contextptr),contextptr);
+      }
+      vecteur v = unit_convert(g, true, contextptr);
+      if (is_undef(v)) return v;
+      int ss=int(v.size());
+      bool all_zero = true;
+      bool is_angle = false;
+
+      for (int i=1;i<ss;++i) {
+        if((i == 9) && all_zero && !is_greater(abs(v[i]-1, contextptr), 1e-6, contextptr)) 
+          is_angle = true;
+        if(is_greater(abs(v[i], contextptr), 1e-6, contextptr)) {
+          all_zero = false;
+          break;
+        }
+      }
+      if(angle_mode && is_angle) return v[0];
+      if(all_zero) return v[0];
+      return g;
+    }
+    static const char _usimplify_base_s []="usimplify_base";
+    static define_unary_function_eval (__usimplify_base,&_usimplify_base,_usimplify_base_s);
+    define_unary_function_ptr5( at_usimplify_base ,alias_at_usimplify_base,&__usimplify_base,0,true);
+
+    vecteur combine_units_routine(const gen & g, const gen pow, GIAC_CONTEXT) {
+      vecteur v_out;
+      vecteur v;
+      if (g.type==_IDNT) {
+        vecteur v = mksa_convert(*g._IDNTptr, contextptr);
+        int l = int(v.size());
+        for(int i=1; i<l; ++i)
+          v[i] = operator_times(v[i], pow, contextptr);
+        for(int i=l; i<10; ++i)
+          v.push_back(zero);
+        v.push_back(pow);
+        v[0] = *g._IDNTptr;
+        v_out.push_back(v);
+        return v_out;
+      }
+      if (g.type!=_SYMB) {
+        v_out.push_back(v);
+        return v_out;
+      }
+      if (g._SYMBptr->sommet==at_inv) 
+        return combine_units_routine(g._SYMBptr->feuille, operator_times(minus_one, pow, contextptr), contextptr);
       if (g._SYMBptr->sommet==at_pow) {
         gen & f=g._SYMBptr->feuille;
         if (f.type!=_VECT||f._VECTptr->size()!=2)
           return vecteur(1,gensizeerr(contextptr));
-        return pow(_usimplify_base_function(f._VECTptr->front(), angle_mode, contextptr), f._VECTptr->back(), contextptr);
+        return combine_units_routine(f._VECTptr->front(), operator_times(pow, f._VECTptr->back(), contextptr), contextptr);
       }
-      if (g._SYMBptr->sommet==at_prod){
+      if (g._SYMBptr->sommet==at_prod) {
         gen & f=g._SYMBptr->feuille;
         if (f.type!=_VECT)
-          return _usimplify_base_function(f, angle_mode, contextptr);
-        vecteur & v=*f._VECTptr;
-        gen out = plus_one;
-        const_iterateur it=v.begin(),itend=v.end();
+          return combine_units_routine(f, pow, contextptr);
+        vecteur & vv=*f._VECTptr;
+        const_iterateur it=vv.begin(),itend=vv.end();
         for (;it!=itend;++it){
-          out = operator_times(out, _usimplify_base_function(*it, angle_mode, contextptr), contextptr);
+          vecteur v_prod = combine_units_routine(*it, pow, contextptr);
+          const_iterateur it2=v_prod.begin(),it2end=v_prod.end();
+          for (;it2!=it2end;++it2)
+            v_out.push_back(*it2);
         }
-        return normal(out,contextptr);
+        return v_out;
       }
-      #ifdef SWIFT_CALCS_OPTIONS
-        if (g._SYMBptr->sommet==at_plus) {
-          gen & f=g._SYMBptr->feuille;
-          if (f.type!=_VECT)
-            return _usimplify_base_function(f, angle_mode, contextptr);
-          gen out = zero;
-          for (unsigned i=0;i<f._VECTptr->size();++i){
-            out = operator_plus(out, _usimplify_base_function((*f._VECTptr)[i], angle_mode, contextptr), contextptr);
-          }
-          return out;
-        }
-        if (g._SYMBptr->sommet==at_neg) 
-          return operator_times(minus_one, _usimplify_base_function(g._SYMBptr->feuille, angle_mode, contextptr), contextptr);
-      #endif
-      return g;
-    }
-    vecteur v = unit_convert(g, true, contextptr);
-    if (is_undef(v)) return v;
-    int ss=int(v.size());
-    bool all_zero = true;
-    bool is_angle = false;
-
-    for (int i=1;i<ss;++i) {
-      if((i == 9) && all_zero && !is_greater(abs(v[i]-1, contextptr), 1e-6, contextptr)) 
-        is_angle = true;
-      if(is_greater(abs(v[i], contextptr), 1e-6, contextptr)) {
-        all_zero = false;
-        break;
-      }
-    }
-    if(angle_mode && is_angle) return v[0];
-    if(all_zero) return v[0];
-    return g;
-  }
-  static const char _usimplify_base_s []="usimplify_base";
-  static define_unary_function_eval (__usimplify_base,&_usimplify_base,_usimplify_base_s);
-  define_unary_function_ptr5( at_usimplify_base ,alias_at_usimplify_base,&__usimplify_base,0,true);
-
-  vecteur combine_units_routine(const gen & g, const gen pow, GIAC_CONTEXT) {
-    vecteur v_out;
-    vecteur v;
-    if (g.type==_IDNT) {
-      vecteur v = mksa_convert(*g._IDNTptr, contextptr);
-      int l = int(v.size());
-      for(int i=1; i<l; ++i)
-        v[i] = operator_times(v[i], pow, contextptr);
-      for(int i=l; i<10; ++i)
-        v.push_back(zero);
-      v.push_back(pow);
-      v[0] = *g._IDNTptr;
       v_out.push_back(v);
       return v_out;
     }
-    if (g.type!=_SYMB) {
-      v_out.push_back(v);
-      return v_out;
-    }
-    if (g._SYMBptr->sommet==at_inv) 
-      return combine_units_routine(g._SYMBptr->feuille, operator_times(minus_one, pow, contextptr), contextptr);
-    if (g._SYMBptr->sommet==at_pow) {
-      gen & f=g._SYMBptr->feuille;
-      if (f.type!=_VECT||f._VECTptr->size()!=2)
-        return vecteur(1,gensizeerr(contextptr));
-      return combine_units_routine(f._VECTptr->front(), operator_times(pow, f._VECTptr->back(), contextptr), contextptr);
-    }
-    if (g._SYMBptr->sommet==at_prod) {
-      gen & f=g._SYMBptr->feuille;
-      if (f.type!=_VECT)
-        return combine_units_routine(f, pow, contextptr);
-      vecteur & vv=*f._VECTptr;
-      const_iterateur it=vv.begin(),itend=vv.end();
-      for (;it!=itend;++it){
-        vecteur v_prod = combine_units_routine(*it, pow, contextptr);
-        const_iterateur it2=v_prod.begin(),it2end=v_prod.end();
-        for (;it2!=it2end;++it2)
-          v_out.push_back(*it2);
-      }
-      return v_out;
-    }
-    v_out.push_back(v);
-    return v_out;
-  }
-  // will take an input and combine like units, so that _m^2/_in becomes _m, etc.  In case of same type of unit but different base, first instance is used
-  gen combine_units(const gen & g, GIAC_CONTEXT) {          
-    if (g.type!=_SYMB)
-      return g;
-    if (g.is_symb_of_sommet(at_unit)){
-      vecteur & vv=*g._SYMBptr->feuille._VECTptr;
-      vecteur v = combine_units_routine(vv[1], plus_one, contextptr);
-      int l=int(v.size());
-      if(l < 2) return g;
-      // v is an array of unit vectors, where element 0 is the unit, and elements 1-10 are the mksa_unit vector for each dimension
-      gen coeff = vv[0];
-      vecteur output_units;
-      const_iterateur it=v.begin(),itend=v.end();
-      // First unit is automatically included
-      output_units.push_back(*it);
-      ++it;
-      for (;it!=itend;++it) {
-        // Check for match with something already in the output array
-        gen frac = zero;
-        l = int(output_units.size());
-        for(int j=0; j<l; j++) {
-          for(int i=1; i<10; i++) {
-            if(is_greater(abs(output_units[j][i], contextptr), 1e-6, contextptr) && is_greater(abs((*it)[i], contextptr), 1e-6, contextptr)) {
-              if(is_zero(frac)) frac = (*it)[i] / output_units[j][i];
-              else if(is_greater(abs(frac - (*it)[i] / output_units[j][i], contextptr), 1e-6, contextptr)) {
+    // will take an input and combine like units, so that _m^2/_in becomes _m, etc.  In case of same type of unit but different base, first instance is used
+    gen combine_units(const gen & g, GIAC_CONTEXT) {          
+      if (g.type!=_SYMB)
+        return g;
+      if (g.is_symb_of_sommet(at_unit)){
+        vecteur & vv=*g._SYMBptr->feuille._VECTptr;
+        vecteur v = combine_units_routine(vv[1], plus_one, contextptr);
+        int l=int(v.size());
+        if(l < 2) return g;
+        // v is an array of unit vectors, where element 0 is the unit, and elements 1-10 are the mksa_unit vector for each dimension
+        gen coeff = vv[0];
+        vecteur output_units;
+        const_iterateur it=v.begin(),itend=v.end();
+        // First unit is automatically included
+        output_units.push_back(*it);
+        ++it;
+        for (;it!=itend;++it) {
+          // Check for match with something already in the output array
+          gen frac = zero;
+          l = int(output_units.size());
+          for(int j=0; j<l; j++) {
+            for(int i=1; i<10; i++) {
+              if(is_greater(abs(output_units[j][i], contextptr), 1e-6, contextptr) && is_greater(abs((*it)[i], contextptr), 1e-6, contextptr)) {
+                if(is_zero(frac)) frac = (*it)[i] / output_units[j][i];
+                else if(is_greater(abs(frac - (*it)[i] / output_units[j][i], contextptr), 1e-6, contextptr)) {
+                  frac = zero;
+                  break;
+                }
+              } else if(is_greater(abs(output_units[j][i], contextptr), 1e-6, contextptr)) {
+                frac = zero;
+                break;
+              } else if(is_greater(abs((*it)[i], contextptr), 1e-6, contextptr)) {
                 frac = zero;
                 break;
               }
-            } else if(is_greater(abs(output_units[j][i], contextptr), 1e-6, contextptr)) {
-              frac = zero;
-              break;
-            } else if(is_greater(abs((*it)[i], contextptr), 1e-6, contextptr)) {
-              frac = zero;
+            }
+            if(!is_zero(frac)) { //Matches already added unit 
+              vecteur output_unit = gen2vecteur(output_units[j]);
+              output_unit[10] = operator_plus(output_unit[10], (*it)[10], contextptr);
+              output_units[j] = output_unit;
+              coeff = operator_times(coeff, pow(_usimplify_base(symbolic(at_unit,makevecteur(1,operator_times(output_units[j][0], inv((*it)[0], contextptr), contextptr))), contextptr), operator_times(minus_one,(*it)[10],contextptr), contextptr), contextptr);
               break;
             }
           }
-          if(!is_zero(frac)) { //Matches already added unit 
-            vecteur output_unit = gen2vecteur(output_units[j]);
-            output_unit[10] = operator_plus(output_unit[10], (*it)[10], contextptr);
-            output_units[j] = output_unit;
-            coeff = operator_times(coeff, pow(_usimplify_base(symbolic(at_unit,makevecteur(1,operator_times(output_units[j][0], inv((*it)[0], contextptr), contextptr))), contextptr), operator_times(minus_one,(*it)[10],contextptr), contextptr), contextptr);
-            break;
-          }
+          if(is_zero(frac)) 
+            output_units.push_back(*it);
         }
-        if(is_zero(frac)) 
-          output_units.push_back(*it);
+        l = int(output_units.size());
+        gen out = plus_one;
+        for(int j=0; j<l; j++) {
+          if (is_one(output_units[j][10]))
+            out = operator_times(out, output_units[j][0], contextptr);
+          else if(is_minus_one(output_units[j][10]))
+            out = operator_times(out, inv(output_units[j][0],contextptr), contextptr);
+          else if(is_greater(output_units[j][10], zero, contextptr))
+            out = operator_times(out, pow(output_units[j][0], output_units[j][10], contextptr), contextptr);
+          else
+            out = operator_times(out, inv(pow(output_units[j][0], -1*output_units[j][10], contextptr), contextptr), contextptr);
+        }
+        return symbolic(at_unit,makevecteur(coeff, out));
       }
-      l = int(output_units.size());
-      gen out = plus_one;
-      for(int j=0; j<l; j++) {
-        if (is_one(output_units[j][10]))
-          out = operator_times(out, output_units[j][0], contextptr);
-        else if(is_minus_one(output_units[j][10]))
-          out = operator_times(out, inv(output_units[j][0],contextptr), contextptr);
-        else if(is_greater(output_units[j][10], zero, contextptr))
-          out = operator_times(out, pow(output_units[j][0], output_units[j][10], contextptr), contextptr);
-        else
-          out = operator_times(out, inv(pow(output_units[j][0], -1*output_units[j][10], contextptr), contextptr), contextptr);
-      }
-      return symbolic(at_unit,makevecteur(coeff, out));
+      return g;
     }
-    return g;
-  }
+#endif
 
   gen _usimplify(const gen & g,GIAC_CONTEXT){
-std::string data = "console.log('USIMPLIFY: " + gen2string(g) + "');";
-emscripten_run_script(data.data());
     if ( g.type==_STRNG &&  g.subtype==-1) return  g;
     if (g.type==_VECT)
       return apply(g,_usimplify,contextptr);
     if (!g.is_symb_of_sommet(at_unit)) {
-emscripten_run_script("console.log('NOT UNIT');");
       if (g.type!=_SYMB)
         return g;
       if (g._SYMBptr->sommet==at_inv)
@@ -9299,8 +9298,6 @@ emscripten_run_script("console.log('NOT UNIT');");
         for (;it!=itend;++it){
           out = operator_times(out, _usimplify(*it, contextptr), contextptr);
         }
-std::string data3 = "console.log('PRODUCT: " + gen2string(out) + " --- " + gen2string(normal(out,contextptr)) + "');";
-emscripten_run_script(data3.data());
         return normal(out,contextptr);
       }
       #ifdef SWIFT_CALCS_OPTIONS
@@ -9320,8 +9317,6 @@ emscripten_run_script(data3.data());
       return g;
     }
     vecteur v = unit_convert(g, false, contextptr);
-std::string data2 = "console.log('UNIT: " + gen2string(v) + "');";
-emscripten_run_script(data2.data());
     if (is_undef(v)) return v;
     gen res1=v[0];
     int ss=int(v.size());
@@ -9345,7 +9340,6 @@ emscripten_run_script(data2.data());
         return g;
     } else if(all_zero)
       return g;
-emscripten_run_script("console.log('PAST ANGLE MODE');");
     // Test if this unit has the same dimensions as a 'usual' unit (proper or inverse)
     v[0]=plus_one;
     const_iterateur it=usual_units().begin(),itend=usual_units().end();
@@ -9510,8 +9504,12 @@ emscripten_run_script("console.log('PAST ANGLE MODE');");
         }
       }
     }
+#ifdef SWIFT_CALCS_OPTIONS
     // If all else fails, return combine_units(g) to ensure we collect like units
     return combine_units(g, contextptr);
+#else
+    return g;
+#endif
   }
   static const char _usimplify_s []="usimplify";
   static define_unary_function_eval (__usimplify,&_usimplify,_usimplify_s);

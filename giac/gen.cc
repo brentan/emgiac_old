@@ -6537,11 +6537,10 @@ namespace giac {
 	return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_times(va[0],v[0],contextptr),res)));
       }
       else {
-	//if (lidnt(b).empty()) //BRENTAN
-	  return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_times(va[0],b,contextptr),va[1])));
+	return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_times(va[0],b,contextptr),va[1])));
       }
     }
-    if (b.is_symb_of_sommet(at_unit)){// && lidnt(a).empty()){ //BRENTAN
+    if (b.is_symb_of_sommet(at_unit)){
       vecteur & v=*b._SYMBptr->feuille._VECTptr;
       return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_times(a,v[0],contextptr),v[1])));
     }

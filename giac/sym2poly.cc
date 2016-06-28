@@ -107,7 +107,7 @@ namespace giac {
     }
     if ( (s.sommet==at_pow) && ( (*s.feuille._VECTptr)[1].type==_INT_))
       lvar(s.feuille._VECTptr->front(),l);
-    else
+    else 
       addtolvar(g,l);
   }
 

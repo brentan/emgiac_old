@@ -849,6 +849,21 @@ extern "C" void Sleep(unsigned int miliSecond);
       else
         _mksavariable_mode_=b;
     }
+
+    static bool _remove_angle_mode_=false;
+    bool & remove_angle_mode(GIAC_CONTEXT){
+      if (contextptr && contextptr->globalptr )
+        return contextptr->globalptr->_remove_angle_mode_;
+      else
+        return _remove_angle_mode_;
+    }
+
+    void remove_angle_mode(bool b,GIAC_CONTEXT){
+      if (contextptr && contextptr->globalptr )
+        contextptr->globalptr->_remove_angle_mode_=b;
+      else
+        _remove_angle_mode_=b;
+    }
   #endif
 
   static bool _show_point_=true;
@@ -3305,6 +3320,7 @@ extern "C" void Sleep(unsigned int miliSecond);
      #ifdef SWIFT_CALCS_OPTIONS
        ptr->globalptr->_mksareduce_mode_=_mksareduce_mode_;
        ptr->globalptr->_mksavariable_mode_=_mksavariable_mode_;
+       ptr->globalptr->_remove_angle_mode_=_remove_angle_mode_;
      #endif
      ptr->globalptr->_variables_are_files_=_variables_are_files_;
      ptr->globalptr->_bounded_function_no_=_bounded_function_no_;
@@ -3713,7 +3729,7 @@ extern "C" void Sleep(unsigned int miliSecond);
 		     _show_point_(true),  _io_graph_(true),
 		     _all_trig_sol_(false),
 #ifdef SWIFT_CALCS_OPTIONS
-         _mksareduce_mode_(false),_mksavariable_mode_(false),
+         _mksareduce_mode_(false),_mksavariable_mode_(false),_remove_angle_mode_(false),
 #endif
 #ifdef WITH_MYOSTREAM
 		     _ntl_on_(true),
@@ -3771,6 +3787,7 @@ _prog_eval_level_val(1), _eval_level(DEFAULT_EVAL_LEVEL), _rand_seed(123457),_ma
      #ifdef SWIFT_CALCS_OPTIONS
        _mksareduce_mode_=g._mksareduce_mode_;
        _mksavariable_mode_=g._mksavariable_mode_;
+       _remove_angle_mode_=g._remove_angle_mode_;
      #endif
      _complex_variables_=g._complex_variables_;
      _increasing_power_=g._increasing_power_;

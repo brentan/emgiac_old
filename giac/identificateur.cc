@@ -1112,6 +1112,13 @@ namespace giac {
           // CODE ADDED TO CALL OUTSIDE FUNCTION 'eval_function' AND TEST FOR PRESENCE OF THIS VARIABLE...IF SO, RETURN VALUE!
           std::string asm_code;
           std::string method_call = id_name;
+          // Catch angle mode lookups here, and drop u__rad, u__deg, and u__grad
+          if(remove_angle_mode(contextptr) && mksavariable_mode(contextptr)) {
+            if((strcmp(id_name, "u__rad") == 0) || (strcmp(id_name, "u__deg") == 0) || (strcmp(id_name, "u__grad") == 0)) {
+              evaled = plus_one;
+              return true;
+            }
+          }
           asm_code += "eval_function( ";
           size_t pos = 0;
           while((pos = method_call.find("'", pos)) != std::string::npos) {

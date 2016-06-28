@@ -652,9 +652,11 @@ namespace giac {
   vecteur mksa_convert(const gen & g,GIAC_CONTEXT);
   gen _ufactor(const gen & g,GIAC_CONTEXT);
   gen _usimplify(const gen & g,GIAC_CONTEXT);
+  #ifdef SWIFT_CALCS_OPTIONS
   gen _usimplify_base(const gen & g,GIAC_CONTEXT);
   gen _usimplify_angle(const gen & g,GIAC_CONTEXT);
   gen _usimplify_base_function(const gen & g,const bool angle_mode, GIAC_CONTEXT);
+  #endif
 
   extern const mksa_unit __m_unit;
   extern const mksa_unit __kg_unit;

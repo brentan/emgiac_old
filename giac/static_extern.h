@@ -1378,7 +1378,9 @@ extern const unary_function_ptr * const  at_uniformd_icdf;
 extern const unary_function_ptr * const  at_unitV;
 extern const unary_function_ptr * const  at_unquote;
 extern const unary_function_ptr * const  at_usimplify;
+#ifdef SWIFT_CALCS_OPTIONS
 extern const unary_function_ptr * const  at_usimplify_base;
+#endif
 extern const unary_function_ptr * const  at_valuation;
 extern const unary_function_ptr * const  at_vandermonde;
 extern const unary_function_ptr * const  at_variance;
