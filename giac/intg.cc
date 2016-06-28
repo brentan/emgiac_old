@@ -5259,6 +5259,10 @@ namespace giac {
     vecteur resv; // contains the curve
     if (return_curve)
       resv.push_back(makevecteur(t0_e,y0v));
+#ifdef SWIFT_CALCS_OPTIONS
+    gen last_t_e = t0_e;
+    int tot_size = 0;
+#endif
 #ifdef HAVE_LIBGSL
     if (!iscomplex && t0_e.type==_DOUBLE_ && t1_e.type==_DOUBLE_ && is_zero(im(tmp,contextptr))){
       double t0=t0_e._DOUBLE_val;
@@ -5477,12 +5481,19 @@ namespace giac {
           tstep=hopt._DOUBLE_val;
         if(tstep_passed && (tstep > tstep_initial)) 
           tstep = tstep_initial;
+        if(return_curve && tstep_passed && ((nstep+1) >= maxstep) && (maxstep < 50000) && (tot_size < 1000)) maxstep += 1;
+        if(return_curve && tstep_passed && (abs(t_e - last_t_e,contextptr)._DOUBLE_val) >= tstep_initial) {
+          resv.push_back(makevecteur(t_e,y_final5));
+          last_t_e = t_e;
+          tot_size++;
+        } else if (return_curve && !tstep_passed)
+          resv.push_back(makevecteur(t_e,y_final5));
 #else
         if (hopt._DOUBLE_val<tstep)
           tstep=hopt._DOUBLE_val;
+        if (return_curve)
+          resv.push_back(makevecteur(t_e,y_final5));
 #endif
-	if (return_curve)
-	  resv.push_back(makevecteur(t_e,y_final5));
 	if (!iscomplex){
 	  // check boundaries for y_final5
 	  for (int i=0;i<dim;++i){
