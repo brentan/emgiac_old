@@ -8715,93 +8715,94 @@ namespace giac {
       if (s>2) {
         exponent = unitpow_double(_kg_unit,v[2]);
         if(exponent != 0) {
-          if(ceilf(exponent) == exponent)
+          /*if(ceilf(exponent) == exponent)
+          COMMENTED BECAUSE THIS FOR SOME REASONS BREAKS DESOLVE.  IT WON'T FIND SOLUTION WITH EXACT SYMOBLICS, BUT WILL WITH DECIMAL IN THE EXPONENT...THIS MAY POPUP ELSEWHERE TO...
             length += sprintf(outstr + length, "*u__kg^(%d)", int(exponent));
-          else
+          else*/
             length += sprintf(outstr + length, "*u__kg^(%f)", exponent);
         }
       }
       if (s>1) {
         exponent = unitpow_double(_m_unit,v[1]);
         if(exponent != 0){
-          if(ceilf(exponent) == exponent)
+          /*if(ceilf(exponent) == exponent)
             length += sprintf(outstr + length, "*u__m^(%d)", int(exponent));
-          else
+          else*/
             length += sprintf(outstr + length, "*u__m^(%f)", exponent);
         }
       }
       if (s>3) {
         exponent = unitpow_double(_s_unit,v[3]);
         if(exponent != 0){
-          if(ceilf(exponent) == exponent)
+          /*if(ceilf(exponent) == exponent)
             length += sprintf(outstr + length, "*u__s^(%d)", int(exponent));
-          else
+          else*/
             length += sprintf(outstr + length, "*u__s^(%f)", exponent);
         }
       }
       if (s>4) {
         exponent = unitpow_double(_A_unit,v[4]);
         if(exponent != 0){
-          if(ceilf(exponent) == exponent)
+          /*if(ceilf(exponent) == exponent)
             length += sprintf(outstr + length, "*u__A^(%d)", int(exponent));
-          else
+          else*/
             length += sprintf(outstr + length, "*u__A^(%f)", exponent);
         }
       }
       if (s>5) {
         exponent = unitpow_double(_K_unit,v[5]);
         if(exponent != 0){
-          if(ceilf(exponent) == exponent)
+          /*if(ceilf(exponent) == exponent)
             length += sprintf(outstr + length, "*u__K^(%d)", int(exponent));
-          else
+          else*/
             length += sprintf(outstr + length, "*u__K^(%f)", exponent);
         }
       }
       if (s>6) {
         exponent = unitpow_double(_mol_unit,v[6]);
         if(exponent != 0){
-          if(ceilf(exponent) == exponent)
+          /*if(ceilf(exponent) == exponent)
             length += sprintf(outstr + length, "*u__mol^(%d)", int(exponent));
-          else
+          else*/
             length += sprintf(outstr + length, "*u__mol^(%f)", exponent);
         }
       }
       if (s>7) {
         exponent = unitpow_double(_cd_unit,v[7]);
         if(exponent != 0){
-          if(ceilf(exponent) == exponent)
+          /*if(ceilf(exponent) == exponent)
             length += sprintf(outstr + length, "*u__cd^(%d)", int(exponent));
-          else
+          else*/
             length += sprintf(outstr + length, "*u__cd^(%f)", exponent);
         }
       }
       if (s>8) {
         exponent = unitpow_double(_E_unit,v[8]);
         if(exponent != 0){
-          if(ceilf(exponent) == exponent)
+          /*if(ceilf(exponent) == exponent)
             length += sprintf(outstr + length, "*u__E^(%d)", int(exponent));
-          else
+          else*/
             length += sprintf(outstr + length, "*u__E^(%f)", exponent);
         }
       }
       if (s>9) { // The 'MKSA' angle unit is dependant on whatever the current angle mode is
         exponent = unitpow_double(_rad_unit,v[9]);
         if(exponent != 0) {
-          if(ceilf(exponent) == exponent) {
+          /*if(ceilf(exponent) == exponent) {
             if(angle_radian(contextptr))
               length += sprintf(outstr + length, "*u__rad^(%d)", int(exponent));
             else if(angle_degree(contextptr))
               length += sprintf(outstr + length, "*u__deg^(%d)", int(exponent));
             else
               length += sprintf(outstr + length, "*u__grad^(%d)", int(exponent));
-          } else {
+          } else {*/
             if(angle_radian(contextptr))
               length += sprintf(outstr + length, "*u__rad^(%f)", exponent);
             else if(angle_degree(contextptr))
               length += sprintf(outstr + length, "*u__deg^(%f)", exponent);
             else
               length += sprintf(outstr + length, "*u__grad^(%f)", exponent);
-          }
+          //}
         }
       }
       return symb_prod(mksa_remove_base(g,contextptr), gen(outstr,contextptr));

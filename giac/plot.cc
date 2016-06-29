@@ -1218,12 +1218,19 @@ namespace giac {
       int protect=giac::bind(vecteur(1,xmin),localvar,newcontextptr);
       vecteur chemin;
       double i=xmin;
+std::string data;
       for (;i<xmax;i+= step){
 	// yy=evalf_double(subst(f,vars,i,false,contextptr),1,contextptr);
 	local_sto_double(i,*vars._IDNTptr,newcontextptr);
 	// vars._IDNTptr->localvalue->back()._DOUBLE_val =i;
 	yy=y.evalf2double(eval_level(contextptr),newcontextptr);
 	if (yy.type!=_DOUBLE_){
+#ifdef SWIFT_CALCS_OPTIONS
+          // rounding errors can lead to 'complex' numbers with 1e-15 for imaginary portion.  If so, drop it
+          if((yy.type == _CPLX) && is_greater(abs(re(yy,contextptr),contextptr),abs(im(yy,contextptr)*1e10,contextptr),contextptr)) {
+            yy = re(yy, contextptr);
+          } else {
+#endif
 	  if (debug_infolevel)
 	    CERR << y << " not real at " << i << " " << yy << endl;
           if (!chemin.empty()) {
@@ -1237,6 +1244,9 @@ namespace giac {
 	  xmin=i;
 	  chemin.clear();
 	  continue;
+#ifdef SWIFT_CALCS_OPTIONS
+          }
+#endif
 	}
 	j=yy._DOUBLE_val;
 	if (j>function_ymax)
@@ -1254,6 +1264,7 @@ namespace giac {
 	    local_sto_double_increment(-step/2,*vars._IDNTptr,newcontextptr);
 	    // vars._IDNTptr->localvalue->back()._DOUBLE_val -= step/2;
 	    yy=y.evalf2double(eval_level(contextptr),newcontextptr);
+
 	    if (yy.type!=_DOUBLE_)
 	      joindre=false;
 	    else {
