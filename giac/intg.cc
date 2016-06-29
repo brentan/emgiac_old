@@ -19,7 +19,6 @@
  *  along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 using namespace std;
-#include "emscripten.h"
 #include <stdexcept>
 #include "vector.h"
 #include <cmath>
@@ -5417,7 +5416,7 @@ namespace giac {
       // compute next step
       vecteur & bk0=*butcher_k[0]._VECTptr;
       bk0=firsteval;
-      if (is_undef(bk0))
+      if (is_undef(bk0)) 
 	return bk0;
       multvecteur(dt,bk0,bk0);
       int butcher_a_shift=0;
@@ -5440,7 +5439,7 @@ namespace giac {
 	  bkj=subst(odesolve_f,ytvar,yt1,false,contextptr);
 	else
 	  bkj=lasteval=subst(odesolve_f,ytvar,yt1,false,contextptr);
-	if (is_undef(bkj))
+	if (is_undef(bkj)) 
 	  return bkj;
 	multvecteur(dt,bkj,bkj);
       }
@@ -5460,8 +5459,10 @@ namespace giac {
       // accept or reject current step and compute dt
       double err=rk_error(y_final4,y_final5,yt,contextptr);
       gen hopt=.9*tstep*pow(tolerance/err,.2,contextptr);
-      if (err==0 || is_undef(hopt))
+#ifndef SWIFT_CALCS_OPTIONS
+      if (err==0 || is_undef(hopt)) 
 	break;
+#endif
       if (debug_infolevel>5)
 	CERR << nstep << ":" << t_e << ",y5=" << y_final5 << ",y4=" << y_final4 << " " << tstep << " hopt=" << hopt << " err=" << err << endl;
       if (is_strictly_greater(err,tolerance,contextptr)){
@@ -5498,7 +5499,7 @@ namespace giac {
 	  // check boundaries for y_final5
 	  for (int i=0;i<dim;++i){
 	    // CERR << y[i] << endl;
-	    if ( ymin && ymax && ( y_final5[i]._DOUBLE_val< ymin[i] || y_final5[i]._DOUBLE_val>ymax[i]) )
+	    if ( ymin && ymax && ( y_final5[i]._DOUBLE_val< ymin[i] || y_final5[i]._DOUBLE_val>ymax[i]) ) 
 	      do_while=false;
 	  }
 	}
