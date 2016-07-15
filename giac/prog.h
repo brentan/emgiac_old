@@ -644,6 +644,7 @@ namespace giac {
     gen default_units(const gen & g,GIAC_CONTEXT);
   #endif
   gen chk_not_unit(const gen & g);
+  gen chk_not_unit_together(const gen & a, const gen & b, const bool compare,GIAC_CONTEXT);
   gen find_or_make_symbol(const std::string & s,bool check38,GIAC_CONTEXT);
   std::map<const char *, const mksa_unit *,ltstr> & unit_conversion_map();
   gen mksa_register(const char * s,const mksa_unit * equiv);

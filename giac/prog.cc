@@ -5582,6 +5582,22 @@ namespace giac {
       return gensizeerr(gettext("Incompatible units"));
     return g;
   }
+  gen chk_not_unit_together(const gen & a, const gen & b, const bool compare, GIAC_CONTEXT) {
+    gen g = mksa_reduce(a/b,contextptr);
+    if (g.is_symb_of_sommet(at_unit)) {
+      gen au = default_units(a.is_symb_of_sommet(at_unit) ? a._SYMBptr->feuille._VECTptr->back() : a, contextptr);
+      gen bu = default_units(b.is_symb_of_sommet(at_unit) ? b._SYMBptr->feuille._VECTptr->back() : b, contextptr);
+      std::string out = "Incompatible units: Attempting to ";
+      if(compare)
+        out += "compare '";
+      else
+        out += "combine '";
+      out += gen2string(au) + "' and '" + gen2string(bu) + "'";
+      return gensizeerr(gettext(out.data()));
+    }
+    return g;
+  }
+
 
   gen convert_interval(const gen & g,int nbits,GIAC_CONTEXT){
 #if defined HAVE_LIBMPFI && !defined NO_RTTI
@@ -8307,7 +8323,7 @@ namespace giac {
   }
 #endif
 
-  static vecteur mksa_unit2vecteur(const mksa_unit * tmp){ // NEED TO USE CURRENT ANGLE MODE TO CHANGE TO APPROPRIATE ANGLE UNIT??
+  static vecteur mksa_unit2vecteur(const mksa_unit * tmp){ 
     vecteur v;
     if (tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0 && tmp->E==0){
       if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0){
@@ -8716,7 +8732,7 @@ namespace giac {
         exponent = unitpow_double(_kg_unit,v[2]);
         if(exponent != 0) {
           /*if(ceilf(exponent) == exponent)
-          COMMENTED BECAUSE THIS FOR SOME REASONS BREAKS DESOLVE.  IT WON'T FIND SOLUTION WITH EXACT SYMOBLICS, BUT WILL WITH DECIMAL IN THE EXPONENT...THIS MAY POPUP ELSEWHERE TO...
+          COMMENTED BECAUSE THIS FOR SOME REASONS BREAKS DESOLVE.  IT WON'T FIND SOLUTION WITH EXACT SYMOBLICS, BUT WILL WITH DECIMAL IN THE EXPONENT...THIS MAY POPUP ELSEWHERE TOO...
             length += sprintf(outstr + length, "*u__kg^(%d)", int(exponent));
           else*/
             length += sprintf(outstr + length, "*u__kg^(%f)", exponent);

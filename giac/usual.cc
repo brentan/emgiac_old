@@ -5639,7 +5639,7 @@ namespace giac {
       if (!is_inf(a._VECTptr->front()) && !is_undef(a._VECTptr->front()) && !is_inf(a._VECTptr->back()) && !is_undef(a._VECTptr->back()) && a._VECTptr->front().type!=_VECT &&a._VECTptr->back().type!=_VECT ){
 #ifdef SWIFT_CALCS_OPTIONS 
         if (a._VECTptr->front().is_symb_of_sommet(at_unit) || a._VECTptr->back().is_symb_of_sommet(at_unit)) {
-          gen tmp = chk_not_unit(mksa_reduce(symb_prod(mksa_reduce_base(a._VECTptr->front().evalf(1, contextptr), contextptr),_inv(mksa_reduce_base(a._VECTptr->back().evalf(1, contextptr), contextptr),contextptr)),contextptr));
+          gen tmp = chk_not_unit_together(a._VECTptr->front().evalf(1, contextptr),a._VECTptr->back().evalf(1, contextptr),true,contextptr);
           if(is_undef(tmp)) return tmp;
           res = _simplify(mksa_remove_base(a._VECTptr->front() - a._VECTptr->back(), contextptr),contextptr);
         } else
@@ -6046,7 +6046,7 @@ namespace giac {
 #ifdef SWIFT_CALCS_OPTIONS
   gen apply_unit(const gen & args_in,const gen_op_context & f,GIAC_CONTEXT){
     gen args = _usimplify(args_in, contextptr);
-    *logptr(contextptr) << "Warning: Rounding assumes units of " << args._SYMBptr->feuille[1] << ". Change default units in settings to alter this behavior." << endl;
+    *logptr(contextptr) << "Warning: Rounding assumes units of '" << args._SYMBptr->feuille[1] << "'. Change default units in settings to alter this behavior." << endl;
 #else
   gen apply_unit(const gen & args,const gen_op_context & f,GIAC_CONTEXT) {
 #endif

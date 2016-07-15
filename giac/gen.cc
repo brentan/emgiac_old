@@ -3054,6 +3054,8 @@ namespace giac {
 	 return *this; */
       return new_ref_symbolic(symbolic(at_conj,*this));
     case _SYMB:
+      if (_SYMBptr->sommet==at_unit)
+        return symbolic(at_unit,makevecteur(_SYMBptr->feuille._VECTptr->front().conj(contextptr),_SYMBptr->feuille._VECTptr->back()));
       if (_SYMBptr->sommet==at_conj)
 	return _SYMBptr->feuille;
       if (_SYMBptr->sommet==at_re || _SYMBptr->sommet==at_im)
@@ -3622,6 +3624,8 @@ namespace giac {
 	return *this;
       return new_ref_symbolic(symbolic(at_re,*this));
     case _SYMB:
+      if (_SYMBptr->sommet==at_unit)
+        return symbolic(at_unit,makevecteur(_SYMBptr->feuille._VECTptr->front().re(contextptr),_SYMBptr->feuille._VECTptr->back()));
       if (equalposcomp(plot_sommets,_SYMBptr->sommet))
 	return new_ref_symbolic(symbolic(_SYMBptr->sommet,_SYMBptr->feuille.re(contextptr)));
       if (expand_re_im(contextptr))
@@ -3737,6 +3741,8 @@ namespace giac {
 	return zero;
       return new_ref_symbolic(symbolic(at_im,*this));
     case _SYMB:      
+      if (_SYMBptr->sommet==at_unit)
+        return symbolic(at_unit,makevecteur(_SYMBptr->feuille._VECTptr->front().im(contextptr),_SYMBptr->feuille._VECTptr->back()));
       if (equalposcomp(plot_sommets,_SYMBptr->sommet))
 	return new_ref_symbolic(symbolic(_SYMBptr->sommet,_SYMBptr->feuille.im(contextptr)));
       if (expand_re_im(contextptr))
@@ -4600,7 +4606,6 @@ namespace giac {
 #ifdef TIMEOUT
     control_c();
 #endif
-std::string data;
     if (ctrl_c || interrupted) { 
       interrupted = true; ctrl_c=false;
       return gensizeerr(gettext("Stopped by user interruption.")); 
@@ -4615,16 +4620,20 @@ std::string data;
 	vecteur & vb=*b._SYMBptr->feuille._VECTptr;
 	if (va[1]==vb[1])
 	  return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),va[1])));
-	gen g=mksa_reduce(b/a,contextptr);
-	gen tmp=chk_not_unit(g);
-	if (is_undef(tmp)) // NEED TO DEAL WITH a/b being only angle units...
+	gen tmp=chk_not_unit_together(a,b,false,contextptr);
+	if (is_undef(tmp))
           return tmp;
 	return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],operator_times(vb[1]/va[1],vb[0],contextptr),contextptr),va[1])));
       }
       if (lidnt_no_unit(a).empty() && lidnt(b).empty()){ 
-	gen g=mksa_reduce(a,contextptr);
-	gen tmp=chk_not_unit(g);
-	if (is_undef(tmp)) return tmp; // NEED TO DEAL WITH a/b being only angle units...
+        gen tmp=chk_not_unit_together(a,b,false,contextptr);
+        gen g=mksa_reduce(a,contextptr);
+	if (is_undef(tmp)) {
+          gen gu = g._SYMBptr->feuille._VECTptr->back();
+          if((gu == _rad_unit) || (gu == _deg_unit) || (gu == _grad_unit))
+            return a + symbolic(at_unit, makenewvecteur(b, angle_radian(contextptr) ? _rad_unit : (angle_degree(contextptr) ? _deg_unit : _grad_unit))); // Angle units, assume default angle and force the addition
+          return tmp;
+        }
 	return g+b;
       } 
     }
@@ -4632,9 +4641,14 @@ std::string data;
       if (is_zero(a))
 	return b;
       if (lidnt(a).empty() && lidnt_no_unit(b).empty()){ 
-	gen g=mksa_reduce(b,contextptr);
-	gen tmp=chk_not_unit(g);
-	if (is_undef(tmp)) return tmp; // NEED TO DEAL WITH a/b being only angle units...
+	gen tmp=chk_not_unit_together(a,b,false,contextptr);
+        gen g=mksa_reduce(b,contextptr);
+        if (is_undef(tmp)) {
+          gen gu = g._SYMBptr->feuille._VECTptr->back();
+          if((gu == _rad_unit) || (gu == _deg_unit) || (gu == _grad_unit))
+            return symbolic(at_unit, makenewvecteur(a, angle_radian(contextptr) ? _rad_unit : (angle_degree(contextptr) ? _deg_unit : _grad_unit))) + b; // Angle units, assume default angle and force the addition
+          return tmp;
+        }
 	return a+g;
       } 
     }
@@ -8180,7 +8194,7 @@ std::string data;
 
 #ifdef SWIFT_CALCS_OPTIONS 
     if ((a.type==_SYMB || b.type==_SYMB) && (!is_inf(a) && !is_undef(a) && !is_inf(b) && !is_undef(b) && a.type!=_VECT && b.type!=_VECT ) && (a.is_symb_of_sommet(at_unit) || b.is_symb_of_sommet(at_unit))) {
-      gen tmp = chk_not_unit(mksa_reduce(symb_prod(mksa_reduce_base(a.evalf(1, contextptr), contextptr),_inv(mksa_reduce_base(b.evalf(1, contextptr), contextptr),contextptr)),contextptr));
+      gen tmp = chk_not_unit_together(a.evalf(1, contextptr),b.evalf(1, contextptr),true,contextptr);
       if(is_undef(tmp)) return tmp;
       return superieur_strict(mksa_remove_base(a.evalf(1, contextptr), contextptr),mksa_remove_base(b.evalf(1, contextptr),contextptr),contextptr);
     }
