@@ -8190,79 +8190,112 @@ namespace giac {
     return symb_superieur_strict(a,b);
   }
 
-  gen superieur_strict(const gen & a,const gen & b,GIAC_CONTEXT){
-
-#ifdef SWIFT_CALCS_OPTIONS 
-    if ((a.type==_SYMB || b.type==_SYMB) && (!is_inf(a) && !is_undef(a) && !is_inf(b) && !is_undef(b) && a.type!=_VECT && b.type!=_VECT ) && (a.is_symb_of_sommet(at_unit) || b.is_symb_of_sommet(at_unit))) {
-      gen tmp = chk_not_unit_together(a.evalf(1, contextptr),b.evalf(1, contextptr),true,contextptr);
-      if(is_undef(tmp)) return tmp;
-      return superieur_strict(mksa_remove_base(a.evalf(1, contextptr), contextptr),mksa_remove_base(b.evalf(1, contextptr),contextptr),contextptr);
-    }
-    if(a.type == _VECT) {
-      if(b.type == _VECT) {
-        if(ckmatrix(a)) {
-          if(ckmatrix(b)) {
-            if (a._VECTptr->front()._VECTptr->size()!=b._VECTptr->front()._VECTptr->size())
+#ifdef SWIFT_CALCS_OPTIONS
+  gen superieur_strict(const gen & a_in,const gen & b_in,GIAC_CONTEXT){
+    switch ( (a_in.type<< _DECALAGE) | b_in.type ) {
+    case _INT___INT_: 
+      return (a_in.val>b_in.val);
+    case _INT___ZINT: 
+      return (mpz_cmp_si(*b_in._ZINTptr,a_in.val)<0);
+    case _ZINT__INT_:
+      return (mpz_cmp_si(*a_in._ZINTptr,b_in.val)>0);
+    case _ZINT__ZINT:
+      return (mpz_cmp(*a_in._ZINTptr,*b_in._ZINTptr)>0);
+    case _DOUBLE___DOUBLE_:
+      return a_in._DOUBLE_val>b_in._DOUBLE_val;
+    case _DOUBLE___INT_:
+      return a_in._DOUBLE_val>b_in.val;
+    case _INT___DOUBLE_:
+      return a_in.val>b_in._DOUBLE_val;
+    case _FLOAT___FLOAT_:
+      return a_in._FLOAT_val>b_in._FLOAT_val;
+    case _FLOAT___INT_:
+      return a_in._FLOAT_val>b_in.val;
+    case _INT___FLOAT_:
+      return a_in.val>b_in._FLOAT_val;
+    case _DOUBLE___ZINT:
+      return a_in._DOUBLE_val>mpz_get_d(*b_in._ZINTptr);
+    case _ZINT__DOUBLE_:
+      return mpz_get_d(*a_in._ZINTptr)>b_in._DOUBLE_val;
+    default:
+      gen a = _usimplify_base(a_in, contextptr);
+      gen b = _usimplify_base(b_in, contextptr);
+      if ((a.type==_SYMB || b.type==_SYMB) && (!is_inf(a) && !is_undef(a) && !is_inf(b) && !is_undef(b) && a.type!=_VECT && b.type!=_VECT ) && (a.is_symb_of_sommet(at_unit) || b.is_symb_of_sommet(at_unit))) {
+        gen tmp = chk_not_unit_together(a.evalf(1, contextptr),b.evalf(1, contextptr),true,contextptr);
+        if(is_undef(tmp)) return tmp;
+        return superieur_strict(mksa_remove_base(a.evalf(1, contextptr), contextptr),mksa_remove_base(b.evalf(1, contextptr),contextptr),contextptr);
+      }
+      if(a.type == _VECT) {
+        if(b.type == _VECT) {
+          if(ckmatrix(a)) {
+            if(ckmatrix(b)) {
+              if (a._VECTptr->front()._VECTptr->size()!=b._VECTptr->front()._VECTptr->size())
+                return gendimerr("");
+            } else
               return gendimerr("");
-          } else
+          } else if(ckmatrix(b))
             return gendimerr("");
-        } else if(ckmatrix(b))
-          return gendimerr("");
-        if (a._VECTptr->size()!=b._VECTptr->size()) 
-          return gendimerr("");
-        vecteur res, res2;
-        const_iterateur it=a._VECTptr->begin(),itend=a._VECTptr->end();
-        const_iterateur it2=b._VECTptr->begin(),it2end=b._VECTptr->end();
-        gen holder;
-        res.clear();
-        res.reserve(itend-it);
-        for (;it!=itend;++it) {
-          if (it->type==_VECT){
-            res.push_back(superieur_strict(*it->_VECTptr,*it2->_VECTptr,contextptr));
-          } else {
-            holder = superieur_strict(*it,*it2,contextptr);
-            if((holder.type == _INT_) && abs_calc_mode(contextptr)!=38) holder.subtype=_INT_BOOLEAN;
-            res.push_back(holder);
+          if (a._VECTptr->size()!=b._VECTptr->size()) 
+            return gendimerr("");
+          vecteur res, res2;
+          const_iterateur it=a._VECTptr->begin(),itend=a._VECTptr->end();
+          const_iterateur it2=b._VECTptr->begin(),it2end=b._VECTptr->end();
+          gen holder;
+          res.clear();
+          res.reserve(itend-it);
+          for (;it!=itend;++it) {
+            if (it->type==_VECT){
+              res.push_back(superieur_strict(*it->_VECTptr,*it2->_VECTptr,contextptr));
+            } else {
+              holder = superieur_strict(*it,*it2,contextptr);
+              if((holder.type == _INT_) && abs_calc_mode(contextptr)!=38) holder.subtype=_INT_BOOLEAN;
+              res.push_back(holder);
+            }
+            ++it2;
           }
-          ++it2;
-        }
-        return res;
-      } else {
-        vecteur res;
-        const_iterateur it=a._VECTptr->begin(),itend=a._VECTptr->end();
-        gen holder;
-        res.clear();
-        res.reserve(itend-it);
-        for (;it!=itend;++it) {
-          if (it->type==_VECT){
-            res.push_back(superieur_strict(*it->_VECTptr,b,contextptr));
-          } else {
-            holder = superieur_strict(*it,b,contextptr);
-            if((holder.type == _INT_) && abs_calc_mode(contextptr)!=38) holder.subtype=_INT_BOOLEAN;
-            res.push_back(holder);
-          }
-        }
-        return res;
-      }
-    } 
-    if(b.type == _VECT) {
-      vecteur res;
-      const_iterateur it=b._VECTptr->begin(),itend=b._VECTptr->end();
-        gen holder;
-      res.clear();
-      res.reserve(itend-it);
-      for (;it!=itend;++it) {
-        if (it->type==_VECT){
-          res.push_back(superieur_strict(a,*it->_VECTptr,contextptr));
+          return res;
         } else {
-          holder = superieur_strict(a,*it,contextptr);
-          if((holder.type == _INT_) && abs_calc_mode(contextptr)!=38) holder.subtype=_INT_BOOLEAN;
-          res.push_back(holder);
+          vecteur res;
+          const_iterateur it=a._VECTptr->begin(),itend=a._VECTptr->end();
+          gen holder;
+          res.clear();
+          res.reserve(itend-it);
+          for (;it!=itend;++it) {
+            if (it->type==_VECT){
+              res.push_back(superieur_strict(*it->_VECTptr,b,contextptr));
+            } else {
+              holder = superieur_strict(*it,b,contextptr);
+              if((holder.type == _INT_) && abs_calc_mode(contextptr)!=38) holder.subtype=_INT_BOOLEAN;
+              res.push_back(holder);
+            }
+          }
+          return res;
         }
+      } 
+      if(b.type == _VECT) {
+        vecteur res;
+        const_iterateur it=b._VECTptr->begin(),itend=b._VECTptr->end();
+          gen holder;
+        res.clear();
+        res.reserve(itend-it);
+        for (;it!=itend;++it) {
+          if (it->type==_VECT){
+            res.push_back(superieur_strict(a,*it->_VECTptr,contextptr));
+          } else {
+            holder = superieur_strict(a,*it,contextptr);
+            if((holder.type == _INT_) && abs_calc_mode(contextptr)!=38) holder.subtype=_INT_BOOLEAN;
+            res.push_back(holder);
+          }
+        }
+        return res;
       }
-      return res;
+      if (a.type<=_REAL && b.type<=_REAL)
+        return is_strictly_positive(a-b,contextptr);
+      return sym_is_greater(a,b,contextptr);
     }
-#endif
+  }
+#else
+  gen superieur_strict(const gen & a,const gen & b,GIAC_CONTEXT){
 
     switch ( (a.type<< _DECALAGE) | b.type ) {
     case _INT___INT_: 
@@ -8295,6 +8328,7 @@ namespace giac {
       return sym_is_greater(a,b,contextptr);
     }
   }
+#endif
 
   gen inferieur_strict(const gen & a,const gen & b,GIAC_CONTEXT){
     return superieur_strict(b,a,contextptr);

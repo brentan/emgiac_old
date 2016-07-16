@@ -36,7 +36,6 @@ using namespace std;
 #include "rpn.h"
 #include "plot.h"
 #include "giacintl.h"
-#include "emscripten.h"
 
 #ifndef NO_NAMESPACE_GIAC
 namespace giac {
@@ -383,7 +382,7 @@ namespace giac {
     for (;;){
       if ( (it->type==_CPLX && !is_zero(*it->_CPLXptr) && !is_zero(*(it->_CPLXptr+1))) || (it->type==_SYMB && ( it->_SYMBptr->sommet==at_plus || (it->_SYMBptr->sommet==at_neg && need_parenthesis(it->_SYMBptr->feuille)) ) ) )
         #ifdef SWIFT_CALCS_OPTIONS
-	       s += string("\\left(")+gen2tex(*it,contextptr)+string("\\right)");
+	 s += string("\\left(")+gen2tex(*it,contextptr)+string("\\right)");
         #else
          s += string("(")+gen2tex(*it,contextptr)+string(")");
         #endif
@@ -392,12 +391,16 @@ namespace giac {
       ++it;
       if (it==itend)
 	return s;
+#ifdef SWIFT_CALCS_OPTIONS
+        s += "\\cdot ";
+#else
       if (it->type<=_IDNT || (it->type==_SYMB && 
 			      (it->_SYMBptr->sommet==at_neg || (it->_SYMBptr->sommet.ptr()->printsommet && it->_SYMBptr->feuille.type==_VECT && !it->_SYMBptr->feuille._VECTptr->empty() && it->_SYMBptr->feuille._VECTptr->front().type<=_IDNT))
 			      )) // second part of the test added for e.g. latex('2*3*5^2')
 	s += "\\cdot ";
       else
 	s += " ";
+#endif
     }
   }
 
@@ -1257,7 +1260,11 @@ namespace giac {
 	  return opstring+gen2tex(feu,contextptr) ;
 	return opstring+string("\\left(") + gen2tex(feu,contextptr) +string("\\right)");
       }
+#ifdef SWIFT_CALCS_OPTIONS
+      if (mys.sommet==at_inv && (feu.is_symb_of_sommet(at_prod) || feu.is_symb_of_sommet(at_plus) || giac::unit_mode || feu.type<=_IDNT) ){
+#else
       if (mys.sommet==at_inv && (feu.is_symb_of_sommet(at_prod) || feu.is_symb_of_sommet(at_plus) || feu.type<=_IDNT) ){
+#endif
 	return string("\\frac{1}{") + gen2tex(feu,contextptr) +string("}");
       }
       #ifdef SWIFT_CALCS_OPTIONS
@@ -1345,7 +1352,7 @@ namespace giac {
         s += ',';
       }
     #else
-      if((opstring.length() == 0) && (l == 2)) {
+      if(mys.sommet == at_unit) {
         if(need_parenthesis((*(feu._VECTptr))[0]))
           s = "\\left(" + gen2tex((*(feu._VECTptr))[0],contextptr) + "\\right)";
         else
