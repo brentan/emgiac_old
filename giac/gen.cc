@@ -4623,7 +4623,7 @@ namespace giac {
 	gen tmp=chk_not_unit_together(a,b,false,contextptr);
 	if (is_undef(tmp))
           return tmp;
-	return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],operator_times(vb[1]/va[1],vb[0],contextptr),contextptr),va[1])));
+	return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],operator_times(_usimplify_base(symbolic(at_unit, makenewvecteur(plus_one, vb[1]/va[1])),contextptr),vb[0],contextptr),contextptr),va[1])));
       }
       if (lidnt_no_unit(a).empty() && lidnt(b).empty()){ 
         gen tmp=chk_not_unit_together(a,b,false,contextptr);
