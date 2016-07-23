@@ -9164,6 +9164,8 @@ namespace giac {
       if (!g.is_symb_of_sommet(at_unit)) {
         if (g.type!=_SYMB)
           return g;
+        if (is_inf(g)) 
+          return g;
         if (g._SYMBptr->sommet==at_inv)
           return inv(_usimplify_base_function(g._SYMBptr->feuille, angle_mode, contextptr),contextptr);
         if (g._SYMBptr->sommet==at_pow) {
