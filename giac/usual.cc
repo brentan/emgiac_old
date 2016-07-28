@@ -5291,7 +5291,11 @@ namespace giac {
       return "("+printsommetasoperator(feuille,sommetstr,contextptr)+")";
   }
   static string texprintasand(const gen & g,const char * s,GIAC_CONTEXT){
+#ifdef SWIFT_CALCS_OPTIONS
+    return texprintsommetasoperator(g,"\\and ",contextptr);
+#else
     return texprintsommetasoperator(g,"\\mbox{ and }",contextptr);
+#endif
   }
   symbolic symb_and(const gen & a,const gen & b){
     return symbolic(at_and,gen(makevecteur(a,b),_SEQ__VECT));
@@ -5321,7 +5325,11 @@ namespace giac {
   define_unary_function_ptr5( at_and ,alias_at_and,&__and,_QUOTE_ARGUMENTS,T_AND_OP);
 
   static string texprintasor(const gen & g,const char * s,GIAC_CONTEXT){
+#ifdef SWIFT_CALCS_OPTIONS
+    return texprintsommetasoperator(g,"\\or ",contextptr);
+#else
     return texprintsommetasoperator(g,"\\mbox{ or }",contextptr);
+#endif
   }
   static string printasor(const gen & feuille,const char * sommetstr,GIAC_CONTEXT){
     if (abs_calc_mode(contextptr)==38)
@@ -5639,8 +5647,10 @@ namespace giac {
       if (!is_inf(a._VECTptr->front()) && !is_undef(a._VECTptr->front()) && !is_inf(a._VECTptr->back()) && !is_undef(a._VECTptr->back()) && a._VECTptr->front().type!=_VECT &&a._VECTptr->back().type!=_VECT ){
 #ifdef SWIFT_CALCS_OPTIONS 
         if (a._VECTptr->front().is_symb_of_sommet(at_unit) || a._VECTptr->back().is_symb_of_sommet(at_unit)) {
-          gen tmp = chk_not_unit_together(a._VECTptr->front().evalf(1, contextptr),a._VECTptr->back().evalf(1, contextptr),true,contextptr);
-          if(is_undef(tmp)) return tmp;
+          gen a1e = a._VECTptr->front().evalf(1, contextptr);
+          gen a2e = a._VECTptr->back().evalf(1, contextptr);
+          gen tmp = chk_not_unit_together(a1e,a2e,true,contextptr);
+          if(is_undef(tmp) && !is_zero(a1e) && !is_zero(a2e)) return tmp;
           res = _simplify(mksa_remove_base(a._VECTptr->front() - a._VECTptr->back(), contextptr),contextptr);
         } else
           res = _simplify(a._VECTptr->front() - a._VECTptr->back(), contextptr);

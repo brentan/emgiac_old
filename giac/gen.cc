@@ -8221,9 +8221,11 @@ namespace giac {
       gen a = _usimplify_base(a_in, contextptr);
       gen b = _usimplify_base(b_in, contextptr);
       if ((a.type==_SYMB || b.type==_SYMB) && (!is_inf(a) && !is_undef(a) && !is_inf(b) && !is_undef(b) && a.type!=_VECT && b.type!=_VECT ) && (a.is_symb_of_sommet(at_unit) || b.is_symb_of_sommet(at_unit))) {
-        gen tmp = chk_not_unit_together(a.evalf(1, contextptr),b.evalf(1, contextptr),true,contextptr);
-        if(is_undef(tmp)) return tmp;
-        return superieur_strict(mksa_remove_base(a.evalf(1, contextptr), contextptr),mksa_remove_base(b.evalf(1, contextptr),contextptr),contextptr);
+        gen ae = a.evalf(1, contextptr);
+        gen be = b.evalf(1, contextptr);
+        gen tmp = chk_not_unit_together(ae,be,true,contextptr);
+        if(is_undef(tmp) && !is_zero(ae) && !is_zero(be)) return tmp;
+        return superieur_strict(mksa_remove_base(ae, contextptr),mksa_remove_base(be,contextptr),contextptr);
       }
       if(a.type == _VECT) {
         if(b.type == _VECT) {
