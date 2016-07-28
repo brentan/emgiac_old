@@ -930,7 +930,11 @@ namespace giac {
 	  }
 	}
 	if (!done)
-	  res[i]=eval(v[i],contextptr);
+#ifdef SWIFT_CALCS_OPTIONS
+	  res[i]=v[i];//eval(v[i],contextptr);
+#else
+          res[i]=eval(v[i],contextptr);
+#endif
 #ifndef NO_STDEXCEPT
       } catch (std::runtime_error & ){
 	;  //    *logptr(contextptr) << e.what() << endl;
@@ -1206,7 +1210,7 @@ namespace giac {
       return res; // gen(res,_SEQ__VECT);
     }
 #ifndef GNUWINCE
-    if (vars.type==_IDNT){ // function plot
+    if (vars.type==_IDNT) { // function plot
       gen locvar(vars);
       locvar.subtype=0;
       gen y=quotesubst(f,vars,locvar,contextptr),yy;
@@ -1218,7 +1222,6 @@ namespace giac {
       int protect=giac::bind(vecteur(1,xmin),localvar,newcontextptr);
       vecteur chemin;
       double i=xmin;
-std::string data;
       for (;i<xmax;i+= step){
 	// yy=evalf_double(subst(f,vars,i,false,contextptr),1,contextptr);
 	local_sto_double(i,*vars._IDNTptr,newcontextptr);

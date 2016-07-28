@@ -121,6 +121,11 @@ namespace giac {
   gen gentoomanyargs(const std::string & s,GIAC_CONTEXT0);
   gen genmaxordererr(GIAC_CONTEXT0);
   gen genstabilityerr(GIAC_CONTEXT0);
+#ifdef SWIFT_CALCS_OPTIONS
+  void print_emscripten(const gen & e, const string pre_text);
+  void print_emscripten(const string pre_text);
+  void print_emscripten(const gen & e);
+#endif
 
   // short integer arithmetic
   int absint(int a);
@@ -661,6 +666,8 @@ namespace giac {
     // inline gen evalf() const { return evalf(DEFAULT_EVAL_LEVEL,context0); }
     gen evalf_double(int level,const context * contextptr) const ;
     gen evalf2double(int level,const context * contextptr) const;
+    void print_emscripten(const string pre_text) const;
+    void print_emscripten() const;
     gen & operator = (const gen & a);
     int to_int() const ;
     double to_double(const context * contextptr) const;
@@ -851,6 +858,7 @@ namespace giac {
   gen makemap(); // make a new map
   gen chartab2gen(char * & s,GIAC_CONTEXT);
 
+  std::string get_error_message(const gen & e);
 
   bool is_zero(const gen & a,GIAC_CONTEXT0);
   bool is_exactly_zero(const gen & a);
@@ -858,6 +866,7 @@ namespace giac {
   bool is_minus_one(const gen & a);
   bool is_sq_minus_one(const gen & a);
   bool is_inf(const gen & e);
+  bool is_error(const gen & e);
   bool is_undef(const gen & e);
   bool is_undef(const polynome & p);
   bool is_undef(const vecteur & v);

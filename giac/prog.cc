@@ -1443,8 +1443,10 @@ namespace giac {
       test=test.evalf_double(eval_level(contextptr),contextptr);
       if ( (test.type!=_DOUBLE_) && (test.type!=_CPLX) ){
 	if (isifte){
-	  gensizeerr(gettext("Ifte: Unable to check test"),res); 
-	  return res;
+          if(is_error(test)) 
+            return gensizeerr(gettext("Error in If statement: ") + get_error_message(test));
+          else 
+	    return gensizeerr(gettext("Error while evaluating If statement.")); 
 	}
 	else
 	  return symb_when(eval(args,1,contextptr));

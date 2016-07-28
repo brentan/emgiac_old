@@ -434,6 +434,51 @@ namespace giac {
   }
 #endif // NO_STDEXCEPT
 
+#ifdef SWIFT_CALCS_OPTIONS
+  void print_emscripten(const gen & e, const string pre_text) {
+    std::string output = "console.log('" + pre_text;
+    std::string genout = gen2string(e);
+    size_t pos = 0;
+    while((pos = genout.find("'", pos)) != std::string::npos) {
+      genout.replace(pos, 1, "\\'");
+      pos += 2;
+    }
+    pos=0;
+    while((pos = genout.find("\n", pos)) != std::string::npos) {
+      genout.replace(pos, 1, "\\n");
+      pos += 2;
+    }
+    output += genout + "');";
+    emscripten_run_script(output.data());
+  }
+  void print_emscripten(const string pre_text) {
+    std::string output = "console.log('" + pre_text + "');";
+    emscripten_run_script(output.data());
+  }
+  void print_emscripten(const gen & e) {
+    print_emscripten(e,"");
+  }
+  void gen::print_emscripten(const string pre_text) const{
+    std::string output = "console.log('" + pre_text;
+    std::string genout = gen2string(*this);
+    size_t pos = 0;
+    while((pos = genout.find("'", pos)) != std::string::npos) {
+      genout.replace(pos, 1, "\\'");
+      pos += 2;
+    }
+    pos=0;
+    while((pos = genout.find("\n", pos)) != std::string::npos) {
+      genout.replace(pos, 1, "\\n");
+      pos += 2;
+    }
+    output += genout + "');";
+    emscripten_run_script(output.data());
+  }
+  void gen::print_emscripten() const{
+    print_emscripten("");
+  }
+#endif
+
   gen undeferr(const string & s){
 #ifdef NSPIRE
     sleep(1);
@@ -8414,6 +8459,13 @@ namespace giac {
     default:
       return false;
     }
+  }
+  bool is_error(const gen & e) {
+    return (e.type == _STRNG) && (e.subtype==-1);
+  }
+  std::string get_error_message(const gen & e) {
+    if(is_error(e)) return e.__STRNGptr->s;
+    else return "";
   }
   
   bool is_zero__VECT(const vecteur & v,GIAC_CONTEXT){
