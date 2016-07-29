@@ -122,9 +122,9 @@ namespace giac {
   gen genmaxordererr(GIAC_CONTEXT0);
   gen genstabilityerr(GIAC_CONTEXT0);
 #ifdef SWIFT_CALCS_OPTIONS
-  void print_emscripten(const gen & e, const string pre_text);
-  void print_emscripten(const string pre_text);
-  void print_emscripten(const gen & e);
+  void print_emscripten(const gen & e, const std::string pre_text);
+  void print_emscripten(const std::string pre_text);
+  void a(const gen & e);
 #endif
 
   // short integer arithmetic
@@ -666,7 +666,7 @@ namespace giac {
     // inline gen evalf() const { return evalf(DEFAULT_EVAL_LEVEL,context0); }
     gen evalf_double(int level,const context * contextptr) const ;
     gen evalf2double(int level,const context * contextptr) const;
-    void print_emscripten(const string pre_text) const;
+    void print_emscripten(const std::string pre_text) const;
     void print_emscripten() const;
     gen & operator = (const gen & a);
     int to_int() const ;
