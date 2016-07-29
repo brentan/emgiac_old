@@ -930,11 +930,7 @@ namespace giac {
 	  }
 	}
 	if (!done)
-#ifdef SWIFT_CALCS_OPTIONS
-	  res[i]=v[i];//eval(v[i],contextptr);
-#else
           res[i]=eval(v[i],contextptr);
-#endif
 #ifndef NO_STDEXCEPT
       } catch (std::runtime_error & ){
 	;  //    *logptr(contextptr) << e.what() << endl;
@@ -962,7 +958,7 @@ namespace giac {
   // add vx_var if args is not a seq
   // evaluate v[1], if it's not an idnt or a vector of idnt keep v[1]
   // evaluate v with v[1] quoted
-  vecteur plotpreprocess(const gen & args,GIAC_CONTEXT){
+  vecteur plotpreprocess_eval(const gen & args,const bool do_quote_eval, GIAC_CONTEXT){
     vecteur v;
 
     gen var,res;
@@ -983,6 +979,9 @@ namespace giac {
       if (v.size()==1)
 	v.push_back(vx_var);
     }
+#ifdef SWIFT_CALCS_OPTIONS
+    if(!do_quote_eval) return v;
+#endif
     // find quoted variables from v[1]
     vecteur quoted;
     if ( v[1].type==_SYMB && (v[1]._SYMBptr->sommet==at_equal || v[1]._SYMBptr->sommet==at_equal2 ||v[1]._SYMBptr->sommet==at_same ))
@@ -990,6 +989,9 @@ namespace giac {
     else
       plotpreprocess(v[1],quoted,contextptr);
     return quote_eval(v,quoted,contextptr);
+  }
+  vecteur plotpreprocess(const gen & args,GIAC_CONTEXT){
+    return plotpreprocess_eval(args, true, contextptr);
   }
 
   gen pnt_attrib(const gen & point,const vecteur & attributs,GIAC_CONTEXT){
@@ -1756,7 +1758,11 @@ namespace giac {
       zmin=zmax; // if z-range is not given, then fmin/fmax will be used 
     int nstep=gnuplot_pixels_per_eval,jstep=0;
     gen attribut=default_color(contextptr);
+#ifdef SWIFT_CALCS_OPTIONS
+    vecteur vargs(plotpreprocess_eval(args,false,contextptr));
+#else
     vecteur vargs(plotpreprocess(args,contextptr));
+#endif
     if (is_undef(vargs))
       return vargs;
     int s=int(vargs.size());
