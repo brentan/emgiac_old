@@ -876,7 +876,11 @@ namespace giac {
     }
   }
 
+#ifdef SWIFT_CALCS_OPTIONS
+  vecteur quote_eval_plot_option(const vecteur & v,const vecteur & quoted,const bool called_by_plot,GIAC_CONTEXT){
+#else
   vecteur quote_eval(const vecteur & v,const vecteur & quoted,GIAC_CONTEXT){
+#endif
     /*
       vecteur l(quoted);
       lidnt(v,l);
@@ -929,8 +933,18 @@ namespace giac {
 	    }
 	  }
 	}
-	if (!done)
+	if (!done) {
+#ifdef SWIFT_CALCS_OPTIONS
+          if(called_by_plot) {
+            vecteur lv = lidnt(v[i]);
+            vecteur lw(lv);
+            for(int j=0; j<int(lw.size());++j)
+              lw[j] = eval(lv[j], contextptr);
+            res[i] = quotesubst(v[i], lv, lw, contextptr);
+          } else
+#endif
           res[i]=eval(v[i],contextptr);
+        }
 #ifndef NO_STDEXCEPT
       } catch (std::runtime_error & ){
 	;  //    *logptr(contextptr) << e.what() << endl;
@@ -953,6 +967,11 @@ namespace giac {
     }
     return res;
   }
+#ifdef SWIFT_CALCS_OPTIONS
+  vecteur quote_eval(const vecteur & v,const vecteur & quoted,GIAC_CONTEXT){
+    return quote_eval_plot_option(v, quoted, false, contextptr);
+  }
+#endif
 
   // args -> vector
   // add vx_var if args is not a seq
@@ -980,7 +999,7 @@ namespace giac {
 	v.push_back(vx_var);
     }
 #ifdef SWIFT_CALCS_OPTIONS
-    if(!do_quote_eval) return v;
+    //if(!do_quote_eval) return v;
 #endif
     // find quoted variables from v[1]
     vecteur quoted;
@@ -988,7 +1007,11 @@ namespace giac {
       plotpreprocess(v[1]._SYMBptr->feuille._VECTptr->front(),quoted,contextptr);
     else
       plotpreprocess(v[1],quoted,contextptr);
-    return quote_eval(v,quoted,contextptr);
+#ifdef SWIFT_CALCS_OPTIONS
+    return quote_eval_plot_option(v,quoted,!do_quote_eval, contextptr);
+#else
+    return quote_eval(v,quoted, contextptr);
+#endif
   }
   vecteur plotpreprocess(const gen & args,GIAC_CONTEXT){
     return plotpreprocess_eval(args, true, contextptr);
