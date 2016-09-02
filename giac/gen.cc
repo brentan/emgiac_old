@@ -4390,13 +4390,6 @@ namespace giac {
     }
     register ref_mpz_t * e;
 
-    #ifdef SWIFT_CALCS_OPTIONS2 // Vect + float should add to all elements, not just the last element
-      //if (a.type==_VECT && b.type!=_VECT)
-      //  return apply1st(a,b,contextptr,pointplus);
-      //if (a.type!=_VECT && b.type==_VECT)
-      //  return apply2nd(a,b,contextptr,pointplus);
-    #endif
-
     switch ( t ) {
     case _ZINT__ZINT:
       e =new ref_mpz_t;
@@ -4499,6 +4492,12 @@ namespace giac {
       return addpoly(*a._POLYptr,b);
     case _INT___POLY: case _ZINT__POLY: case _DOUBLE___POLY: case _FLOAT___POLY: case _CPLX__POLY: case _MOD__POLY: case _USER__POLY: case _REAL__POLY: 
       return addpoly(*b._POLYptr,a);
+#ifdef SWIFT_CALCS_OPTIONS
+    case _VECT__INT_: case _VECT__ZINT: case _VECT__DOUBLE_: case _VECT__FLOAT_: case _VECT__CPLX: case _VECT__MOD: case _VECT__REAL: 
+      return apply1st(a,b,contextptr,pointplus);
+    case _INT___VECT: case _ZINT__VECT: case _DOUBLE___VECT: case _FLOAT___VECT: case _CPLX__VECT: case _MOD__VECT: case _REAL__VECT: 
+      return apply2nd(a,b,contextptr,pointplus);
+#endif
     case _MOD__MOD:
 #ifdef SMARTPTR64
       return modadd( (ref_modulo *) (* ((longlong * ) &a) >> 16),(ref_modulo *) (* ((longlong * ) &b) >> 16));
@@ -5146,13 +5145,6 @@ namespace giac {
     }      
     register ref_mpz_t * e;
 
-    #ifdef SWIFT_CALCS_OPTIONS // Vect - float should subtract from all elements, not just the last element
-      //if (a.type==_VECT && b.type!=_VECT)
-      //  return apply1st(a,b,contextptr,pointminus);
-      //if (a.type!=_VECT && b.type==_VECT)
-      //  return apply2nd(a,b,contextptr,pointminus);
-    #endif
-
     switch ( t) {
     case _ZINT__ZINT:
       e = new ref_mpz_t;
@@ -5249,7 +5241,13 @@ namespace giac {
     case _POLY__INT_: case _POLY__ZINT: case _POLY__DOUBLE_: case _POLY__FLOAT_: case _POLY__CPLX: case _POLY__MOD: case _POLY__REAL: case _POLY__USER:
       return subpoly(*a._POLYptr,b);
     case _INT___POLY: case _ZINT__POLY: case _DOUBLE___POLY: case _FLOAT___POLY: case _CPLX__POLY: case _MOD__POLY:
-      return subpoly(a,*b._POLYptr);        
+      return subpoly(a,*b._POLYptr);  
+#ifdef SWIFT_CALCS_OPTIONS
+    case _VECT__INT_: case _VECT__ZINT: case _VECT__DOUBLE_: case _VECT__FLOAT_: case _VECT__CPLX: case _VECT__MOD: case _VECT__REAL: 
+      return apply1st(a,b,contextptr,pointminus);
+    case _INT___VECT: case _ZINT__VECT: case _DOUBLE___VECT: case _FLOAT___VECT: case _CPLX__VECT: case _MOD__VECT: case _REAL__VECT: 
+      return apply2nd(a,b,contextptr,pointminus);
+#endif      
     case _MOD__MOD:
 #ifdef SMARTPTR64
       return modsub( (ref_modulo *) (* ((longlong * ) &a) >> 16), (ref_modulo *) (* ((longlong * ) &b) >> 16) );
