@@ -8868,6 +8868,16 @@ namespace giac {
     static const char _mksa_base_s []="mksa_base";
     static define_unary_function_eval (__mksa_base,&mksa_reduce_base,_mksa_base_s);
     define_unary_function_ptr5( at_mksa_base ,alias_at_mksa_base,&__mksa_base,0,true);
+
+    // mksa_base but of the first element in an array. Useful to determine the units of an array like [1_m, 3_m, 5_m,...]
+    gen mksa_base_first(const gen & g, GIAC_CONTEXT){ 
+      if (g.type==_VECT) 
+        return mksa_base_first(g[0], contextptr);
+      return mksa_reduce_base(g, contextptr);
+    }
+    static const char _mksa_base_first_s []="mksa_base_first";
+    static define_unary_function_eval (__mksa_base_first,&mksa_base_first,_mksa_base_first_s);
+    define_unary_function_ptr5( at_mksa_base_first ,alias_at_mksa_base_first,&__mksa_base_first,0,true);
     
     // Function returns the value of the unit in mksa space, with unit removed.  1_h -> 3600, 1_in -> 0.0254
     gen mksa_remove_base(const gen & g,GIAC_CONTEXT){

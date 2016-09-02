@@ -799,7 +799,8 @@
 *((size_t *) at_mkisom),
 *((size_t *) at_mksa),
 #ifdef SWIFT_CALCS_OPTIONS
-	*((size_t *) at_mksa_base),
+  *((size_t *) at_mksa_base),
+  *((size_t *) at_mksa_base_first),
 	*((size_t *) at_mksa_remove),
 	*((size_t *) at_mksa_var),
 	*((size_t *) at_mksareduce_mode),
