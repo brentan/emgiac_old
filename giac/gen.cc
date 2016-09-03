@@ -8501,7 +8501,9 @@ namespace giac {
       return a._USERptr->is_zero();
     case _SYMB:
       if (a._SYMBptr->sommet==at_unit)
-	      return is_zero(a._SYMBptr->feuille[0]);
+	return is_zero(mksa_remove_base(a, contextptr));
+      else
+        return false;
     default: 
       return false;
     }
@@ -8523,7 +8525,9 @@ namespace giac {
       return fis_exactly_zero(a._FLOAT_val);
     case _SYMB:
       if(a._SYMBptr->sommet == at_unit) 
-        return is_exactly_zero(a._SYMBptr->feuille[0]);
+        return is_exactly_zero(mksa_remove_base(a, context0));
+      else
+        return false;
     case _POLY:
       return a._POLYptr->coord.empty();
     case _FRAC:
