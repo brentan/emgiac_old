@@ -7669,18 +7669,35 @@ namespace giac {
       else
 	joindre=true;
       if (joindre)
-	chemin.push_back(gen(i,j));
+#ifdef SWIFT_CALCS_OPTIONS
+          chemin.push_back(makevecteur(i,j));
+#else
+	  chemin.push_back(gen(i,j));
+#endif
       else {
-	if (!chemin.empty())
-	  res.push_back(symb_pnt(symb_curve(gen(makevecteur(fC,vars,function_tmin,t,0,equation,parameq),_PNT__VECT),gen(chemin,_GROUP__VECT)),attribut,contextptr));
+	if (!chemin.empty()) {
+#ifdef SWIFT_CALCS_OPTIONS 
+            // THIS IS AN AREA WHERE WE BLOW UP...WHAT SHOULD WE DO?
+#else
+	    res.push_back(symb_pnt(symb_curve(gen(makevecteur(fC,vars,function_tmin,t,0,equation,parameq),_PNT__VECT),gen(chemin,_GROUP__VECT)),attribut,contextptr));
+#endif
+        }
 	function_tmin=t;
-	chemin=vecteur(1,gen(i,j));
+#ifdef SWIFT_CALCS_OPTIONS
+          chemin.push_back(makevecteur(i,j));
+#else
+	  chemin=vecteur(1,gen(i,j));
+#endif
       }
       oldi=i;
       oldj=j;
     }
     if (!chemin.empty())
+#ifdef SWIFT_CALCS_OPTIONS // Swift Calcs options to output 2d array of x y pairs, instead of points etc as we do our own plotting
+      res = mergevecteur(res, chemin);
+#else
       res.push_back(symb_pnt(symb_curve(gen(makevecteur(fC,vars,function_tmin,function_tmax,0,equation,parameq),_PNT__VECT),gen(chemin,_GROUP__VECT)),attribut,contextptr));
+#endif
     leave(protect,localvar,newcontextptr);
     // io_graph(old_io_graph,contextptr);
 #if !defined(WIN32) && defined(WITH_GNUPLOT)
