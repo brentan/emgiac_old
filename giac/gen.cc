@@ -5942,8 +5942,9 @@ namespace giac {
       if ( (A.subtype==_LIST__VECT) || (B.subtype==_LIST__VECT) )
         return matrix_apply(A,B,contextptr,operator_times);
 #ifdef SWIFT_CALCS_OPTIONS
-      if ( (A.subtype < _SEQ__VECT) && (B.subtype < _SEQ__VECT) )
-        return matrix_apply(A,B,contextptr,operator_times);
+        matrice res;
+        if ((mcols(*A._VECTptr)!=mrows(*B._VECTptr)) && (A.subtype < _SEQ__VECT) && (B.subtype < _SEQ__VECT) )
+          return matrix_apply(A,B,contextptr,operator_times);
 #endif
       { gen res=ckmultmatvecteur(*A._VECTptr,*B._VECTptr);
 	if ( (calc_mode(contextptr)==1 || abs_calc_mode(contextptr)==38) && res.type==_VECT){
