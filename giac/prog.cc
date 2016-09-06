@@ -8537,9 +8537,9 @@ namespace giac {
     }
     vecteur v;
     if(mksa)
-        v = mksa_unit2vecteur(it->second);
+      v = mksa_unit2vecteur(it->second);
     else
-        v = default_unit_unit2vecteur(it->second);
+      v = default_unit_unit2vecteur(it->second);
     if (it->second->K==0 && it->second->mol==0 && it->second->cd==0 && it->second->d==1 && it->second->E==0 && it->second->m==0 && it->second->kg==0 && it->second->s==0 && it->second->A==0) {
       // This is an angle.  MKSA or default should 'be' whatever the current angle mode is:
 
@@ -8554,7 +8554,6 @@ namespace giac {
       if(is_greater(1e-6, abs(v[0]-1), contextptr))
         v[0] = plus_one;
     }
-
     v[0]=operator_times(res, v[0], contextptr);
     res_d=res_d * it->second->coeff;
     output.coeff = res_d;
@@ -8622,7 +8621,7 @@ namespace giac {
       vecteur res(makevecteur(plus_one));
       const_iterateur it=v.begin(),itend=v.end();
       for (;it!=itend;++it){
-	vecteur tmp(mksa_convert(*it,contextptr));
+	vecteur tmp(unit_convert(*it,mksa,contextptr));
 	res[0]=operator_times(res[0],tmp[0],contextptr);
 	iterateur it=res.begin()+1,itend=res.end(),jt=tmp.begin()+1,jtend=tmp.end();
 	for (;it!=itend && jt!=jtend;++it,++jt)
