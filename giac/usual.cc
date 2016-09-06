@@ -322,7 +322,11 @@ namespace giac {
   }
   gen _inv(const gen & args,GIAC_CONTEXT){
     if ( args.type==_STRNG && args.subtype==-1) return  args;
+#ifdef SWIFT_CALCS_OPTIONS // inv([.5 .2]) should give [2 5], not 10
+    if ((args.type!=_VECT) || ckmatrix(args) || (args.subtype==_VECTOR__VECT) || (args.subtype < _SEQ__VECT))
+#else
     if ((args.type!=_VECT) || ckmatrix(args))
+#endif
       return inv(args,contextptr);
     iterateur it=args._VECTptr->begin(), itend=args._VECTptr->end();
     gen prod(1);

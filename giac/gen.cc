@@ -5940,7 +5940,11 @@ namespace giac {
       if ( (A.subtype==_POLY1__VECT) || (B.subtype==_POLY1__VECT) )
 	return multgen_poly(*A._VECTptr,*B._VECTptr);
       if ( (A.subtype==_LIST__VECT) || (B.subtype==_LIST__VECT) )
-	return matrix_apply(A,B,contextptr,operator_times);
+        return matrix_apply(A,B,contextptr,operator_times);
+#ifdef SWIFT_CALCS_OPTIONS
+      if ( (A.subtype < _SEQ__VECT) && (B.subtype < _SEQ__VECT) )
+        return matrix_apply(A,B,contextptr,operator_times);
+#endif
       { gen res=ckmultmatvecteur(*A._VECTptr,*B._VECTptr);
 	if ( (calc_mode(contextptr)==1 || abs_calc_mode(contextptr)==38) && res.type==_VECT){
 	  res.subtype=B.subtype;
@@ -7409,7 +7413,11 @@ namespace giac {
     case _INT___VECT: case _ZINT__VECT: case _CPLX__VECT: case _DOUBLE___VECT: case _FLOAT___VECT: case _SYMB__VECT:
       if (b.subtype==_LIST__VECT)
 	return apply2nd(a,b,contextptr,rdiv);
+#ifdef SWIFT_CALCS_OPTIONS
+      if (ckmatrix(b) || (b.subtype==_VECTOR__VECT) || (b.subtype < _SEQ__VECT))
+#else
       if (ckmatrix(b))
+#endif
 	return a*inv(b,contextptr);
       else
 	return fraction(a,b);
