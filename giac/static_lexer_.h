@@ -433,7 +433,8 @@
 *((size_t *) at_debut_enregistrement),
 *((size_t *) at_decrement),
 #ifdef SWIFT_CALCS_OPTIONS
-	*((size_t *) at_default_units),
+  *((size_t *) at_default_base),
+  *((size_t *) at_default_units),
 #endif
 *((size_t *) at_degree),
 *((size_t *) at_delcols),
@@ -1207,6 +1208,9 @@
 *((size_t *) at_unarchive),
 *((size_t *) at_unarchive_ti),
 *((size_t *) at_unitV),
+#ifdef SWIFT_CALCS_OPTIONS
+  *((size_t *) at_unit_remove),
+#endif
 *((size_t *) at_unquote),
 *((size_t *) at_usimplify),
 #ifdef SWIFT_CALCS_OPTIONS

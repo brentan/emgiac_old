@@ -480,6 +480,7 @@
 {"debut_enregistrement",13,126,0,*((ulonglong *) at_debut_enregistrement)},
 {"decrement",13,9,0,*((ulonglong *) at_decrement)| 1},
 #ifdef SWIFT_CALCS_OPTIONS
+  {"default_base",13,9,0,*((ulonglong *) at_default_base)},
 	{"default_units",13,9,0,*((ulonglong *) at_default_units)},
 #endif
 {"degree",13,9,0,*((ulonglong *) at_degree)},
@@ -911,7 +912,7 @@
 #ifdef SWIFT_CALCS_OPTIONS
   {"mksa_base",13,9,0,*((ulonglong *) at_mksa_base)},
   {"mksa_base_first",13,9,0,*((ulonglong *) at_mksa_base_first)},
-	{"mksa_remove",13,9,0,*((ulonglong *) at_mksa_remove)},
+  {"mksa_remove",13,9,0,*((ulonglong *) at_mksa_remove)},
 	{"mksa_var",13,9,0,*((ulonglong *) at_mksa_var)},
 	{"mksareduce_mode",13,9,0,*((ulonglong *) at_mksareduce_mode)},
 	{"mksavariable_mode",13,9,0,*((ulonglong *) at_mksavariable_mode)},
@@ -1386,6 +1387,9 @@
 {"uniformd_cdf",13,9,0,*((ulonglong *) at_uniformd_cdf)},
 {"uniformd_icdf",13,9,0,*((ulonglong *) at_uniformd_icdf)},
 {"unitV",13,9,0,*((ulonglong *) at_unitV)},
+#ifdef SWIFT_CALCS_OPTIONS
+{"unit_remove",13,9,0,*((ulonglong *) at_unit_remove)},
+#endif
 {"unquote",13,9,0,*((ulonglong *) at_unquote)},
 {"usimplify",13,9,0,*((ulonglong *) at_usimplify)},
 #ifdef SWIFT_CALCS_OPTIONS

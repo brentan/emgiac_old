@@ -8677,6 +8677,73 @@ namespace giac {
       return g;
     return symbolic(at_pow,gen(makevecteur(g,exponent),_SEQ__VECT));
   }
+  
+  // Set the default return units for various dimensions
+  static unit_system _default_unit_ = {1,1,1,1,1,1,1,1,1, _m_unit, _kg_unit, _s_unit, _A_unit, _K_unit, _mol_unit, _cd_unit, _E_unit,_rad_unit};
+  unit_system & default_unit(){
+    return _default_unit_;
+  }
+  gen default_unit(int index, GIAC_CONTEXT) {
+      switch(index) {
+        case 1:
+          return _default_unit_.m_base;
+        case 2:
+          return _default_unit_.kg_base;
+        case 3:
+          return _default_unit_.s_base;
+        case 4:
+          return _default_unit_.A_base;
+        case 5:
+          return _default_unit_.K_base;
+        case 6:
+          return _default_unit_.mol_base;
+        case 7:
+          return _default_unit_.cd_base;
+        case 8:
+          return _default_unit_.E_base;
+        case 9:
+          if(angle_radian(contextptr)) return _rad_unit;
+          else if(angle_degree(contextptr)) return _deg_unit;
+          else return _grad_unit;
+      }
+      return zero;
+  }
+  void default_unit(gen g, double d, int index) {
+    switch(index) {
+      case 1:
+        _default_unit_.m = d;
+        _default_unit_.m_base = g;
+        break;
+      case 2:
+        _default_unit_.kg = d;
+        _default_unit_.kg_base = g;
+        break;
+      case 3:
+        _default_unit_.s = d;
+        _default_unit_.s_base = g;
+        break;
+      case 4:
+        _default_unit_.A = d;
+        _default_unit_.A_base = g;
+        break;
+      case 5:
+        _default_unit_.K = d;
+        _default_unit_.K_base = g;
+        break;
+      case 6:
+        _default_unit_.mol = d;
+        _default_unit_.mol_base = g;
+        break;
+      case 7:
+        _default_unit_.cd = d;
+        _default_unit_.cd_base = g;
+        break;
+      case 8:
+        _default_unit_.E = d;
+        _default_unit_.E_base = g;
+        break;
+    }  
+  }
   #ifdef SWIFT_CALCS_OPTIONS
     // Mode switch: all units will be converted to mksa and have the unit portion dropped
     gen mksareduce_mode(const gen & g,GIAC_CONTEXT){
@@ -8828,6 +8895,83 @@ namespace giac {
     static define_unary_function_eval (__mksa_var,&mksa_to_var,_mksa_var_s);
     define_unary_function_ptr5( at_mksa_var ,alias_at_mksa_var,&__mksa_var,0,true);
     
+  // Function returns the base of the units in default unit space.  Example 1_in -> 1_m, 23_h -> 1_s (assuming mksa is default)
+  gen default_units_reduce_base(const gen & g,GIAC_CONTEXT){ //mksa_reduce_base, but instead for the default units
+    if (g.type==_VECT)
+      return apply(g,default_units_reduce_base,contextptr);
+    vecteur v(unit_convert(g, false, contextptr));
+    if (is_undef(v)) return v;
+    gen res1=v[0];
+    gen num = plus_one;
+    gen den = plus_one;
+    int s=int(v.size());
+    if (s>2) {
+      if(is_greater(0, v[2], contextptr))
+        den = den * unitpow(default_unit(2, contextptr),-1*v[2]);
+      else
+        num = num * unitpow(default_unit(2, contextptr),v[2]);
+    }
+    if (s>1) {
+      if(is_greater(0, v[1], contextptr))
+        den = den * unitpow(default_unit(1, contextptr),-1*v[1]);
+      else
+        num = num * unitpow(default_unit(1, contextptr),v[1]);
+    }
+    if (s>3) {
+      if(is_greater(0, v[3], contextptr))
+        den = den * unitpow(default_unit(3, contextptr),-1*v[3]);
+      else
+        num = num * unitpow(default_unit(3, contextptr),v[3]);
+    }
+    if (s>4) {
+      if(is_greater(0, v[4], contextptr))
+        den = den * unitpow(default_unit(4, contextptr),-1*v[4]);
+      else
+        num = num * unitpow(default_unit(4, contextptr),v[4]);
+    }
+    if (s>5) {
+      if(is_greater(0, v[5], contextptr))
+        den = den * unitpow(default_unit(5, contextptr),-1*v[5]);
+      else
+        num = num * unitpow(default_unit(5, contextptr),v[5]);
+    }
+    if (s>6) {
+      if(is_greater(0, v[6], contextptr))
+        den = den * unitpow(default_unit(6, contextptr),-1*v[6]);
+      else
+        num = num * unitpow(default_unit(6, contextptr),v[6]);
+    }
+    if (s>7) {
+      if(is_greater(0, v[7], contextptr))
+        den = den * unitpow(default_unit(7, contextptr),-1*v[7]);
+      else
+        num = num * unitpow(default_unit(7, contextptr),v[7]);
+    }
+    if (s>8) {
+      if(is_greater(0, v[8], contextptr))
+        den = den * unitpow(default_unit(8, contextptr),-1*v[8]);
+      else
+        num = num * unitpow(default_unit(8, contextptr),v[8]);
+    }
+    if (s>9) {
+      if(is_greater(0, v[9], contextptr))
+        den = den * unitpow(default_unit(9, contextptr),-1*v[9]);
+      else
+        num = num * unitpow(default_unit(9, contextptr),v[9]);
+    }
+    if(is_one(num) && is_one(den))
+      return plus_one;
+    else if(is_one(num))
+      return plus_one / symbolic(at_unit,makevecteur(plus_one, den));
+    else if(is_one(den))
+      return symbolic(at_unit,makevecteur(plus_one,num));
+    else
+      return symbolic(at_unit,makevecteur(plus_one, num/den ));
+  }
+  static const char _default_base_s []="default_base";
+  static define_unary_function_eval (__default_base,&default_units_reduce_base,_default_base_s);
+  define_unary_function_ptr5( at_default_base ,alias_at_default_base,&__default_base,0,true);
+
     // Function returns the base of the units in mksa space.  Example 1_in -> 1_m, 23_h -> 1_s
     gen mksa_reduce_base(const gen & g,GIAC_CONTEXT){
       if (g.type==_VECT) 
@@ -8891,74 +9035,21 @@ namespace giac {
     static define_unary_function_eval (__mksa_remove,&mksa_remove_base,_mksa_remove_s);
     define_unary_function_ptr5( at_mksa_remove ,alias_at_mksa_remove,&__mksa_remove,0,true);
 
+    // Function returns the value of the unit in default unit space, with unit removed.  1_h -> 3600, 1_in -> 0.0254 (assuming mksa is default)
+    gen default_unit_remove_base(const gen & g,GIAC_CONTEXT){
+      if (g.type==_VECT) 
+        return apply(g,default_unit_remove_base,contextptr);
+      vecteur v(unit_convert(g,false,contextptr));
+      if (is_undef(v)) return v;
+      gen res1=v[0];
+      return res1;
+    }
+    static const char _unit_remove_s []="unit_remove";
+    static define_unary_function_eval (__unit_remove,&default_unit_remove_base,_unit_remove_s);
+    define_unary_function_ptr5( at_unit_remove ,alias_at_unit_remove,&__unit_remove,0,true);
+
   #endif
 
-  // Set the default return units for various dimensions
-  static unit_system _default_unit_ = {1,1,1,1,1,1,1,1,1, _m_unit, _kg_unit, _s_unit, _A_unit, _K_unit, _mol_unit, _cd_unit, _E_unit,_rad_unit};
-  unit_system & default_unit(){
-    return _default_unit_;
-  }
-  gen default_unit(int index, GIAC_CONTEXT) {
-      switch(index) {
-        case 1:
-          return _default_unit_.m_base;
-        case 2:
-          return _default_unit_.kg_base;
-        case 3:
-          return _default_unit_.s_base;
-        case 4:
-          return _default_unit_.A_base;
-        case 5:
-          return _default_unit_.K_base;
-        case 6:
-          return _default_unit_.mol_base;
-        case 7:
-          return _default_unit_.cd_base;
-        case 8:
-          return _default_unit_.E_base;
-        case 9:
-          if(angle_radian(contextptr)) return _rad_unit;
-          else if(angle_degree(contextptr)) return _deg_unit;
-          else return _grad_unit;
-      }
-      return zero;
-  }
-  void default_unit(gen g, double d, int index) {
-    switch(index) {
-      case 1:
-        _default_unit_.m = d;
-        _default_unit_.m_base = g;
-        break;
-      case 2:
-        _default_unit_.kg = d;
-        _default_unit_.kg_base = g;
-        break;
-      case 3:
-        _default_unit_.s = d;
-        _default_unit_.s_base = g;
-        break;
-      case 4:
-        _default_unit_.A = d;
-        _default_unit_.A_base = g;
-        break;
-      case 5:
-        _default_unit_.K = d;
-        _default_unit_.K_base = g;
-        break;
-      case 6:
-        _default_unit_.mol = d;
-        _default_unit_.mol_base = g;
-        break;
-      case 7:
-        _default_unit_.cd = d;
-        _default_unit_.cd_base = g;
-        break;
-      case 8:
-        _default_unit_.E = d;
-        _default_unit_.E_base = g;
-        break;
-    }  
-  }
 
   gen set_units(const gen & g,GIAC_CONTEXT) {  
     if ( g.type==_STRNG &&  g.subtype==-1) return g;

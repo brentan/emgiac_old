@@ -908,7 +908,8 @@ extern const unary_function_ptr * const  at_mksa;
   extern const unary_function_ptr * const  at_mksa_base_first;
 	extern const unary_function_ptr * const  at_mksa_remove;
 	extern const unary_function_ptr * const  at_mksa_var;
-	extern const unary_function_ptr * const  at_default_units;
+  extern const unary_function_ptr * const  at_default_units;
+  extern const unary_function_ptr * const  at_default_base;
 #endif
 extern const unary_function_ptr * const  at_modgcd;
 extern const unary_function_ptr * const  at_modgcd_cachesize;
@@ -1377,6 +1378,9 @@ extern const unary_function_ptr * const  at_uniformd;
 extern const unary_function_ptr * const  at_uniformd_cdf;
 extern const unary_function_ptr * const  at_uniformd_icdf;
 extern const unary_function_ptr * const  at_unitV;
+#ifdef SWIFT_CALCS_OPTIONS
+  extern const unary_function_ptr * const  at_unit_remove;
+#endif
 extern const unary_function_ptr * const  at_unquote;
 extern const unary_function_ptr * const  at_usimplify;
 #ifdef SWIFT_CALCS_OPTIONS
