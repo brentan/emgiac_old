@@ -4493,9 +4493,9 @@ namespace giac {
     case _INT___POLY: case _ZINT__POLY: case _DOUBLE___POLY: case _FLOAT___POLY: case _CPLX__POLY: case _MOD__POLY: case _USER__POLY: case _REAL__POLY: 
       return addpoly(*b._POLYptr,a);
 #ifdef SWIFT_CALCS_OPTIONS
-    case _VECT__INT_: case _VECT__ZINT: case _VECT__DOUBLE_: case _VECT__FLOAT_: case _VECT__CPLX: case _VECT__MOD: case _VECT__REAL: case _VECT__SYMB: 
+    case _VECT__INT_: case _VECT__ZINT: case _VECT__DOUBLE_: case _VECT__FLOAT_: case _VECT__CPLX: case _VECT__MOD: case _VECT__REAL: case _VECT__SYMB: case _VECT__FRAC: 
       return apply1st(a,b,contextptr,pointplus);
-    case _INT___VECT: case _ZINT__VECT: case _DOUBLE___VECT: case _FLOAT___VECT: case _CPLX__VECT: case _MOD__VECT: case _REAL__VECT: case _SYMB__VECT: 
+    case _INT___VECT: case _ZINT__VECT: case _DOUBLE___VECT: case _FLOAT___VECT: case _CPLX__VECT: case _MOD__VECT: case _REAL__VECT: case _SYMB__VECT: case _FRAC__VECT: 
       return apply2nd(a,b,contextptr,pointplus);
 #endif
     case _MOD__MOD:
@@ -5243,9 +5243,9 @@ namespace giac {
     case _INT___POLY: case _ZINT__POLY: case _DOUBLE___POLY: case _FLOAT___POLY: case _CPLX__POLY: case _MOD__POLY:
       return subpoly(a,*b._POLYptr);  
 #ifdef SWIFT_CALCS_OPTIONS
-    case _VECT__INT_: case _VECT__ZINT: case _VECT__DOUBLE_: case _VECT__FLOAT_: case _VECT__CPLX: case _VECT__MOD: case _VECT__REAL: case _VECT__SYMB: 
+    case _VECT__INT_: case _VECT__ZINT: case _VECT__DOUBLE_: case _VECT__FLOAT_: case _VECT__CPLX: case _VECT__MOD: case _VECT__REAL: case _VECT__SYMB: case _VECT__FRAC: 
       return apply1st(a,b,contextptr,pointminus);
-    case _INT___VECT: case _ZINT__VECT: case _DOUBLE___VECT: case _FLOAT___VECT: case _CPLX__VECT: case _MOD__VECT: case _REAL__VECT: case _SYMB__VECT: 
+    case _INT___VECT: case _ZINT__VECT: case _DOUBLE___VECT: case _FLOAT___VECT: case _CPLX__VECT: case _MOD__VECT: case _REAL__VECT: case _SYMB__VECT: case _FRAC__VECT: 
       return apply2nd(a,b,contextptr,pointminus);
 #endif      
     case _MOD__MOD:
