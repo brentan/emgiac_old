@@ -1357,11 +1357,11 @@ namespace giac {
           s = "\\left(" + gen2tex((*(feu._VECTptr))[0],contextptr) + "\\right)";
         else
           s = gen2tex((*(feu._VECTptr))[0],contextptr);
-        s += " \\Unit{";
         giac::unit_mode = true;
-        s += gen2tex((*(feu._VECTptr))[1],contextptr);
+        std::string s2 = gen2tex((*(feu._VECTptr))[1],contextptr);
         giac::unit_mode = false;
-        return s+"}";
+        if(s2.compare("1.0")==0) return s;
+        else return s+" \\Unit{"+s2+"}";
       } else {
         s = opstring +"\\left(";
         for (int i=0;;++i){
@@ -1405,6 +1405,28 @@ namespace giac {
       return (e._CPLXptr->print(contextptr) + string("+") + (e._CPLXptr+1)->print(contextptr) + "\\cdot ")+printi(contextptr);
   }
 
+#ifdef SWIFT_CALCS_OPTIONS
+  string doub2tex(const gen & g, GIAC_CONTEXT) {
+    std::string s, b, e;
+    s = g.print(contextptr);
+    b = "";
+    e = "";
+    bool scientific = false;
+    for (int i=0;s[i];++i){
+      if (s[i]=='e' || s[i]=='E') 
+        scientific = true;
+      else if(scientific && (s[i]!='+'))
+        e += s[i];
+      else if(!scientific)
+        b += s[i];
+    }
+    if(scientific) 
+      return " \\scientificNotation{" + b + "}{" + e + "}";
+    else
+      return s;
+  }
+#endif
+
   // assume math mode enabled
   string gen2tex(const gen & e,GIAC_CONTEXT){
     switch (e.type){
@@ -1413,8 +1435,12 @@ namespace giac {
     case _DOUBLE_:
       if (specialtexprint_double(contextptr))
 	return double2tex(e._DOUBLE_val);
-      else
+      else 
+#ifdef SWIFT_CALCS_OPTIONS
+        return doub2tex(e, contextptr);
+#else
 	return e.print(contextptr);
+#endif
     case _CPLX:
       return cplx2tex(e, contextptr); //e.print(contextptr);
     case _IDNT:
