@@ -160,6 +160,9 @@ namespace giac {
   // eval spreadsheet, compute list of dependances in lc
   void spread_eval(matrice & m,GIAC_CONTEXT);
 
+#ifdef SWIFT_CALCS_OPTIONS
+  vecteur vecteur2matrice(const vecteur & a);
+#endif
   gen makesuite(const gen & a);
   gen makesuite(const gen & a,const gen & b);
   gen makesuite_inplace(const gen & a,const gen & b);
@@ -194,6 +197,7 @@ namespace giac {
   gen cross(const gen & g1,const gen & g2,GIAC_CONTEXT);
   // ckmvmult check a and b
   // if a and b are matrices returns matrix product
+  // SWIFT_CALCS_OPTIONS: if a is a matrix with 1 column and b is a vector, turn b into matrix and do matrix product
   // if a is a matrix and b a vecteur return matr*vect
   // otherwise returns the dot product of a and b
   gen ckmultmatvecteur(const vecteur & a,const vecteur & b);
