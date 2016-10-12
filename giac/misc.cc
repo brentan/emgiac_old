@@ -1512,9 +1512,17 @@ namespace giac {
 
   gen _nrows(const gen & g,GIAC_CONTEXT){
     if ( g.type==_STRNG && g.subtype==-1) return  g;
+#ifdef SWIFT_CALCS_OPTIONS
+    if(g.type != _VECT) return gensizeerr(contextptr);
+    matrice g2 = vecteur2matrice(*g._VECTptr);
+    if (!ckmatrix(g2))
+      return gensizeerr(contextptr);
+    return int(g2.size());
+#else
     if (!ckmatrix(g))
       return gensizeerr(contextptr);
     return int(g._VECTptr->size());
+#endif
   }
   static const char _nrows_s []="nrows";
   static define_unary_function_eval (__nrows,&_nrows,_nrows_s);
@@ -1522,11 +1530,21 @@ namespace giac {
 
   gen _ncols(const gen & g,GIAC_CONTEXT){
     if ( g.type==_STRNG && g.subtype==-1) return  g;
+#ifdef SWIFT_CALCS_OPTIONS
+    if(g.type != _VECT) return gensizeerr(contextptr);
+    matrice g2 = vecteur2matrice(*g._VECTptr);
+    if (!ckmatrix(g2))
+      return gensizeerr(contextptr);
+    if (g2.empty())
+      return zero;
+    return int(g2.front()._VECTptr->size());
+#else
     if (!ckmatrix(g))
       return gensizeerr(contextptr);
     if (g._VECTptr->empty())
       return zero;
     return int(g._VECTptr->front()._VECTptr->size());
+#endif
   }
   static const char _ncols_s []="ncols";
   static define_unary_function_eval (__ncols,&_ncols,_ncols_s);

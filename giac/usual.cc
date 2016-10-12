@@ -3283,7 +3283,13 @@ namespace giac {
     return res;
   }
   // in_place==true to store in vector/matrices without making a new copy
+#ifdef SWIFT_CALCS_OPTIONS
+  gen sto(const gen & a_in,const gen & b_in,bool in_place,const context * contextptr_){
+    gen a = a_in;
+    gen b = b_in;
+#else
   gen sto(const gen & a,const gen & b,bool in_place,const context * contextptr_){
+#endif
     if (is_undef(a) && a.type==_STRNG)
       return a;
     if ( (a.type==_IDNT || a.is_symb_of_sommet(at_at)) && b.is_symb_of_sommet(at_rootof) && contextptr_){
@@ -3771,7 +3777,11 @@ namespace giac {
 #endif
 	  if (!is_integral(deb) || !is_integral(fin) || deb.type!=_INT_ || fin.type!=_INT_ || deb.val<0 || fin.val<0 || deb.val>fin.val)
 	    return gendimerr(contextptr);
-	  if (a.type==_VECT && a._VECTptr->size()!=fin.val-deb.val+1)
+#ifdef SWIFT_CALCS_OPTIONS
+          if (a.type==_VECT && !ckmatrix(a))
+            a = gen(vecteur2matrice(*a._VECTptr));
+#endif
+          if (a.type==_VECT && a._VECTptr->size()!=fin.val-deb.val+1)
 	    return gendimerr(contextptr);
 	  if (!ckmatrix(*vptr))
 	    return gendimerr(contextptr);
@@ -3798,7 +3808,7 @@ namespace giac {
 	      return gendimerr(contextptr);
 	    if (ckmatrix(a)){
 	      if (fin2.val-deb2.val+1!=a._VECTptr->front()._VECTptr->size())
-		return gendimerr(contextptr);	      
+		return gendimerr(contextptr);	  
 	      for (int i=deb.val;i<=fin.val;++i){
 		vecteur & target=*(*vptr)[i]._VECTptr;
 		const vecteur & source=*(*a._VECTptr)[i-deb.val]._VECTptr;
@@ -3813,7 +3823,7 @@ namespace giac {
 	      return sto(gen(v,valeur.subtype),destination,in_place,contextptr);
 	    }
 	    if (fin2.val-deb2.val!=fin.val-deb.val)
-	      return gendimerr(contextptr);	      
+	      return gendimerr(contextptr);	
 	    int shift=deb2.val-deb.val;
 	    if (a.type==_VECT){
 	      for (int i=deb.val;i<=fin.val;++i)
@@ -3850,8 +3860,20 @@ namespace giac {
 	    (*vptr)[i1]=*(*vptr)[i1]._VECTptr;
 	  gen deb2=i2._SYMBptr->feuille._VECTptr->front();
 	  gen fin2=i2._SYMBptr->feuille._VECTptr->back();
+#ifdef SWIFT_CALCS_OPTIONS // Adds support for i__s and i__e keywords for use in intervals when accessing matrix/list contents.  i__s..3 is start to index 3.  2..i__e is index 2 until end.  etc
+            if(!is_integral(deb2) && (gen2string(i2._SYMBptr->feuille._VECTptr->front()).compare("i__s") == 0)) // Test for special keyword i__s, which indicates 'start'
+              deb2 = gen(0);
+            if(!is_integral(fin2) && (gen2string(i2._SYMBptr->feuille._VECTptr->back()).compare("i__e") == 0)) // Test for special keyword i__e, which indicates 'end'
+              fin2 = gen(int((*(*vptr)[i1]._VECTptr).size())-1);
+#endif
 	  if (!is_integral(deb2) || !is_integral(fin2) || deb2.type!=_INT_ || fin2.type!=_INT_ || deb2.val<0 || fin2.val <deb2.val || fin2.val>=vptr->front()._VECTptr->size())
 	    return gendimerr(contextptr);
+#ifdef SWIFT_CALCS_OPTIONS
+          if (a.type == _VECT && ckmatrix(a)) {
+            if(a._VECTptr->size() != 1) return gendimerr(contextptr);
+            a = a._VECTptr->front();
+          }
+#endif
 	  if (a.type==_VECT){
 	    for (int i=deb2.val;i<=fin2.val;++i)
 	      (*(*vptr)[i1]._VECTptr)[i]=(*a._VECTptr)[i-deb2.val];	     
