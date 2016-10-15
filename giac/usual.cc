@@ -31,6 +31,7 @@ using namespace std;
 #include "moyal.h"
 #include "subst.h"
 #include "gausspol.h"
+#include "emscripten.h"
 #include "identificateur.h"
 #include "ifactor.h"
 #include "prog.h"
@@ -3462,6 +3463,44 @@ namespace giac {
 	    else
 	      return gensizeerr(b.print(contextptr)+gettext(": recursive definition"));
 	  }
+#ifdef SWIFT_CALCS_OPTIONS
+          if(strstr(b._IDNTptr->id_name, "SWIFTCALCSMETHOD") != NULL) {
+            // CODE ADDED TO CALL OUTSIDE FUNCTION 'eval_function' AND TEST FOR PRESENCE OF THIS VARIABLE...IF SO, RETURN VALUE!
+            std::string asm_code;
+            std::string method_call = b._IDNTptr->id_name;
+            asm_code += "eval_method( ";
+            size_t pos = 0;
+            while((pos = method_call.find("'", pos)) != std::string::npos) {
+              method_call.replace(pos, 1, "\\'");
+              pos += 2;
+            }
+            pos = method_call.find("SWIFTCALCSMETHOD", 0);
+            method_call.replace(pos, 16, "SWIFTCALCSMETHODset");
+            asm_code += "'";
+            asm_code += method_call;
+            asm_code += "', '";
+            std::string all_inputs;
+            if ( (a.type==_SYMB) && (a._SYMBptr->sommet==at_quote)) 
+              all_inputs += a._SYMBptr->feuille.evalf(1,contextptr).print(contextptr);
+            else 
+              all_inputs += a.evalf(1,contextptr).print(contextptr);
+            pos = 0; 
+            while ((pos = all_inputs.find('\'', pos)) != std::string::npos) {
+              all_inputs.replace(pos, 1, "\\'");
+              pos += 2;
+            }
+            asm_code += all_inputs;
+            asm_code += "');";
+            std::string out = emscripten_run_script_string( asm_code.data() );
+            if(out.length() > 0) {
+              if(out.compare(0,5,"ERROR") == 0)
+                return gensizeerr(out.substr(7,string::npos));
+              else
+                return gen(out, contextptr);
+              return true;
+            }
+          }
+#endif
 	  sym_tab * symtabptr=contextptr->globalcontextptr?contextptr->globalcontextptr->tabptr:contextptr->tabptr;
 	  sym_tab::iterator it=symtabptr->find(b._IDNTptr->id_name),itend=symtabptr->end();
 	  if (it!=itend){ 

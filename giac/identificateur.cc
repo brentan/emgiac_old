@@ -1110,29 +1110,34 @@ namespace giac {
       	//  return eval_38(level,orig,evaled,id_name,contextptr);
         #ifdef SWIFT_CALCS_OPTIONS
           // CODE ADDED TO CALL OUTSIDE FUNCTION 'eval_function' AND TEST FOR PRESENCE OF THIS VARIABLE...IF SO, RETURN VALUE!
-          std::string asm_code;
-          std::string method_call = id_name;
-          // Catch angle mode lookups here, and drop u__rad, u__deg, and u__grad
-          if(remove_angle_mode(contextptr) && mksavariable_mode(contextptr)) {
-            if((strcmp(id_name, "u__rad") == 0) || (strcmp(id_name, "u__deg") == 0) || (strcmp(id_name, "u__grad") == 0)) {
-              evaled = plus_one;
+          if(strstr(id_name, "SWIFTCALCSMETHOD") != NULL) {
+            std::string asm_code;
+            std::string method_call = id_name;
+            // Catch angle mode lookups here, and drop u__rad, u__deg, and u__grad
+            if(remove_angle_mode(contextptr) && mksavariable_mode(contextptr)) {
+              if((strcmp(id_name, "u__rad") == 0) || (strcmp(id_name, "u__deg") == 0) || (strcmp(id_name, "u__grad") == 0)) {
+                evaled = plus_one;
+                return true;
+              }
+            }
+            asm_code += "eval_function( ";
+            size_t pos = 0;
+            while((pos = method_call.find("'", pos)) != std::string::npos) {
+              method_call.replace(pos, 1, "\\'");
+              pos += 2;
+            }
+            asm_code += "'";
+            asm_code += method_call;
+            asm_code += "'";
+            asm_code += " );";
+            std::string out = emscripten_run_script_string( asm_code.data() );
+            if(out.length() > 0) {
+              if(out.compare(0,5,"ERROR") == 0)
+                evaled = gensizeerr(out.substr(7,string::npos));
+              else
+                evaled = gen(out, contextptr);
               return true;
             }
-          }
-          asm_code += "eval_function( ";
-          size_t pos = 0;
-          while((pos = method_call.find("'", pos)) != std::string::npos) {
-            method_call.replace(pos, 1, "\\'");
-            pos += 2;
-          }
-          if(method_call[0] != '\'') asm_code += "'";
-          asm_code += id_name;
-          if(method_call[method_call.length()-1] != '\'') asm_code += "'";
-          asm_code += " );";
-          std::string out = emscripten_run_script_string( asm_code.data() );
-          if(out.length() > 0) {
-            evaled = gen(out, contextptr);
-            return true;
           }
         #endif
       	return false;

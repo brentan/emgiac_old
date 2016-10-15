@@ -2175,31 +2175,17 @@ namespace giac {
         add_print(method_call, *it, contextptr);
         ++it;
       }
-      std::string regex_code;
-      std::string asm_code;
-      asm_code = "eval_method( "; 
-      regex_code = "check_method("; 
-      size_t pos = 0;
-      while((pos = method_call.find("'", pos)) != std::string::npos) {
-        method_call.replace(pos, 1, "\\'");
-        pos += 2;
-      }
-      if(method_call[0] != '\'') {
+      if(method_call.find("SWIFTCALCSMETHOD",0) != std::string::npos) {
+        std::string asm_code;
+        asm_code = "eval_method( "; 
+        size_t pos = 0;
+        while((pos = method_call.find("'", pos)) != std::string::npos) {
+          method_call.replace(pos, 1, "\\'");
+          pos += 2;
+        }
         asm_code += "'";  
-        regex_code += "'";  
-      }
-      asm_code += method_call;
-      regex_code += method_call;
-      if(method_call[method_call.length()-1] != '\'') {
-        asm_code += "'";
-        regex_code += "'";  
-      }
-      if((method_call.length() >= 2) && (method_call[method_call.length()-1] == '\'') && (method_call[method_call.length()-2] == '\\')) {
+        asm_code += method_call;
         asm_code += "'"; 
-        regex_code += "'";  
-      }
-      regex_code += ");";
-      if(emscripten_run_script_int(regex_code.data()) > 0) {
         // Next, zip up all the inputs for the 'function' into a string to send to the function (as array so we can use the 'apply' method)
         std::string all_inputs;
         it=_SYMBptr->feuille._VECTptr->begin();
@@ -2221,8 +2207,8 @@ namespace giac {
         asm_code += " , '";
         pos = 0;
         while ((pos = all_inputs.find('\'', pos)) != std::string::npos) {
-             all_inputs.replace(pos, 1, "\\'");
-             pos += 2;
+          all_inputs.replace(pos, 1, "\\'");
+          pos += 2;
         }
         asm_code += all_inputs;
         asm_code += "' );";
