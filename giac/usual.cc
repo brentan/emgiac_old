@@ -3465,7 +3465,7 @@ namespace giac {
 	  }
 #ifdef SWIFT_CALCS_OPTIONS
           if(strstr(b._IDNTptr->id_name, "SWIFTCALCSMETHOD") != NULL) {
-            // CODE ADDED TO CALL OUTSIDE FUNCTION 'eval_function' AND TEST FOR PRESENCE OF THIS VARIABLE...IF SO, RETURN VALUE!
+            // CODE ADDED TO CALL OUTSIDE FUNCTION 'eval_function' AND TEST FOR PRESENCE OF THIS VARIABLE...IF SO, SET VALUE!
             std::string asm_code;
             std::string method_call = b._IDNTptr->id_name;
             asm_code += "eval_method( ";
@@ -3475,7 +3475,7 @@ namespace giac {
               pos += 2;
             }
             pos = method_call.find("SWIFTCALCSMETHOD", 0);
-            method_call.replace(pos, 16, "SWIFTCALCSMETHODset");
+            method_call.replace(pos, 16, "SWIFTCALCSMETHODset_");
             asm_code += "'";
             asm_code += method_call;
             asm_code += "', '";
@@ -3497,7 +3497,6 @@ namespace giac {
                 return gensizeerr(out.substr(7,string::npos));
               else
                 return gen(out, contextptr);
-              return true;
             }
           }
 #endif
