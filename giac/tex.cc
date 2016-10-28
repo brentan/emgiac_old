@@ -1412,11 +1412,15 @@ namespace giac {
     b = "";
     e = "";
     bool scientific = false;
+    bool added_nonzero = false;
     for (int i=0;s[i];++i){
       if (s[i]=='e' || s[i]=='E') 
         scientific = true;
-      else if(scientific && (s[i]!='+'))
+      else if(scientific && added_nonzero && (s[i]!='+'))
         e += s[i];
+      else if(scientific && (s[i]!='0') && (s[i]!='+'))
+        e += s[i];
+        added_nonzero = true;
       else if(!scientific)
         b += s[i];
     }
