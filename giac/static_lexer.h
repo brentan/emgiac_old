@@ -364,7 +364,9 @@
 {"cauchyd",13,9,0,*((ulonglong *) at_cauchyd)},
 {"cauchyd_cdf",13,9,0,*((ulonglong *) at_cauchyd_cdf)},
 {"cauchyd_icdf",13,9,0,*((ulonglong *) at_cauchyd_icdf)},
-{"cd",13,9,0,*((ulonglong *) at_cd)},
+#ifndef SWIFT_CALCS_OPTIONS
+  {"cd",13,9,0,*((ulonglong *) at_cd)},
+#endif
 {"cdf",13,9,0,*((ulonglong *) at_cdf)},
 {"cdfplot",13,9,0,*((ulonglong *) at_cdfplot)},
 {"ceil",13,9,0,*((ulonglong *) at_ceil)},

@@ -4705,7 +4705,11 @@ namespace giac {
     // *logptr(contextptr) << g << endl;
     return g;
   }
+#ifndef SWIFT_CALCS_OPTIONS
   static const char _cd_s []="cd";
+#else
+  static const char _cd_s []="path_cd";
+#endif
   static define_unary_function_eval (__cd,&_cd,_cd_s);
   define_unary_function_ptr5( at_cd ,alias_at_cd,&__cd,0,true);
 

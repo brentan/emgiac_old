@@ -334,7 +334,9 @@
 *((size_t *) at_cap),
 *((size_t *) at_cas_setup),
 *((size_t *) at_cat),
-*((size_t *) at_cd),
+#ifndef SWIFT_CALCS_OPTIONS
+  *((size_t *) at_cd),
+#endif
 *((size_t *) at_ceil),
 *((size_t *) at_ceiling),
 *((size_t *) at_cell),
