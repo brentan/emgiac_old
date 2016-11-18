@@ -7756,6 +7756,177 @@ namespace giac {
   const mksa_unit __sd_unit={8.61640905e4,0,0,1,0,0,0,0,0}; 
   const mksa_unit __syr_unit={3.15581498e7,0,0,1,0,0,0,0,0}; 
 
+  #ifdef SWIFT_CALCS_OPTIONS
+    const mksa_unit __USD_unit={1,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __AED_unit={2,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __AFN_unit={3,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __ALL_unit={4,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __AMD_unit={5,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __ANG_unit={6,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __AOA_unit={7,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __ARS_unit={8,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __AUD_unit={9,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __AWG_unit={10,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __AZN_unit={11,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __BAM_unit={12,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __BBD_unit={13,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __BDT_unit={14,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __BGN_unit={15,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __BHD_unit={16,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __BIF_unit={17,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __BMD_unit={18,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __BND_unit={19,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __BOB_unit={20,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __BRL_unit={21,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __BSD_unit={22,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __BTC_unit={23,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __BTN_unit={24,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __BWP_unit={25,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __BYN_unit={26,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __BZD_unit={27,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __CAD_unit={28,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __CDF_unit={29,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __CHF_unit={30,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __CLP_unit={31,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __CNY_unit={32,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __COP_unit={33,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __CRC_unit={34,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __CUC_unit={35,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __CUP_unit={36,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __CVE_unit={37,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __CZK_unit={38,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __DJF_unit={39,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __DKK_unit={40,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __DOP_unit={41,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __DZD_unit={42,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __EEK_unit={43,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __EGP_unit={44,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __ERN_unit={45,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __ETB_unit={46,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __EUR_unit={47,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __FJD_unit={48,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __FKP_unit={49,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __GBP_unit={50,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __GEL_unit={51,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __GGP_unit={52,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __GHS_unit={53,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __GIP_unit={54,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __GMD_unit={55,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __GNF_unit={56,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __GTQ_unit={57,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __GYD_unit={58,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __HKD_unit={59,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __HNL_unit={60,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __HRK_unit={61,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __HTG_unit={62,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __HUF_unit={63,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __IDR_unit={64,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __ILS_unit={65,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __IMP_unit={66,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __INR_unit={67,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __IQD_unit={68,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __IRR_unit={69,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __ISK_unit={70,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __JEP_unit={71,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __JMD_unit={72,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __JOD_unit={73,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __JPY_unit={74,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __KES_unit={75,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __KGS_unit={76,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __KHR_unit={77,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __KMF_unit={78,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __KPW_unit={79,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __KRW_unit={80,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __KWD_unit={81,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __KYD_unit={82,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __KZT_unit={83,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __LAK_unit={84,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __LBP_unit={85,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __LKR_unit={86,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __LRD_unit={87,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __LSL_unit={88,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __LTL_unit={89,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __LVL_unit={90,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __LYD_unit={91,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __MAD_unit={92,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __MDL_unit={93,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __MGA_unit={94,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __MKD_unit={95,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __MMK_unit={96,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __MNT_unit={97,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __MOP_unit={98,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __MRO_unit={99,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __MTL_unit={100,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __MUR_unit={101,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __MVR_unit={102,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __MWK_unit={103,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __MXN_unit={104,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __MYR_unit={105,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __MZN_unit={106,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __NAD_unit={107,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __NGN_unit={108,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __NIO_unit={109,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __NOK_unit={110,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __NPR_unit={111,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __NZD_unit={112,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __OMR_unit={113,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __PAB_unit={114,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __PEN_unit={115,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __PGK_unit={116,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __PHP_unit={117,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __PKR_unit={118,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __PLN_unit={119,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __PYG_unit={120,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __QAR_unit={121,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __RON_unit={122,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __RSD_unit={123,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __RUB_unit={124,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __RWF_unit={125,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __SAR_unit={126,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __SBD_unit={127,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __SCR_unit={128,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __SDG_unit={129,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __SEK_unit={130,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __SGD_unit={131,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __SHP_unit={132,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __SLL_unit={133,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __SOS_unit={134,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __SRD_unit={135,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __SVC_unit={136,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __SYP_unit={137,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __SZL_unit={138,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __THB_unit={139,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __TJS_unit={140,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __TMT_unit={141,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __TND_unit={142,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __TOP_unit={143,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __TRY_unit={144,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __TTD_unit={145,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __TWD_unit={146,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __TZS_unit={147,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __UAH_unit={148,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __UGX_unit={149,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __UYU_unit={150,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __UZS_unit={151,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __VEF_unit={152,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __VND_unit={153,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __VUV_unit={154,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __WST_unit={155,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __XAF_unit={156,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __XAG_unit={157,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __XAU_unit={158,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __XCD_unit={159,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __XDR_unit={160,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __XOF_unit={161,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __XPD_unit={162,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __XPF_unit={163,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __XPT_unit={164,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __YER_unit={165,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __ZAR_unit={166,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __ZMW_unit={167,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __ZWL_unit={168,0,0,0,0,0,0,0,1,0};
+  #endif
+
   // table of alpha-sorted units
   const mksa_unit * const unitptr_tab[]={
     &__A_unit,
@@ -7951,7 +8122,179 @@ namespace giac {
     &__u_unit,
     &__yd_unit,
     &__yr_unit,
+#ifdef SWIFT_CALCS_OPTIONS
+    &__micron_unit,
+    &__USD_unit,
+    &__AED_unit,
+    &__AFN_unit,
+    &__ALL_unit,
+    &__AMD_unit,
+    &__ANG_unit,
+    &__AOA_unit,
+    &__ARS_unit,
+    &__AUD_unit,
+    &__AWG_unit,
+    &__AZN_unit,
+    &__BAM_unit,
+    &__BBD_unit,
+    &__BDT_unit,
+    &__BGN_unit,
+    &__BHD_unit,
+    &__BIF_unit,
+    &__BMD_unit,
+    &__BND_unit,
+    &__BOB_unit,
+    &__BRL_unit,
+    &__BSD_unit,
+    &__BTC_unit,
+    &__BTN_unit,
+    &__BWP_unit,
+    &__BYN_unit,
+    &__BZD_unit,
+    &__CAD_unit,
+    &__CDF_unit,
+    &__CHF_unit,
+    &__CLP_unit,
+    &__CNY_unit,
+    &__COP_unit,
+    &__CRC_unit,
+    &__CUC_unit,
+    &__CUP_unit,
+    &__CVE_unit,
+    &__CZK_unit,
+    &__DJF_unit,
+    &__DKK_unit,
+    &__DOP_unit,
+    &__DZD_unit,
+    &__EEK_unit,
+    &__EGP_unit,
+    &__ERN_unit,
+    &__ETB_unit,
+    &__EUR_unit,
+    &__FJD_unit,
+    &__FKP_unit,
+    &__GBP_unit,
+    &__GEL_unit,
+    &__GGP_unit,
+    &__GHS_unit,
+    &__GIP_unit,
+    &__GMD_unit,
+    &__GNF_unit,
+    &__GTQ_unit,
+    &__GYD_unit,
+    &__HKD_unit,
+    &__HNL_unit,
+    &__HRK_unit,
+    &__HTG_unit,
+    &__HUF_unit,
+    &__IDR_unit,
+    &__ILS_unit,
+    &__IMP_unit,
+    &__INR_unit,
+    &__IQD_unit,
+    &__IRR_unit,
+    &__ISK_unit,
+    &__JEP_unit,
+    &__JMD_unit,
+    &__JOD_unit,
+    &__JPY_unit,
+    &__KES_unit,
+    &__KGS_unit,
+    &__KHR_unit,
+    &__KMF_unit,
+    &__KPW_unit,
+    &__KRW_unit,
+    &__KWD_unit,
+    &__KYD_unit,
+    &__KZT_unit,
+    &__LAK_unit,
+    &__LBP_unit,
+    &__LKR_unit,
+    &__LRD_unit,
+    &__LSL_unit,
+    &__LTL_unit,
+    &__LVL_unit,
+    &__LYD_unit,
+    &__MAD_unit,
+    &__MDL_unit,
+    &__MGA_unit,
+    &__MKD_unit,
+    &__MMK_unit,
+    &__MNT_unit,
+    &__MOP_unit,
+    &__MRO_unit,
+    &__MTL_unit,
+    &__MUR_unit,
+    &__MVR_unit,
+    &__MWK_unit,
+    &__MXN_unit,
+    &__MYR_unit,
+    &__MZN_unit,
+    &__NAD_unit,
+    &__NGN_unit,
+    &__NIO_unit,
+    &__NOK_unit,
+    &__NPR_unit,
+    &__NZD_unit,
+    &__OMR_unit,
+    &__PAB_unit,
+    &__PEN_unit,
+    &__PGK_unit,
+    &__PHP_unit,
+    &__PKR_unit,
+    &__PLN_unit,
+    &__PYG_unit,
+    &__QAR_unit,
+    &__RON_unit,
+    &__RSD_unit,
+    &__RUB_unit,
+    &__RWF_unit,
+    &__SAR_unit,
+    &__SBD_unit,
+    &__SCR_unit,
+    &__SDG_unit,
+    &__SEK_unit,
+    &__SGD_unit,
+    &__SHP_unit,
+    &__SLL_unit,
+    &__SOS_unit,
+    &__SRD_unit,
+    &__SVC_unit,
+    &__SYP_unit,
+    &__SZL_unit,
+    &__THB_unit,
+    &__TJS_unit,
+    &__TMT_unit,
+    &__TND_unit,
+    &__TOP_unit,
+    &__TRY_unit,
+    &__TTD_unit,
+    &__TWD_unit,
+    &__TZS_unit,
+    &__UAH_unit,
+    &__UGX_unit,
+    &__UYU_unit,
+    &__UZS_unit,
+    &__VEF_unit,
+    &__VND_unit,
+    &__VUV_unit,
+    &__WST_unit,
+    &__XAF_unit,
+    &__XAG_unit,
+    &__XAU_unit,
+    &__XCD_unit,
+    &__XDR_unit,
+    &__XOF_unit,
+    &__XPD_unit,
+    &__XPF_unit,
+    &__XPT_unit,
+    &__YER_unit,
+    &__ZAR_unit,
+    &__ZMW_unit,
+    &__ZWL_unit
+#else
     &__micron_unit
+#endif
   };
   const unsigned unitptr_tab_length=sizeof(unitptr_tab)/sizeof(mksa_unit *);
   const char * const unitname_tab[]={
@@ -8147,7 +8490,179 @@ namespace giac {
     "_u",
     "_yd",
     "_yr",
+#ifdef SWIFT_CALCS_OPTIONS
+    "_µ",
+    "_USD",
+    "_AED",
+    "_AFN",
+    "_ALL",
+    "_AMD",
+    "_ANG",
+    "_AOA",
+    "_ARS",
+    "_AUD",
+    "_AWG",
+    "_AZN",
+    "_BAM",
+    "_BBD",
+    "_BDT",
+    "_BGN",
+    "_BHD",
+    "_BIF",
+    "_BMD",
+    "_BND",
+    "_BOB",
+    "_BRL",
+    "_BSD",
+    "_BTC",
+    "_BTN",
+    "_BWP",
+    "_BYN",
+    "_BZD",
+    "_CAD",
+    "_CDF",
+    "_CHF",
+    "_CLP",
+    "_CNY",
+    "_COP",
+    "_CRC",
+    "_CUC",
+    "_CUP",
+    "_CVE",
+    "_CZK",
+    "_DJF",
+    "_DKK",
+    "_DOP",
+    "_DZD",
+    "_EEK",
+    "_EGP",
+    "_ERN",
+    "_ETB",
+    "_EUR",
+    "_FJD",
+    "_FKP",
+    "_GBP",
+    "_GEL",
+    "_GGP",
+    "_GHS",
+    "_GIP",
+    "_GMD",
+    "_GNF",
+    "_GTQ",
+    "_GYD",
+    "_HKD",
+    "_HNL",
+    "_HRK",
+    "_HTG",
+    "_HUF",
+    "_IDR",
+    "_ILS",
+    "_IMP",
+    "_INR",
+    "_IQD",
+    "_IRR",
+    "_ISK",
+    "_JEP",
+    "_JMD",
+    "_JOD",
+    "_JPY",
+    "_KES",
+    "_KGS",
+    "_KHR",
+    "_KMF",
+    "_KPW",
+    "_KRW",
+    "_KWD",
+    "_KYD",
+    "_KZT",
+    "_LAK",
+    "_LBP",
+    "_LKR",
+    "_LRD",
+    "_LSL",
+    "_LTL",
+    "_LVL",
+    "_LYD",
+    "_MAD",
+    "_MDL",
+    "_MGA",
+    "_MKD",
+    "_MMK",
+    "_MNT",
+    "_MOP",
+    "_MRO",
+    "_MTL",
+    "_MUR",
+    "_MVR",
+    "_MWK",
+    "_MXN",
+    "_MYR",
+    "_MZN",
+    "_NAD",
+    "_NGN",
+    "_NIO",
+    "_NOK",
+    "_NPR",
+    "_NZD",
+    "_OMR",
+    "_PAB",
+    "_PEN",
+    "_PGK",
+    "_PHP",
+    "_PKR",
+    "_PLN",
+    "_PYG",
+    "_QAR",
+    "_RON",
+    "_RSD",
+    "_RUB",
+    "_RWF",
+    "_SAR",
+    "_SBD",
+    "_SCR",
+    "_SDG",
+    "_SEK",
+    "_SGD",
+    "_SHP",
+    "_SLL",
+    "_SOS",
+    "_SRD",
+    "_SVC",
+    "_SYP",
+    "_SZL",
+    "_THB",
+    "_TJS",
+    "_TMT",
+    "_TND",
+    "_TOP",
+    "_TRY",
+    "_TTD",
+    "_TWD",
+    "_TZS",
+    "_UAH",
+    "_UGX",
+    "_UYU",
+    "_UZS",
+    "_VEF",
+    "_VND",
+    "_VUV",
+    "_WST",
+    "_XAF",
+    "_XAG",
+    "_XAU",
+    "_XCD",
+    "_XDR",
+    "_XOF",
+    "_XPD",
+    "_XPF",
+    "_XPT",
+    "_YER",
+    "_ZAR",
+    "_ZMW",
+    "_ZWL"
+#else
     "_µ"
+#endif
   };
 
   const char * const * const unitname_tab_end=unitname_tab+unitptr_tab_length;
@@ -8308,6 +8823,176 @@ namespace giac {
   gen _tepcC_unit(mksa_register("_tepcC",&__tepcC_unit));
   // mean PRG for HFC in kg C unit
   gen _HFCC_unit(mksa_register("_HFCC",&__HFCC_unit));
+#ifdef SWIFT_CALCS_OPTIONS
+    gen _USD_unit(mksa_register("_USD", &__USD_unit));
+    gen _AED_unit(mksa_register("_AED", &__AED_unit));
+    gen _AFN_unit(mksa_register("_AFN", &__AFN_unit));
+    gen _ALL_unit(mksa_register("_ALL", &__ALL_unit));
+    gen _AMD_unit(mksa_register("_AMD", &__AMD_unit));
+    gen _ANG_unit(mksa_register("_ANG", &__ANG_unit));
+    gen _AOA_unit(mksa_register("_AOA", &__AOA_unit));
+    gen _ARS_unit(mksa_register("_ARS", &__ARS_unit));
+    gen _AUD_unit(mksa_register("_AUD", &__AUD_unit));
+    gen _AWG_unit(mksa_register("_AWG", &__AWG_unit));
+    gen _AZN_unit(mksa_register("_AZN", &__AZN_unit));
+    gen _BAM_unit(mksa_register("_BAM", &__BAM_unit));
+    gen _BBD_unit(mksa_register("_BBD", &__BBD_unit));
+    gen _BDT_unit(mksa_register("_BDT", &__BDT_unit));
+    gen _BGN_unit(mksa_register("_BGN", &__BGN_unit));
+    gen _BHD_unit(mksa_register("_BHD", &__BHD_unit));
+    gen _BIF_unit(mksa_register("_BIF", &__BIF_unit));
+    gen _BMD_unit(mksa_register("_BMD", &__BMD_unit));
+    gen _BND_unit(mksa_register("_BND", &__BND_unit));
+    gen _BOB_unit(mksa_register("_BOB", &__BOB_unit));
+    gen _BRL_unit(mksa_register("_BRL", &__BRL_unit));
+    gen _BSD_unit(mksa_register("_BSD", &__BSD_unit));
+    gen _BTC_unit(mksa_register("_BTC", &__BTC_unit));
+    gen _BTN_unit(mksa_register("_BTN", &__BTN_unit));
+    gen _BWP_unit(mksa_register("_BWP", &__BWP_unit));
+    gen _BYN_unit(mksa_register("_BYN", &__BYN_unit));
+    gen _BZD_unit(mksa_register("_BZD", &__BZD_unit));
+    gen _CAD_unit(mksa_register("_CAD", &__CAD_unit));
+    gen _CDF_unit(mksa_register("_CDF", &__CDF_unit));
+    gen _CHF_unit(mksa_register("_CHF", &__CHF_unit));
+    gen _CLP_unit(mksa_register("_CLP", &__CLP_unit));
+    gen _CNY_unit(mksa_register("_CNY", &__CNY_unit));
+    gen _COP_unit(mksa_register("_COP", &__COP_unit));
+    gen _CRC_unit(mksa_register("_CRC", &__CRC_unit));
+    gen _CUC_unit(mksa_register("_CUC", &__CUC_unit));
+    gen _CUP_unit(mksa_register("_CUP", &__CUP_unit));
+    gen _CVE_unit(mksa_register("_CVE", &__CVE_unit));
+    gen _CZK_unit(mksa_register("_CZK", &__CZK_unit));
+    gen _DJF_unit(mksa_register("_DJF", &__DJF_unit));
+    gen _DKK_unit(mksa_register("_DKK", &__DKK_unit));
+    gen _DOP_unit(mksa_register("_DOP", &__DOP_unit));
+    gen _DZD_unit(mksa_register("_DZD", &__DZD_unit));
+    gen _EEK_unit(mksa_register("_EEK", &__EEK_unit));
+    gen _EGP_unit(mksa_register("_EGP", &__EGP_unit));
+    gen _ERN_unit(mksa_register("_ERN", &__ERN_unit));
+    gen _ETB_unit(mksa_register("_ETB", &__ETB_unit));
+    gen _EUR_unit(mksa_register("_EUR", &__EUR_unit));
+    gen _FJD_unit(mksa_register("_FJD", &__FJD_unit));
+    gen _FKP_unit(mksa_register("_FKP", &__FKP_unit));
+    gen _GBP_unit(mksa_register("_GBP", &__GBP_unit));
+    gen _GEL_unit(mksa_register("_GEL", &__GEL_unit));
+    gen _GGP_unit(mksa_register("_GGP", &__GGP_unit));
+    gen _GHS_unit(mksa_register("_GHS", &__GHS_unit));
+    gen _GIP_unit(mksa_register("_GIP", &__GIP_unit));
+    gen _GMD_unit(mksa_register("_GMD", &__GMD_unit));
+    gen _GNF_unit(mksa_register("_GNF", &__GNF_unit));
+    gen _GTQ_unit(mksa_register("_GTQ", &__GTQ_unit));
+    gen _GYD_unit(mksa_register("_GYD", &__GYD_unit));
+    gen _HKD_unit(mksa_register("_HKD", &__HKD_unit));
+    gen _HNL_unit(mksa_register("_HNL", &__HNL_unit));
+    gen _HRK_unit(mksa_register("_HRK", &__HRK_unit));
+    gen _HTG_unit(mksa_register("_HTG", &__HTG_unit));
+    gen _HUF_unit(mksa_register("_HUF", &__HUF_unit));
+    gen _IDR_unit(mksa_register("_IDR", &__IDR_unit));
+    gen _ILS_unit(mksa_register("_ILS", &__ILS_unit));
+    gen _IMP_unit(mksa_register("_IMP", &__IMP_unit));
+    gen _INR_unit(mksa_register("_INR", &__INR_unit));
+    gen _IQD_unit(mksa_register("_IQD", &__IQD_unit));
+    gen _IRR_unit(mksa_register("_IRR", &__IRR_unit));
+    gen _ISK_unit(mksa_register("_ISK", &__ISK_unit));
+    gen _JEP_unit(mksa_register("_JEP", &__JEP_unit));
+    gen _JMD_unit(mksa_register("_JMD", &__JMD_unit));
+    gen _JOD_unit(mksa_register("_JOD", &__JOD_unit));
+    gen _JPY_unit(mksa_register("_JPY", &__JPY_unit));
+    gen _KES_unit(mksa_register("_KES", &__KES_unit));
+    gen _KGS_unit(mksa_register("_KGS", &__KGS_unit));
+    gen _KHR_unit(mksa_register("_KHR", &__KHR_unit));
+    gen _KMF_unit(mksa_register("_KMF", &__KMF_unit));
+    gen _KPW_unit(mksa_register("_KPW", &__KPW_unit));
+    gen _KRW_unit(mksa_register("_KRW", &__KRW_unit));
+    gen _KWD_unit(mksa_register("_KWD", &__KWD_unit));
+    gen _KYD_unit(mksa_register("_KYD", &__KYD_unit));
+    gen _KZT_unit(mksa_register("_KZT", &__KZT_unit));
+    gen _LAK_unit(mksa_register("_LAK", &__LAK_unit));
+    gen _LBP_unit(mksa_register("_LBP", &__LBP_unit));
+    gen _LKR_unit(mksa_register("_LKR", &__LKR_unit));
+    gen _LRD_unit(mksa_register("_LRD", &__LRD_unit));
+    gen _LSL_unit(mksa_register("_LSL", &__LSL_unit));
+    gen _LTL_unit(mksa_register("_LTL", &__LTL_unit));
+    gen _LVL_unit(mksa_register("_LVL", &__LVL_unit));
+    gen _LYD_unit(mksa_register("_LYD", &__LYD_unit));
+    gen _MAD_unit(mksa_register("_MAD", &__MAD_unit));
+    gen _MDL_unit(mksa_register("_MDL", &__MDL_unit));
+    gen _MGA_unit(mksa_register("_MGA", &__MGA_unit));
+    gen _MKD_unit(mksa_register("_MKD", &__MKD_unit));
+    gen _MMK_unit(mksa_register("_MMK", &__MMK_unit));
+    gen _MNT_unit(mksa_register("_MNT", &__MNT_unit));
+    gen _MOP_unit(mksa_register("_MOP", &__MOP_unit));
+    gen _MRO_unit(mksa_register("_MRO", &__MRO_unit));
+    gen _MTL_unit(mksa_register("_MTL", &__MTL_unit));
+    gen _MUR_unit(mksa_register("_MUR", &__MUR_unit));
+    gen _MVR_unit(mksa_register("_MVR", &__MVR_unit));
+    gen _MWK_unit(mksa_register("_MWK", &__MWK_unit));
+    gen _MXN_unit(mksa_register("_MXN", &__MXN_unit));
+    gen _MYR_unit(mksa_register("_MYR", &__MYR_unit));
+    gen _MZN_unit(mksa_register("_MZN", &__MZN_unit));
+    gen _NAD_unit(mksa_register("_NAD", &__NAD_unit));
+    gen _NGN_unit(mksa_register("_NGN", &__NGN_unit));
+    gen _NIO_unit(mksa_register("_NIO", &__NIO_unit));
+    gen _NOK_unit(mksa_register("_NOK", &__NOK_unit));
+    gen _NPR_unit(mksa_register("_NPR", &__NPR_unit));
+    gen _NZD_unit(mksa_register("_NZD", &__NZD_unit));
+    gen _OMR_unit(mksa_register("_OMR", &__OMR_unit));
+    gen _PAB_unit(mksa_register("_PAB", &__PAB_unit));
+    gen _PEN_unit(mksa_register("_PEN", &__PEN_unit));
+    gen _PGK_unit(mksa_register("_PGK", &__PGK_unit));
+    gen _PHP_unit(mksa_register("_PHP", &__PHP_unit));
+    gen _PKR_unit(mksa_register("_PKR", &__PKR_unit));
+    gen _PLN_unit(mksa_register("_PLN", &__PLN_unit));
+    gen _PYG_unit(mksa_register("_PYG", &__PYG_unit));
+    gen _QAR_unit(mksa_register("_QAR", &__QAR_unit));
+    gen _RON_unit(mksa_register("_RON", &__RON_unit));
+    gen _RSD_unit(mksa_register("_RSD", &__RSD_unit));
+    gen _RUB_unit(mksa_register("_RUB", &__RUB_unit));
+    gen _RWF_unit(mksa_register("_RWF", &__RWF_unit));
+    gen _SAR_unit(mksa_register("_SAR", &__SAR_unit));
+    gen _SBD_unit(mksa_register("_SBD", &__SBD_unit));
+    gen _SCR_unit(mksa_register("_SCR", &__SCR_unit));
+    gen _SDG_unit(mksa_register("_SDG", &__SDG_unit));
+    gen _SEK_unit(mksa_register("_SEK", &__SEK_unit));
+    gen _SGD_unit(mksa_register("_SGD", &__SGD_unit));
+    gen _SHP_unit(mksa_register("_SHP", &__SHP_unit));
+    gen _SLL_unit(mksa_register("_SLL", &__SLL_unit));
+    gen _SOS_unit(mksa_register("_SOS", &__SOS_unit));
+    gen _SRD_unit(mksa_register("_SRD", &__SRD_unit));
+    gen _SVC_unit(mksa_register("_SVC", &__SVC_unit));
+    gen _SYP_unit(mksa_register("_SYP", &__SYP_unit));
+    gen _SZL_unit(mksa_register("_SZL", &__SZL_unit));
+    gen _THB_unit(mksa_register("_THB", &__THB_unit));
+    gen _TJS_unit(mksa_register("_TJS", &__TJS_unit));
+    gen _TMT_unit(mksa_register("_TMT", &__TMT_unit));
+    gen _TND_unit(mksa_register("_TND", &__TND_unit));
+    gen _TOP_unit(mksa_register("_TOP", &__TOP_unit));
+    gen _TRY_unit(mksa_register("_TRY", &__TRY_unit));
+    gen _TTD_unit(mksa_register("_TTD", &__TTD_unit));
+    gen _TWD_unit(mksa_register("_TWD", &__TWD_unit));
+    gen _TZS_unit(mksa_register("_TZS", &__TZS_unit));
+    gen _UAH_unit(mksa_register("_UAH", &__UAH_unit));
+    gen _UGX_unit(mksa_register("_UGX", &__UGX_unit));
+    gen _UYU_unit(mksa_register("_UYU", &__UYU_unit));
+    gen _UZS_unit(mksa_register("_UZS", &__UZS_unit));
+    gen _VEF_unit(mksa_register("_VEF", &__VEF_unit));
+    gen _VND_unit(mksa_register("_VND", &__VND_unit));
+    gen _VUV_unit(mksa_register("_VUV", &__VUV_unit));
+    gen _WST_unit(mksa_register("_WST", &__WST_unit));
+    gen _XAF_unit(mksa_register("_XAF", &__XAF_unit));
+    gen _XAG_unit(mksa_register("_XAG", &__XAG_unit));
+    gen _XAU_unit(mksa_register("_XAU", &__XAU_unit));
+    gen _XCD_unit(mksa_register("_XCD", &__XCD_unit));
+    gen _XDR_unit(mksa_register("_XDR", &__XDR_unit));
+    gen _XOF_unit(mksa_register("_XOF", &__XOF_unit));
+    gen _XPD_unit(mksa_register("_XPD", &__XPD_unit));
+    gen _XPF_unit(mksa_register("_XPF", &__XPF_unit));
+    gen _XPT_unit(mksa_register("_XPT", &__XPT_unit));
+    gen _YER_unit(mksa_register("_YER", &__YER_unit));
+    gen _ZAR_unit(mksa_register("_ZAR", &__ZAR_unit));
+    gen _ZMW_unit(mksa_register("_ZMW", &__ZMW_unit));
+    gen _ZWL_unit(mksa_register("_ZWL", &__ZWL_unit));
+#endif
 
 
   // Set 'usual' units
@@ -8328,6 +9013,182 @@ namespace giac {
     usual_units_ptr->push_back(g);
   }
 #endif
+#ifdef SWIFT_CALCS_OPTIONS
+  // CURRENCY EXCHANGE RATES
+  static double _currency_conversion_[] = {
+    1, //"USD": "United States Dollar",
+    1, //"AED": "United Arab Emirates Dirham",
+    1, //"AFN": "Afghan Afghani",
+    1, //"ALL": "Albanian Lek",
+    1, //"AMD": "Armenian Dram",
+    1, //"ANG": "Netherlands Antillean Guilder",
+    1, //"AOA": "Angolan Kwanza",
+    1, //"ARS": "Argentine Peso",
+    1, //"AUD": "Australian Dollar",
+    1, //"AWG": "Aruban Florin",
+    1, //"AZN": "Azerbaijani Manat",
+    1, //"BAM": "Bosnia-Herzegovina Convertible Mark",
+    1, //"BBD": "Barbadian Dollar",
+    1, //"BDT": "Bangladeshi Taka",
+    1, //"BGN": "Bulgarian Lev",
+    1, //"BHD": "Bahraini Dinar",
+    1, //"BIF": "Burundian Franc",
+    1, //"BMD": "Bermudan Dollar",
+    1, //"BND": "Brunei Dollar",
+    1, //"BOB": "Bolivian Boliviano",
+    1, //"BRL": "Brazilian Real",
+    1, //"BSD": "Bahamian Dollar",
+    1, //"BTC": "Bitcoin",
+    1, //"BTN": "Bhutanese Ngultrum",
+    1, //"BWP": "Botswanan Pula",
+    1, //"BYN": "Belarusian Ruble",
+    1, //"BZD": "Belize Dollar",
+    1, //"CAD": "Canadian Dollar",
+    1, //"CDF": "Congolese Franc",
+    1, //"CHF": "Swiss Franc",
+    1, //"CLP": "Chilean Peso",
+    1, //"CNY": "Chinese Yuan",
+    1, //"COP": "Colombian Peso",
+    1, //"CRC": "Costa Rican Colón",
+    1, //"CUC": "Cuban Convertible Peso",
+    1, //"CUP": "Cuban Peso",
+    1, //"CVE": "Cape Verdean Escudo",
+    1, //"CZK": "Czech Republic Koruna",
+    1, //"DJF": "Djiboutian Franc",
+    1, //"DKK": "Danish Krone",
+    1, //"DOP": "Dominican Peso",
+    1, //"DZD": "Algerian Dinar",
+    1, //"EEK": "Estonian Kroon",
+    1, //"EGP": "Egyptian Pound",
+    1, //"ERN": "Eritrean Nakfa",
+    1, //"ETB": "Ethiopian Birr",
+    1, //"EUR": "Euro",
+    1, //"FJD": "Fijian Dollar",
+    1, //"FKP": "Falkland Islands Pound",
+    1, //"GBP": "British Pound Sterling",
+    1, //"GEL": "Georgian Lari",
+    1, //"GGP": "Guernsey Pound",
+    1, //"GHS": "Ghanaian Cedi",
+    1, //"GIP": "Gibraltar Pound",
+    1, //"GMD": "Gambian Dalasi",
+    1, //"GNF": "Guinean Franc",
+    1, //"GTQ": "Guatemalan Quetzal",
+    1, //"GYD": "Guyanaese Dollar",
+    1, //"HKD": "Hong Kong Dollar",
+    1, //"HNL": "Honduran Lempira",
+    1, //"HRK": "Croatian Kuna",
+    1, //"HTG": "Haitian Gourde",
+    1, //"HUF": "Hungarian Forint",
+    1, //"IDR": "Indonesian Rupiah",
+    1, //"ILS": "Israeli New Sheqel",
+    1, //"IMP": "Manx pound",
+    1, //"INR": "Indian Rupee",
+    1, //"IQD": "Iraqi Dinar",
+    1, //"IRR": "Iranian Rial",
+    1, //"ISK": "Icelandic Krona",
+    1, //"JEP": "Jersey Pound",
+    1, //"JMD": "Jamaican Dollar",
+    1, //"JOD": "Jordanian Dinar",
+    1, //"JPY": "Japanese Yen",
+    1, //"KES": "Kenyan Shilling",
+    1, //"KGS": "Kyrgystani Som",
+    1, //"KHR": "Cambodian Riel",
+    1, //"KMF": "Comorian Franc",
+    1, //"KPW": "North Korean Won",
+    1, //"KRW": "South Korean Won",
+    1, //"KWD": "Kuwaiti Dinar",
+    1, //"KYD": "Cayman Islands Dollar",
+    1, //"KZT": "Kazakhstani Tenge",
+    1, //"LAK": "Laotian Kip",
+    1, //"LBP": "Lebanese Pound",
+    1, //"LKR": "Sri Lankan Rupee",
+    1, //"LRD": "Liberian Dollar",
+    1, //"LSL": "Lesotho Loti",
+    1, //"LTL": "Lithuanian Litas",
+    1, //"LVL": "Latvian Lats",
+    1, //"LYD": "Libyan Dinar",
+    1, //"MAD": "Moroccan Dirham",
+    1, //"MDL": "Moldovan Leu",
+    1, //"MGA": "Malagasy Ariary",
+    1, //"MKD": "Macedonian Denar",
+    1, //"MMK": "Myanma Kyat",
+    1, //"MNT": "Mongolian Tugrik",
+    1, //"MOP": "Macanese Pataca",
+    1, //"MRO": "Mauritanian Ouguiya",
+    1, //"MTL": "Maltese Lira",
+    1, //"MUR": "Mauritian Rupee",
+    1, //"MVR": "Maldivian Rufiyaa",
+    1, //"MWK": "Malawian Kwacha",
+    1, //"MXN": "Mexican Peso",
+    1, //"MYR": "Malaysian Ringgit",
+    1, //"MZN": "Mozambican Metical",
+    1, //"NAD": "Namibian Dollar",
+    1, //"NGN": "Nigerian Naira",
+    1, //"NIO": "Nicaraguan Cordoba",
+    1, //"NOK": "Norwegian Krone",
+    1, //"NPR": "Nepalese Rupee",
+    1, //"NZD": "New Zealand Dollar",
+    1, //"OMR": "Omani Rial",
+    1, //"PAB": "Panamanian Balboa",
+    1, //"PEN": "Peruvian Nuevo Sol",
+    1, //"PGK": "Papua New Guinean Kina",
+    1, //"PHP": "Philippine Peso",
+    1, //"PKR": "Pakistani Rupee",
+    1, //"PLN": "Polish Zloty",
+    1, //"PYG": "Paraguayan Guarani",
+    1, //"QAR": "Qatari Rial",
+    1, //"RON": "Romanian Leu",
+    1, //"RSD": "Serbian Dinar",
+    1, //"RUB": "Russian Ruble",
+    1, //"RWF": "Rwandan Franc",
+    1, //"SAR": "Saudi Riyal",
+    1, //"SBD": "Solomon Islands Dollar",
+    1, //"SCR": "Seychellois Rupee",
+    1, //"SDG": "Sudanese Pound",
+    1, //"SEK": "Swedish Krona",
+    1, //"SGD": "Singapore Dollar",
+    1, //"SHP": "Saint Helena Pound",
+    1, //"SLL": "Sierra Leonean Leone",
+    1, //"SOS": "Somali Shilling",
+    1, //"SRD": "Surinamese Dollar",
+    1, //"SVC": "Salvadoran Colón",
+    1, //"SYP": "Syrian Pound",
+    1, //"SZL": "Swazi Lilangeni",
+    1, //"THB": "Thai Baht",
+    1, //"TJS": "Tajikistani Somoni",
+    1, //"TMT": "Turkmenistani Manat",
+    1, //"TND": "Tunisian Dinar",
+    1, //"TOP": "Tongan Paanga",
+    1, //"TRY": "Turkish Lira",
+    1, //"TTD": "Trinidad and Tobago Dollar",
+    1, //"TWD": "New Taiwan Dollar",
+    1, //"TZS": "Tanzanian Shilling",
+    1, //"UAH": "Ukrainian Hryvnia",
+    1, //"UGX": "Ugandan Shilling",
+    1, //"UYU": "Uruguayan Peso",
+    1, //"UZS": "Uzbekistan Som",
+    1, //"VEF": "Venezuelan Bolivar Fuerte",
+    1, //"VND": "Vietnamese Dong",
+    1, //"VUV": "Vanuatu Vatu",
+    1, //"WST": "Samoan Tala",
+    1, //"XAF": "CFA Franc BEAC",
+    1, //"XAG": "Silver Ounce",
+    1, //"XAU": "Gold Ounce",
+    1, //"XCD": "East Caribbean Dollar",
+    1, //"XDR": "Special Drawing Rights",
+    1, //"XOF": "CFA Franc BCEAO",
+    1, //"XPD": "Palladium Ounce",
+    1, //"XPF": "CFP Franc",
+    1, //"XPT": "Platinum Ounce",
+    1, //"YER": "Yemeni Rial",
+    1, //"ZAR": "South African Rand",
+    1, //"ZMW": "Zambian Kwacha",
+    1, //"ZWL": "Zimbabwean Dollar"
+  };
+  void setCurrency(const double d, const int i) {
+    _currency_conversion_[i] = d;
+  }
+#endif
 
   static vecteur mksa_unit2vecteur(const mksa_unit * tmp){ 
     vecteur v;
@@ -8343,10 +9204,13 @@ namespace giac {
         v.push_back(tmp->s);
         v.push_back(tmp->A);
       }
-    }
-    else {
+    } else {
       v.reserve(10);
-      v.push_back(tmp->coeff);
+      if (tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0 && tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0) {
+        // Currency unit: We need to find the correct conversion coefficient to mksa (USD)
+        v.push_back(_currency_conversion_[((int)tmp->coeff)-1]); //Some way to set the conversion rates for all these guys?
+      } else
+        v.push_back(tmp->coeff);
       v.push_back(tmp->m);
       v.push_back(tmp->kg);
       v.push_back(tmp->s);
@@ -8371,8 +9235,6 @@ namespace giac {
       coeff = coeff / std::pow(defaults.s,tmp->s);
     if(tmp->A != 0) 
       coeff = coeff / std::pow(defaults.A,tmp->A);
-    if(tmp->E != 0) 
-      coeff = coeff / std::pow(defaults.E,tmp->E);
     if(tmp->K != 0) 
       coeff = coeff / std::pow(defaults.K,tmp->K);
     if(tmp->mol != 0) 
@@ -8396,6 +9258,10 @@ namespace giac {
     }
     else {
       v.reserve(10);
+      if (tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0 && tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0) {
+        // Currency unit: We need to find the correct conversion coefficient to mksa (USD) 
+        coeff = _currency_conversion_[((int)tmp->coeff)-1] / defaults.E;
+      }
       v.push_back(coeff);
       v.push_back(tmp->m);
       v.push_back(tmp->kg);
@@ -8683,7 +9549,11 @@ namespace giac {
   }
   
   // Set the default return units for various dimensions
+#ifdef SWIFT_CALCS_OPTIONS
+  static unit_system _default_unit_ = {1,1,1,1,1,1,1,1,1, _m_unit, _kg_unit, _s_unit, _A_unit, _K_unit, _mol_unit, _cd_unit, _USD_unit,_rad_unit};
+#else
   static unit_system _default_unit_ = {1,1,1,1,1,1,1,1,1, _m_unit, _kg_unit, _s_unit, _A_unit, _K_unit, _mol_unit, _cd_unit, _E_unit,_rad_unit};
+#endif
   unit_system & default_unit(){
     return _default_unit_;
   }
@@ -8865,12 +9735,20 @@ namespace giac {
         }
       }
       if (s>8) {
+#ifdef SWIFT_CALCS_OPTIONS
+        exponent = unitpow_double(_USD_unit,v[8]);
+#else
         exponent = unitpow_double(_E_unit,v[8]);
+#endif
         if(exponent != 0){
           /*if(ceilf(exponent) == exponent)
             length += sprintf(outstr + length, "*u__E^(%d)", int(exponent));
           else*/
+#ifdef SWIFT_CALCS_OPTIONS
+            length += sprintf(outstr + length, "*u__USD^(%f)", exponent);
+#else
             length += sprintf(outstr + length, "*u__E^(%f)", exponent);
+#endif
         }
       }
       if (s>9) { // The 'MKSA' angle unit is dependant on whatever the current angle mode is
@@ -9001,7 +9879,11 @@ namespace giac {
       if (s>7)
         res = res * unitpow(_cd_unit,v[7]);
       if (s>8)
+#ifdef SWIFT_CALCS_OPTIONS
+        res = res * unitpow(_USD_unit,v[8]);
+#else
         res = res * unitpow(_E_unit,v[8]);
+#endif
       if (s>9) { // MKSA angle is based on current angle mode
         if(angle_radian(contextptr)) res = res * unitpow(_rad_unit,v[9]);
         else if(angle_degree(contextptr)) res = res * unitpow(_deg_unit,v[9]);
@@ -9215,7 +10097,11 @@ namespace giac {
     if (s>7)
       res = res * unitpow(_cd_unit,v[7]);
     if (s>8)
+#ifdef SWIFT_CALCS_OPTIONS
+      res = res * unitpow(_USD_unit,v[8]);
+#else
       res = res * unitpow(_E_unit,v[8]);
+#endif
     if (s>9) { // MKSA andle is based on current angle mode
       if(angle_radian(contextptr)) res = res * unitpow(_rad_unit,v[9]);
       else if(angle_degree(contextptr)) res = res * unitpow(_deg_unit,v[9]);
