@@ -121,7 +121,7 @@ namespace giac {
   gen gentoomanyargs(const std::string & s,GIAC_CONTEXT0);
   gen genmaxordererr(GIAC_CONTEXT0);
   gen genstabilityerr(GIAC_CONTEXT0);
-#ifdef SWIFT_CALCS_OPTIONS
+#ifdef EMCC
   void print_emscripten(const gen & e, const std::string pre_text);
   void print_emscripten(const std::string pre_text);
   void a(const gen & e);

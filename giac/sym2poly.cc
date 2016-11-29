@@ -1156,8 +1156,9 @@ namespace giac {
       int embeddings=0;
       vector<int> embeddings_s;
       // put out constant polynomials
-      if (num.type!=_VECT || pmin_num.type!=_VECT)
+      if (num.type!=_VECT || pmin_num.type!=_VECT) {
 	return totally_converted;
+      }
       vecteur vnum=*num._VECTptr,vpmin=*pmin_num._VECTptr;
       int s=int(l.size());
       for (;embeddings<s;){

@@ -5591,8 +5591,13 @@ namespace giac {
   gen chk_not_unit_together(const gen & a, const gen & b, const bool compare, GIAC_CONTEXT) {
     gen g = mksa_reduce(a/b,contextptr);
     if (g.is_symb_of_sommet(at_unit)) {
+#ifdef SWIFT_CALCS_OPTIONS
       gen au = default_units(a.is_symb_of_sommet(at_unit) ? a._SYMBptr->feuille._VECTptr->back() : a, contextptr);
       gen bu = default_units(b.is_symb_of_sommet(at_unit) ? b._SYMBptr->feuille._VECTptr->back() : b, contextptr);
+#else
+      gen au = mksa_reduce(a.is_symb_of_sommet(at_unit) ? a._SYMBptr->feuille._VECTptr->back() : a, contextptr);
+      gen bu = mksa_reduce(b.is_symb_of_sommet(at_unit) ? b._SYMBptr->feuille._VECTptr->back() : b, contextptr);
+#endif
       std::string out = "Incompatible units: Attempting to ";
       if(compare)
         out += "compare '";
@@ -9192,6 +9197,10 @@ namespace giac {
     } else 
       _currency_conversion_[i] = d;
   }
+#else
+  void setCurrency(const double d, const int i) {
+    
+  }
 #endif
 
   static vecteur mksa_unit2vecteur(const mksa_unit * tmp){ 
@@ -9210,6 +9219,7 @@ namespace giac {
       }
     } else {
       v.reserve(10);
+#ifdef SWIFT_CALCS_OPTIONS
       if (tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0 && tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0) {
         // Currency unit: We need to find the correct conversion coefficient to mksa (USD)
         double conv_coeff = _currency_conversion_[((int)tmp->coeff)-1];
@@ -9217,6 +9227,7 @@ namespace giac {
           *logptr(context0) << gettext("Error: No exhange rate information available for this currency") << endl;
         v.push_back(conv_coeff); //Some way to set the conversion rates for all these guys?
       } else
+#endif
         v.push_back(tmp->coeff);
       v.push_back(tmp->m);
       v.push_back(tmp->kg);
@@ -9265,6 +9276,7 @@ namespace giac {
     }
     else {
       v.reserve(10);
+#ifdef SWIFT_CALCS_OPTIONS
       if (tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0 && tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0) {
         // Currency unit: We need to find the correct conversion coefficient to mksa (USD) 
         double conv_coeff = _currency_conversion_[((int)tmp->coeff)-1];
@@ -9272,6 +9284,7 @@ namespace giac {
           *logptr(context0) << gettext("Error: No exhange rate information available for this currency") << endl;
         coeff = conv_coeff / defaults.E;
       }
+#endif
       v.push_back(coeff);
       v.push_back(tmp->m);
       v.push_back(tmp->kg);

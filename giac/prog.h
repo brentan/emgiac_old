@@ -614,9 +614,8 @@ namespace giac {
     gen E_base;
     gen d_base;
   };
-  #ifdef SWIFT_CALCS_OPTIONS
-    extern "C" void setCurrency(const double d, const int i);
-  #endif
+  extern "C" void setCurrency(const double d, const int i);
+
   unit_system & default_unit();
   extern const mksa_unit * const unitptr_tab[]; // table of units alpha-sorted
   extern const unsigned unitptr_tab_length;

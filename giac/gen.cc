@@ -434,7 +434,7 @@ namespace giac {
   }
 #endif // NO_STDEXCEPT
 
-#ifdef SWIFT_CALCS_OPTIONS
+#ifdef EMCC
   void print_emscripten(const gen & e, const string pre_text) {
     std::string output = "console.log('" + pre_text;
     std::string genout = gen2string(e);
@@ -4481,12 +4481,6 @@ namespace giac {
       return addpoly(*a._POLYptr,b);
     case _INT___POLY: case _ZINT__POLY: case _DOUBLE___POLY: case _FLOAT___POLY: case _CPLX__POLY: case _MOD__POLY: case _USER__POLY: case _REAL__POLY: 
       return addpoly(*b._POLYptr,a);
-#ifdef SWIFT_CALCS_OPTIONS
-    case _VECT__INT_: case _VECT__ZINT: case _VECT__DOUBLE_: case _VECT__FLOAT_: case _VECT__CPLX: case _VECT__MOD: case _VECT__REAL: case _VECT__SYMB: case _VECT__FRAC: 
-      return apply1st(a,b,contextptr,pointplus);
-    case _INT___VECT: case _ZINT__VECT: case _DOUBLE___VECT: case _FLOAT___VECT: case _CPLX__VECT: case _MOD__VECT: case _REAL__VECT: case _SYMB__VECT: case _FRAC__VECT: 
-      return apply2nd(a,b,contextptr,pointplus);
-#endif
     case _MOD__MOD:
 #ifdef SMARTPTR64
       return modadd( (ref_modulo *) (* ((longlong * ) &a) >> 16),(ref_modulo *) (* ((longlong * ) &b) >> 16));
@@ -4537,8 +4531,8 @@ namespace giac {
 	  return sym_add(b,a,contextptr);
 	gen b1;
 	if (has_evalf(b,b1,1,contextptr) && b.type!=b1.type)
-	  return operator_plus(a,b1,contextptr);
-	return operator_plus(evalf_double(a,1,contextptr),b,contextptr);
+          return operator_plus(a,b1,contextptr);
+        return operator_plus(evalf_double(a,1,contextptr),b,contextptr);
       }
       if (b.type==_FLOAT_){
 	if (is_inf(b))
@@ -4547,8 +4541,8 @@ namespace giac {
 	  return sym_add(a,b,contextptr);
 	gen a1;
 	if (has_evalf(a,a1,1,contextptr) && a.type!=a1.type)
-	  return operator_plus(a1,b,contextptr);
-	return operator_plus(a,evalf_double(b,1,contextptr),contextptr);
+          return operator_plus(a1,b,contextptr);
+        return operator_plus(a,evalf_double(b,1,contextptr),contextptr);
       }
       if (a.type==_STRNG)
 	return string2gen(*a._STRNGptr+b.print(contextptr),false);
@@ -4656,7 +4650,11 @@ namespace giac {
 	gen tmp=chk_not_unit_together(a,b,false,contextptr);
 	if (is_undef(tmp))
           return tmp;
-	return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],operator_times(_usimplify_base(symbolic(at_unit, makenewvecteur(plus_one, vb[1]/va[1])),contextptr),vb[0],contextptr),contextptr),va[1])));
+#ifdef SWIFT_CALCS_OPTIONS
+        return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],operator_times(_usimplify_base(symbolic(at_unit, makenewvecteur(plus_one, vb[1]/va[1])),contextptr),vb[0],contextptr),contextptr),va[1])));
+#else
+        return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],operator_times(_usimplify(symbolic(at_unit, makenewvecteur(plus_one, vb[1]/va[1])),contextptr),vb[0],contextptr),contextptr),va[1])));
+#endif
       }
       if (lidnt_no_unit(a).empty() && lidnt(b).empty()){ 
         gen tmp=chk_not_unit_together(a,b,false,contextptr);
@@ -5230,13 +5228,7 @@ namespace giac {
     case _POLY__INT_: case _POLY__ZINT: case _POLY__DOUBLE_: case _POLY__FLOAT_: case _POLY__CPLX: case _POLY__MOD: case _POLY__REAL: case _POLY__USER:
       return subpoly(*a._POLYptr,b);
     case _INT___POLY: case _ZINT__POLY: case _DOUBLE___POLY: case _FLOAT___POLY: case _CPLX__POLY: case _MOD__POLY:
-      return subpoly(a,*b._POLYptr);  
-#ifdef SWIFT_CALCS_OPTIONS
-    case _VECT__INT_: case _VECT__ZINT: case _VECT__DOUBLE_: case _VECT__FLOAT_: case _VECT__CPLX: case _VECT__MOD: case _VECT__REAL: case _VECT__SYMB: case _VECT__FRAC: 
-      return apply1st(a,b,contextptr,pointminus);
-    case _INT___VECT: case _ZINT__VECT: case _DOUBLE___VECT: case _FLOAT___VECT: case _CPLX__VECT: case _MOD__VECT: case _REAL__VECT: case _SYMB__VECT: case _FRAC__VECT: 
-      return apply2nd(a,b,contextptr,pointminus);
-#endif      
+      return subpoly(a,*b._POLYptr);      
     case _MOD__MOD:
 #ifdef SMARTPTR64
       return modsub( (ref_modulo *) (* ((longlong * ) &a) >> 16), (ref_modulo *) (* ((longlong * ) &b) >> 16) );
@@ -5244,7 +5236,7 @@ namespace giac {
       return modsub(a.__MODptr,b.__MODptr);
 #endif
     case _REAL__REAL:
-      return (*a._REALptr)-(*b._REALptr);
+      return (*a._REALptr)-(*b._REALptr); 
     default:
       if (is_undef(a))
 	return a;
@@ -5255,16 +5247,16 @@ namespace giac {
 	if (b.type==_VECT)
 	  return sym_sub(a,b,contextptr);
 	if (has_evalf(b,b1,1,contextptr) && b.type!=b1.type)
-	  return operator_minus(a,b1,contextptr);
-	return operator_minus(evalf_double(a,1,contextptr),b,contextptr);
+          return operator_minus(a,b1,contextptr);
+        return operator_minus(evalf_double(a,1,contextptr),b,contextptr);
       }
       if (b.type==_FLOAT_){
 	if (a.type==_VECT)
 	  return sym_sub(a,b,contextptr);
 	gen a1;
 	if (has_evalf(a,a1,1,contextptr) && a.type!=a1.type)
-	  return operator_minus(a1,b,contextptr);
-	return operator_minus(a,evalf_double(b,1,contextptr),contextptr);     
+          return operator_minus(a1,b,contextptr);
+        return operator_minus(a,evalf_double(b,1,contextptr),contextptr);    
       }
       if (a.type==_USER)
 	return (*a._USERptr)-b;
@@ -8499,7 +8491,11 @@ namespace giac {
       return a._USERptr->is_zero();
     case _SYMB:
       if (a._SYMBptr->sommet==at_unit)
+#ifdef SWIFT_CALCS_OPTIONS
 	return is_zero(mksa_remove_base(a, contextptr));
+#else
+        return is_zero(a._SYMBptr->feuille._VECTptr[0]);
+#endif
       else
         return false;
     default: 
@@ -8523,7 +8519,11 @@ namespace giac {
       return fis_exactly_zero(a._FLOAT_val);
     case _SYMB:
       if(a._SYMBptr->sommet == at_unit) 
+#ifdef SWIFT_CALCS_OPTIONS
         return is_exactly_zero(mksa_remove_base(a, context0));
+#else
+        return is_exactly_zero(a._SYMBptr->feuille._VECTptr[0]);
+#endif
       else
         return false;
     case _POLY:

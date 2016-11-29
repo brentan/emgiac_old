@@ -1275,7 +1275,11 @@ namespace giac {
     }
     string s;
     int l=int(feu._VECTptr->size());
+#ifdef SWIFT_CALCS_OPTIONS
+    if (( mys.sommet==at_plus ) || (mys.sommet == at_pointplus) || (mys.sommet == at_pointminus)) {
+#else
     if ( mys.sommet==at_plus ){
+#endif
       for (int i=0;i<l;++i){
 	gen e((*(feu._VECTptr))[i]);
 	if ((e.type==_SYMB) && (e._SYMBptr->sommet==at_neg)){
@@ -1293,6 +1297,10 @@ namespace giac {
 	    if (i){
 	      if (opstring=="+" && !sadd.empty() && sadd[0]=='-')
 		;
+#ifdef SWIFT_CALCS_OPTIONS
+              else if(opstring == ".+") s += "+";
+              else if(opstring == ".-") s += "-";
+#endif
 	      else
 		s += opstring;
 	    }
