@@ -9562,6 +9562,25 @@ namespace giac {
         res[0]= operator_times(minus_one, res[0], contextptr);
         return res;
       }
+      if(g._SYMBptr->sommet==at_division) {
+        gen & f=g._SYMBptr->feuille;
+        if (f.type!=_VECT)
+          return unit_convert(f, mksa, contextptr);
+        vecteur & v=*f._VECTptr;
+        vecteur num(unit_convert((*f._VECTptr)[0], mksa, contextptr));
+        int s=int(num.size());
+        for (int j=s;j<10;++j)
+          num.push_back(zero);
+        vecteur den(unit_convert((*f._VECTptr)[1], mksa, contextptr));
+        s=int(den.size());
+        for (int j=s;j<10;++j)
+          den.push_back(zero);
+        vecteur res(makevecteur(zero));
+        res[0] = operator_times(num[0], inv(den[0], contextptr), contextptr);
+        for (int j=1;j<10;++j)
+          res.push_back(num[j] - den[j]);
+        return res;
+      }
     #endif
     return makevecteur(g);
   }
