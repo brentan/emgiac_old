@@ -3876,8 +3876,19 @@ namespace giac {
 	    if (i2.type!=_INT_ || i2.val<0 || i2.val>=cols)
 	      return gendimerr(contextptr);
 	    if (a.type==_VECT){
+#ifdef SWIFT_CALCS_OPTIONS
+              if(ckmatrix(a)) {
+                if (fin.val-deb.val+1!=a._VECTptr->size()) return gendimerr(contextptr);    
+                if(a._VECTptr->front()._VECTptr->size() != 1) return gendimerr(contextptr);     
+                for (int i=deb.val;i<=fin.val;++i)
+                  (*(*vptr)[i]._VECTptr)[i2.val]=(*a._VECTptr)[i-deb.val][0];
+              } else {
+#endif
 	      for (int i=deb.val;i<=fin.val;++i)
 		(*(*vptr)[i]._VECTptr)[i2.val]=(*a._VECTptr)[i-deb.val];
+#ifdef SWIFT_CALCS_OPTIONS
+              }
+#endif
 	    }
 	    else {
 	      for (int i=deb.val;i<=fin.val;++i)
