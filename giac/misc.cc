@@ -3062,6 +3062,94 @@ static define_unary_function_eval (__exponential_regression,&_exponential_regres
 static define_unary_function_eval (__logarithmic_regression,&_logarithmic_regression,_logarithmic_regression_s);
   define_unary_function_ptr5( at_logarithmic_regression ,alias_at_logarithmic_regression,&__logarithmic_regression,0,true);
 
+  gen _multi_regression(const gen & args, GIAC_CONTEXT) {
+    // Calculate the multiple linear regression for a data set based on a number of independent parameters and associated weights
+    if ( args.type==_STRNG &&  args.subtype==-1) return args;
+    if (args.type!=_VECT) 
+      return gensizeerr(contextptr);
+    vecteur & v=*args._VECTptr;
+
+    // Consistency check
+    if (int(v.size()) != 3)
+      return gensizeerr(gettext("3 arguments required"));
+    if (v[0].type!=_VECT)
+      return gensizeerr(gettext("Invalid y-data"));
+    if (!ckmatrix(v[1]))
+      return gensizeerr(gettext("Invalid x-data"));
+    if (v[2].type!=_VECT)
+      return gensizeerr(gettext("Invalid weight vector"));
+    if(int(v[0]._VECTptr->size()) != int(v[2]._VECTptr->size()))
+      return gensizeerr(gettext("weight vector and data vector must be of same size"));
+    if(int(v[0]._VECTptr->size()) != v[1]._VECTptr->front()._VECTptr->size())
+      return gensizeerr(gettext("x matrix must have same number of columns as data vector"));
+
+    // Inputs are expected as:
+    // Y = array of j observed data points
+    // X = matrix of independent variables, with each row representing an independent variable
+    // W = j element array representing weights for each data point
+
+    gen X = evalf_double(v[1],1,contextptr);
+    gen Y = evalf_double(v[0],1,contextptr);
+    gen W = evalf_double(v[2],1,contextptr);
+
+    int NDF =int(Y._VECTptr->size()) - int(X._VECTptr->size()); // Degrees of freedom
+
+    // If not enough data, don't attempt regression
+    if (NDF < 0)
+      return gensizeerr(gettext("Not enough data.  Must have more data than independent variables to perform regression."));
+
+    // Solve B=V*C for C
+    gen B = X * _tran(Y, contextptr);
+    gen V = X * _diag(W, contextptr) * _tran(X, contextptr);
+    // V now contains the raw least squares matrix
+
+    return inv(V,contextptr) * B;
+    // C is my coefficients vector
+/*
+    // Calculate statistics
+    double TSS = 0;
+    double RSS = 0;
+    double YBAR = 0;
+    double WSUM = 0;
+    for (int k = 0; k < M; k++)
+    {
+      YBAR = YBAR + W[k] * Y[k];
+      WSUM = WSUM + W[k];
+    }
+    YBAR = YBAR / WSUM;
+    for (int k = 0; k < M; k++)
+    {
+      Ycalc[k] = 0;
+      for (int i = 0; i < N; i++)
+        Ycalc[k] = Ycalc[k] + C[i] * X[i, k];
+      DY[k] = Ycalc[k] - Y[k];
+      TSS = TSS + W[k] * (Y[k] - YBAR) * (Y[k] - YBAR);
+      RSS = RSS + W[k] * DY[k] * DY[k];
+    }
+    double SSQ = RSS / NDF;
+    RYSQ = 1 - RSS / TSS;
+    FReg = 9999999;
+    if (RYSQ < 0.9999999)
+      FReg = RYSQ / (1 - RYSQ) * NDF / (N - 1);
+    SDV = Math.Sqrt(SSQ);
+
+    // Calculate var-covar matrix and std error of coefficients
+    for (int i = 0; i < N; i++)
+    {
+      for (int j = 0; j < N; j++)
+        V[i, j] = V[i, j] * SSQ;
+      SEC[i] = Math.Sqrt(V[i, i]);
+    }
+    return true;
+    */
+  }
+
+  static const char _multi_regression_s []="multi_regression";
+static define_unary_function_eval (__multi_regression,&_multi_regression,_multi_regression_s);
+  define_unary_function_ptr5( at_multi_regression ,alias_at_multi_regression,&__multi_regression,0,true);
+
+
+
   gen _power_regression(const gen & g,GIAC_CONTEXT){
     if ( g.type==_STRNG && g.subtype==-1) return  g;
     gen res= function_regression(evalf(g,1,contextptr),at_ln,at_ln,contextptr);

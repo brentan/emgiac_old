@@ -933,6 +933,7 @@
 {"mult_conjugate",13,9,0,*((ulonglong *) at_mult_conjugate)},
 {"multcrement",13,9,0,*((ulonglong *) at_multcrement)| 1},
 {"multinomial",13,9,0,*((ulonglong *) at_multinomial)},
+{"multi_regression",13,9,0,*((ulonglong *) at_multi_regression)},
 {"multiplier_conjugue",13,9,0,*((ulonglong *) at_multiplier_conjugue)},
 {"multiplier_conjugue_complexe",13,9,0,*((ulonglong *) at_multiplier_conjugue_complexe)},
 {"multiply",13,9,0,*((ulonglong *) at_multiply)},

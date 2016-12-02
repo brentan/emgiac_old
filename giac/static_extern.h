@@ -923,6 +923,7 @@ extern const unary_function_ptr * const  at_mpzclass_allowed;
 extern const unary_function_ptr * const  at_mul;
 extern const unary_function_ptr * const  at_mult_c_conjugate;
 extern const unary_function_ptr * const  at_mult_conjugate;
+extern const unary_function_ptr * const  at_multi_regression;
 extern const unary_function_ptr * const  at_multcrement;
 extern const unary_function_ptr * const  at_multinomial;
 extern const unary_function_ptr * const  at_multiplier_conjugue;

@@ -737,6 +737,16 @@ namespace giac {
     return s0;
   }
 
+  static string escapeUnderscore(const string s0) {
+    std::size_t found_index = s0.find_first_of("_"); 
+    if(found_index == std::string::npos)
+      return s0;
+    else if(s0.substr(found_index+1,std::string::npos).size() < 2)
+      return s0;
+    else
+      return s0.substr(0,found_index) + "_{" + s0.substr(found_index+1,std::string::npos) + "}";
+  }
+
   static string idnt2tex(const string & sorig,bool & mathmode){
     string s0;
     mathmode=greek2tex(sorig,s0,true)!=0;
@@ -779,9 +789,9 @@ namespace giac {
       else if(s.compare(string("_")) == 0)
         return string("");
       else if(giac::function_mode)
-        return opname_begin + s + opname_end;  //mbox_begin+translate_underscore(s)+mbox_end;
+        return opname_begin + escapeUnderscore(s) + opname_end;  //mbox_begin+translate_underscore(s)+mbox_end;
       else 
-        return s;
+        return escapeUnderscore(s);
     #else
       string s=idnt2tex(e,mathmode);
       if (mathmode || s.size()==1)

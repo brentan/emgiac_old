@@ -822,6 +822,7 @@
 *((size_t *) at_mult_c_conjugate),
 *((size_t *) at_mult_conjugate),
 *((size_t *) at_multcrement),
+*((size_t *) at_multi_regression),
 *((size_t *) at_multiplier_conjugue),
 *((size_t *) at_multiplier_conjugue_complexe),
 *((size_t *) at_multiply),

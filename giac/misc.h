@@ -120,6 +120,7 @@ namespace giac {
   gen _linear_regression(const gen & g,GIAC_CONTEXT);
   gen _exponential_regression(const gen & g,GIAC_CONTEXT);
   gen _power_regression(const gen & g,GIAC_CONTEXT);
+  gen _multi_regression(const gen & g,GIAC_CONTEXT);
   gen regression_plot_attributs(const gen & g,vecteur & attributs,bool & eq,bool & r,GIAC_CONTEXT);
   gen _linear_regression_plot(const gen & g,GIAC_CONTEXT);
   gen _exponential_regression_plot(const gen & g,GIAC_CONTEXT);
