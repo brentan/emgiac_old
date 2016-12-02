@@ -3070,15 +3070,15 @@ static define_unary_function_eval (__logarithmic_regression,&_logarithmic_regres
     vecteur & v=*args._VECTptr;
 
     // Consistency check
-    if (int(v.size()) != 3)
-      return gensizeerr(gettext("3 arguments required"));
+    if ((int(v.size()) > 4) || (int(v.size()) < 2))
+      return gensizeerr(gettext("2 to 4 arguments required"));
     if (v[0].type!=_VECT)
       return gensizeerr(gettext("Invalid y-data"));
     if (!ckmatrix(v[1]))
       return gensizeerr(gettext("Invalid x-data"));
-    if (v[2].type!=_VECT)
+    if ((int(v.size()) == 4) && (v[3].type!=_VECT))
       return gensizeerr(gettext("Invalid weight vector"));
-    if(int(v[0]._VECTptr->size()) != int(v[2]._VECTptr->size()))
+    if((int(v.size()) == 4) && (int(v[0]._VECTptr->size()) != int(v[3]._VECTptr->size())))
       return gensizeerr(gettext("weight vector and data vector must be of same size"));
     if(int(v[0]._VECTptr->size()) != v[1]._VECTptr->front()._VECTptr->size())
       return gensizeerr(gettext("x matrix must have same number of columns as data vector"));
@@ -3086,11 +3086,17 @@ static define_unary_function_eval (__logarithmic_regression,&_logarithmic_regres
     // Inputs are expected as:
     // Y = array of j observed data points
     // X = matrix of independent variables, with each row representing an independent variable
+    // boolean (1 or 0) indicating whether to include non-zero intercept
     // W = j element array representing weights for each data point
 
-    gen X = evalf_double(v[1],1,contextptr);
+    gen X;
+    if((int(v.size()) > 2) && is_one(v[2]))
+      X = evalf_double(_prepend(makevecteur(v[1],pointplus(v[1]._VECTptr->front()*zero,plus_one,contextptr)),contextptr),1,contextptr);  // Add non-zero intercept (row of 1s to X matrix)
+    else
+      X = evalf_double(v[1],1,contextptr);
+
     gen Y = evalf_double(v[0],1,contextptr);
-    gen W = evalf_double(v[2],1,contextptr);
+    //gen W = evalf_double(v[3],1,contextptr);
 
     int NDF =int(Y._VECTptr->size()) - int(X._VECTptr->size()); // Degrees of freedom
 
@@ -3100,7 +3106,11 @@ static define_unary_function_eval (__logarithmic_regression,&_logarithmic_regres
 
     // Solve B=V*C for C
     gen B = X * _tran(Y, contextptr);
-    gen V = X * _diag(W, contextptr) * _tran(X, contextptr);
+    gen V;
+    if(int(v.size()) < 4)
+      V = X * _tran(X, contextptr); // No weights
+    else
+      V = X * _diag(evalf_double(v[3],1,contextptr), contextptr) * _tran(X, contextptr);  // With weights
     // V now contains the raw least squares matrix
 
     return inv(V,contextptr) * B;
