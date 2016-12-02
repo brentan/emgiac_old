@@ -1442,7 +1442,13 @@ namespace giac {
   // assume math mode enabled
   string gen2tex(const gen & e,GIAC_CONTEXT){
     switch (e.type){
+#ifdef SWIFT_CALCS_OPTIONS
+    case _REAL:
+      return doub2tex(real2double(e), contextptr);
+    case _INT_: case _ZINT: 
+#else
     case _INT_: case _ZINT: case _REAL:
+#endif
       return e.print(contextptr);
     case _DOUBLE_:
       if (specialtexprint_double(contextptr))
