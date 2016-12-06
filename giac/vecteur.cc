@@ -558,7 +558,7 @@ namespace giac {
       else
 	break;
     }
-    if (xcas_mode(contextptr))
+    if (one_indexed() || xcas_mode(contextptr))
       --c;
     return (i==ss);
   }
@@ -597,7 +597,7 @@ namespace giac {
 	// CERR << "absolute cell "<< a << " " << b <<endl;
 	if (b.type!=_INT_)
 	  continue;
-	if (xcas_mode(contextptr))
+	if (one_indexed() || xcas_mode(contextptr))
 	  r=b.val-1;
 	else
 	  r=b.val;
@@ -655,7 +655,7 @@ namespace giac {
     }
     else 
       i=v.front()._VECTptr->front().val+printcell_current_row(contextptr);
-    if (xcas_mode(contextptr))
+    if (one_indexed() || xcas_mode(contextptr))
       ++i;
     if (i<0)
       return debut+print_INT_(i);
@@ -13392,7 +13392,7 @@ namespace giac {
     int s=p->size;
     vecteur res(s);
     for (int i=0;i<s;++i)
-      res[i]=(int)gsl_permutation_get(p,i)+(xcas_mode(contextptr)?1:0);
+      res[i]=(int)gsl_permutation_get(p,i)+(one_indexed() || xcas_mode(contextptr)?1:0);
     return res;
   }
 #endif // HAVE_LIBGSL
@@ -13538,7 +13538,7 @@ namespace giac {
 	    if (IPIV[i-1]!=i)
 	      swapgen(P[i-1],P[IPIV[i-1]-1]);
 	  }
-	  if (!xcas_mode(contextptr)){
+	  if (!xcas_mode(contextptr) && !one_indexed()){
 	    for (int i=0;i<mn;++i)
 	      P[i] -= 1;
 	  }
@@ -13562,7 +13562,7 @@ namespace giac {
 	  if (IPIV[i-1]!=i)
 	    swapgen(P[i-1],P[IPIV[i-1]-1]);
 	}
-	if (!xcas_mode(contextptr)){
+	if (!xcas_mode(contextptr) && !one_indexed()){
 	  for (int i=0;i<mn;++i)
 	    P[i] -= 1;
 	}
@@ -13608,7 +13608,7 @@ namespace giac {
     // Giac LU decomposition
     if (!mlu(*args._VECTptr,P,L,U,contextptr))
       return gendimerr(contextptr);
-    if (xcas_mode(contextptr) || abs_calc_mode(contextptr)==38){
+    if (one_indexed() || xcas_mode(contextptr) || abs_calc_mode(contextptr)==38){
       int s=int(P.size());
       for (int i=0;i<s;++i){
 	P[i]=P[i]+1;

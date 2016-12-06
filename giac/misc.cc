@@ -418,7 +418,7 @@ namespace giac {
     gen l=v.front(),i=v.back();
     int ii=0;
     if (i.type==_INT_ )
-      ii=i.val-(xcas_mode(contextptr)!=0 || abs_calc_mode(contextptr)==38);
+      ii=i.val-(one_indexed() || xcas_mode(contextptr)!=0 || abs_calc_mode(contextptr)==38);
     if (l.type==_STRNG){
       string res;
       string & s=*l._STRNGptr;
@@ -4224,7 +4224,7 @@ static define_unary_function_eval (__histogram,&_histogram,_histogram_s);
 	  return vecteur(1,gendimerr(contextptr));
       }
       else
-	res.push_back(i+(xcas_mode(contextptr)?1:0)+cst_i*tmp);
+	res.push_back(i+(one_indexed() || xcas_mode(contextptr)?1:0)+cst_i*tmp);
     }
     return res;
   }
@@ -6152,7 +6152,7 @@ static define_unary_function_eval (__os_version,&_os_version,_os_version_s);
     if (!is_stochastic(g,M,contextptr))
       return gensizeerr("Not a stochastic matrix!");
     int shift=0;
-    if (xcas_mode(contextptr) || abs_calc_mode(contextptr)==38)
+    if (one_indexed() || xcas_mode(contextptr) || abs_calc_mode(contextptr)==38)
       shift=1;
     vector<unsigned> start(v1.size());
     for (unsigned i=0;i<v1.size();++i){
@@ -6240,7 +6240,7 @@ static define_unary_function_eval (__os_version,&_os_version,_os_version_s);
       return gensizeerr(contextptr);
     const gen a=v.front();
     const vecteur & w =*v.back()._VECTptr;
-    int s=int(w.size()),shift=xcas_mode(contextptr)>0 || abs_calc_mode(contextptr)==38;
+    int s=int(w.size()),shift=one_indexed() || xcas_mode(contextptr)>0 || abs_calc_mode(contextptr)==38;
     vecteur res;
     for (int i=0;i<s;++i){
       if (a==w[i])

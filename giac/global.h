@@ -530,6 +530,7 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
       bool _mksareduce_mode_;
       bool _mksavariable_mode_;
       bool _remove_angle_mode_;
+      bool _one_indexed_;
     #endif
     bool _atan_tan_no_floor_;
     int _angle_mode_;
@@ -738,6 +739,8 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
     bool & remove_angle_mode(GIAC_CONTEXT);
     void remove_angle_mode(bool b,GIAC_CONTEXT);
   #endif
+  bool one_indexed();
+  void one_indexed(bool b);
 
   bool & show_point(GIAC_CONTEXT);
   void show_point(bool b,GIAC_CONTEXT);

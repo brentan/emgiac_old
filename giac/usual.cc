@@ -3808,9 +3808,9 @@ namespace giac {
 	  gen deb=it->_SYMBptr->feuille._VECTptr->front();
 	  gen fin=it->_SYMBptr->feuille._VECTptr->back();
 #ifdef SWIFT_CALCS_OPTIONS // Adds support for i__s and i__e keywords for use in intervals when accessing matrix/list contents.  i__s..3 is start to index 3.  2..i__e is index 2 until end.  etc
-          if(!is_integral(deb) && (gen2string(it->_SYMBptr->feuille._VECTptr->front()).compare("i__s") == 0)) // Test for special keyword i__s, which indicates 'start'
+          if(!is_integral(deb) && (gen2string(it->_SYMBptr->feuille._VECTptr->front()).substr(0,4).compare("i__s") == 0)) // Test for special keyword i__s, which indicates 'start'
             deb = gen(0);
-          if(!is_integral(fin) && (gen2string(it->_SYMBptr->feuille._VECTptr->back()).compare("i__e") == 0)) // Test for special keyword i__e, which indicates 'end'
+          if(!is_integral(fin) && (gen2string(it->_SYMBptr->feuille._VECTptr->back()).substr(0,4).compare("i__e") == 0)) // Test for special keyword i__e, which indicates 'end'
             fin = gen(int((*vptr).size())-1);
 #endif
 	  if (!is_integral(deb) || !is_integral(fin) || deb.type!=_INT_ || fin.type!=_INT_ || deb.val<0 || fin.val<0 || deb.val>fin.val)
@@ -3837,9 +3837,9 @@ namespace giac {
 	    gen deb2=i2._SYMBptr->feuille._VECTptr->front();
 	    gen fin2=i2._SYMBptr->feuille._VECTptr->back();
 #ifdef SWIFT_CALCS_OPTIONS // Adds support for i__s and i__e keywords for use in intervals when accessing matrix/list contents.  i__s..3 is start to index 3.  2..i__e is index 2 until end.  etc
-            if(!is_integral(deb2) && (gen2string(i2._SYMBptr->feuille._VECTptr->front()).compare("i__s") == 0)) // Test for special keyword i__s, which indicates 'start'
+            if(!is_integral(deb2) && (gen2string(i2._SYMBptr->feuille._VECTptr->front()).substr(0,4).compare("i__s") == 0)) // Test for special keyword i__s, which indicates 'start'
               deb2 = gen(0);
-            if(!is_integral(fin2) && (gen2string(i2._SYMBptr->feuille._VECTptr->back()).compare("i__e") == 0)) // Test for special keyword i__e, which indicates 'end'
+            if(!is_integral(fin2) && (gen2string(i2._SYMBptr->feuille._VECTptr->back()).substr(0,4).compare("i__e") == 0)) // Test for special keyword i__e, which indicates 'end'
               fin2 = gen(int((*(*vptr)[deb.val]._VECTptr).size())-1);
 #endif
 	    if (!is_integral(deb2) || !is_integral(fin2) || deb2.type!=_INT_ || fin2.type!=_INT_ || deb2.val<0 || fin2.val<0 || fin2.val>=cols )
@@ -3910,9 +3910,9 @@ namespace giac {
 	  gen deb2=i2._SYMBptr->feuille._VECTptr->front();
 	  gen fin2=i2._SYMBptr->feuille._VECTptr->back();
 #ifdef SWIFT_CALCS_OPTIONS // Adds support for i__s and i__e keywords for use in intervals when accessing matrix/list contents.  i__s..3 is start to index 3.  2..i__e is index 2 until end.  etc
-            if(!is_integral(deb2) && (gen2string(i2._SYMBptr->feuille._VECTptr->front()).compare("i__s") == 0)) // Test for special keyword i__s, which indicates 'start'
+            if(!is_integral(deb2) && (gen2string(i2._SYMBptr->feuille._VECTptr->front()).substr(0,4).compare("i__s") == 0)) // Test for special keyword i__s, which indicates 'start'
               deb2 = gen(0);
-            if(!is_integral(fin2) && (gen2string(i2._SYMBptr->feuille._VECTptr->back()).compare("i__e") == 0)) // Test for special keyword i__e, which indicates 'end'
+            if(!is_integral(fin2) && (gen2string(i2._SYMBptr->feuille._VECTptr->back()).substr(0,4).compare("i__e") == 0)) // Test for special keyword i__e, which indicates 'end'
               fin2 = gen(int((*(*vptr)[i1]._VECTptr).size())-1);
 #endif
 	  if (!is_integral(deb2) || !is_integral(fin2) || deb2.type!=_INT_ || fin2.type!=_INT_ || deb2.val<0 || fin2.val <deb2.val || fin2.val>=vptr->front()._VECTptr->size())
@@ -5241,7 +5241,7 @@ namespace giac {
     if ( (feuille.type!=_VECT) || (feuille._VECTptr->size()!=2) )
       return string(sommetstr)+('('+gen2string(feuille,format,contextptr)+')');
     vecteur & v=*feuille._VECTptr;
-    if (xcas_mode(contextptr) > 0 || abs_calc_mode(contextptr)==38){
+    if (one_indexed() || xcas_mode(contextptr) > 0 || abs_calc_mode(contextptr)==38){
       gen indice;
       if (v.back().type==_VECT)
 	indice=v.back()+vecteur(v.size(),plus_one);
@@ -5261,7 +5261,7 @@ namespace giac {
     return printasat_(feuille,sommetstr,1,contextptr);
   }
   symbolic symb_at(const gen & a,const gen & b,GIAC_CONTEXT){
-    if (xcas_mode(contextptr) || abs_calc_mode(contextptr)==38){
+    if (one_indexed() || xcas_mode(contextptr) || abs_calc_mode(contextptr)==38){
       gen bb;
       if (b.type==_VECT)
 	bb=b-vecteur(b._VECTptr->size(),plus_one);
@@ -5339,7 +5339,7 @@ namespace giac {
 	if (f.type==_VECT && f._VECTptr->size()==2){
 	  vecteur & w=*f._VECTptr;
 	  gen bb=w.front();
-	  if ((xcas_mode(contextptr) || abs_calc_mode(contextptr)==38)){
+	  if ((one_indexed() || xcas_mode(contextptr) || abs_calc_mode(contextptr)==38)){
 	    if (bb.type==_VECT)
 	      bb=bb-vecteur(bb._VECTptr->size(),plus_one);
 	    else

@@ -2515,7 +2515,7 @@ namespace giac {
     }
     int s=int(v.size());
     if (interval.type==_INT_){
-      int i=interval.val-(xcas_mode(contextptr)!=0);
+      int i=interval.val-(one_indexed() || xcas_mode(contextptr)!=0);
       if (i==-1 && g.type==_SYMB)
 	return g._SYMBptr->sommet;
       if (i<0 || i>=s)
@@ -2529,7 +2529,7 @@ namespace giac {
       int i=w.front().val,j=w.back().val;
       if (i>j)
 	return gen(vecteur(0),_SEQ__VECT);
-      if (xcas_mode(contextptr)){
+      if (one_indexed() || xcas_mode(contextptr)){
 	--i;
 	--j;
       }
@@ -2607,7 +2607,7 @@ namespace giac {
 	  w.front()=rec.front();
 	else {
 	  int i=rec.front().val;
-	  if (i>=0 && xcas_mode(contextptr))
+	  if (i>=0 && (one_indexed() || xcas_mode(contextptr)))
 	    --i;
 	  if (i<0)
 	    i += int(res.size());
@@ -2621,7 +2621,7 @@ namespace giac {
       if (w.front().type!=_INT_)
 	continue;
       int i=w.front().val;
-      if (i>=0 && xcas_mode(contextptr))
+      if (i>=0 && (one_indexed() || xcas_mode(contextptr)))
 	--i;
       /*
       if (i==-1){
@@ -6365,7 +6365,7 @@ namespace giac {
     int i=equalposcomp(*v[1]._VECTptr,v[0]);
     if (s==3){
       gen tmpsto;
-      if (xcas_mode(contextptr))
+      if (one_indexed() || xcas_mode(contextptr))
 	tmpsto=sto(i,v[2],contextptr);
       else
 	tmpsto=sto(i-1,v[2],contextptr);
@@ -6701,7 +6701,7 @@ namespace giac {
     if (!f.is_symb_of_sommet(at_program))
       return gen(vecteur(l,vecteur(c,f)),_MATRIX__VECT);
     vecteur res(l);
-    int decal=(xcas_mode(contextptr)!=0);
+    int decal=(one_indexed() || xcas_mode(contextptr)!=0);
     for (int i=decal;i<l+decal;++i){
       vecteur tmp(c);
       for (int j=decal;j<c+decal;++j)
@@ -9684,6 +9684,21 @@ namespace giac {
     static const char _mksareduce_mode_s []="mksareduce_mode";
     static define_unary_function_eval (__mksareduce_mode,&mksareduce_mode,_mksareduce_mode_s);
     define_unary_function_ptr5( at_mksareduce_mode ,alias_at_mksareduce_mode ,&__mksareduce_mode,0,true);
+
+    // Mode switch: if one indexed or zero indexed
+    gen first_index(const gen & g,GIAC_CONTEXT){
+      if ( g.type==_STRNG &&  g.subtype==-1) return  g;
+      gen args(g);
+      if (g.type==_DOUBLE_)
+        args=int(g._DOUBLE_val);    
+      if (args.type!=_INT_)
+        return one_indexed() ? plus_one : zero;
+      one_indexed((args.val)!=0);
+      return args;
+    }
+    static const char _first_index_s []="first_index";
+    static define_unary_function_eval (__first_index,&first_index,_first_index_s);
+    define_unary_function_ptr5( at_first_index ,alias_at_first_index ,&__first_index,0,true);
 
     // Mode switch: all units will be converted to mksa and have trailing variables added that represent mksa units
     gen mksavariable_mode(const gen & g,GIAC_CONTEXT){

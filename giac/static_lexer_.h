@@ -552,6 +552,9 @@
 *((size_t *) at_filled),
 *((size_t *) at_fin_enregistrement),
 *((size_t *) at_findhelp),
+#ifdef SWIFT_CALCS_OPTIONS
+  *((size_t *) at_first_index),
+#endif
 *((size_t *) at_fisher),
 *((size_t *) at_fisher_cdf),
 *((size_t *) at_fisher_icdf),

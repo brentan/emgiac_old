@@ -636,7 +636,7 @@ namespace giac {
   gen galois_field::operator [] (const gen & g) {
     if (g.type==_INT_){
       int i= g.val;
-      if (xcas_mode(context0)) --i;
+      if (one_indexed() || xcas_mode(context0)) --i;
       switch (i){
       case 0:
 	return p;

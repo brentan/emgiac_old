@@ -306,12 +306,14 @@ namespace giac {
   extern const unary_function_ptr * const  at_angle_radian;
 
   #ifdef SWIFT_CALCS_OPTIONS
-    gen _set_units(const gen & args,GIAC_CONTEXT);
+    gen set_units(const gen & args,GIAC_CONTEXT);
     extern const unary_function_ptr * const  at_set_units;
-    gen _mksareduce_mode(const gen & args,GIAC_CONTEXT);
+    gen mksareduce_mode(const gen & args,GIAC_CONTEXT);
     extern const unary_function_ptr * const  at_mksareduce_mode;
-    gen _mksavariable_mode(const gen & args,GIAC_CONTEXT);
+    gen mksavariable_mode(const gen & args,GIAC_CONTEXT);
     extern const unary_function_ptr * const  at_mksavariable_mode;
+    gen first_index(const gen & args,GIAC_CONTEXT);
+    extern const unary_function_ptr * const  at_first_index;
   #endif
  
   gen _epsilon(const gen & args,GIAC_CONTEXT);

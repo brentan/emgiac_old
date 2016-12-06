@@ -8646,7 +8646,7 @@ namespace giac {
       return symb_at(makesequence(*this,i));
     if (type==_FUNC){
       if (*this==at_ln){
-	i=i+(xcas_mode(contextptr)!=0);
+	i=i+(one_indexed() || xcas_mode(contextptr)!=0);
 	return inv(ln(i,contextptr),contextptr)*(*this);
       }
       if (*this==at_maple_root){
@@ -8662,7 +8662,7 @@ namespace giac {
       return gentypeerr(gettext("Gen [int]"));
     }
     if (unsigned(i)>=_VECTptr->size()){
-      if (xcas_mode(contextptr)!=0 || abs_calc_mode(contextptr)==38)
+      if (one_indexed() || xcas_mode(contextptr)!=0 || abs_calc_mode(contextptr)==38)
 	++i;
       return gendimerr(gettext("Index outside range : ")+ print_INT_(i)+", vector size is "+print_INT_(int(_VECTptr->size()))
 #ifndef GIAC_HAS_STO_38
@@ -8725,16 +8725,15 @@ namespace giac {
       if (i._SYMBptr->sommet==at_interval) {
       	gen i1=_ceil(i._SYMBptr->feuille._VECTptr->front(),contextptr);
      	  gen i2=_floor(i._SYMBptr->feuille._VECTptr->back(),contextptr);
-        
         #ifdef SWIFT_CALCS_OPTIONS // Adds support for i__s and i__e keywords for use in intervals when accessing matrix/list contents.  i__s..3 is start to index 3.  2..i__e is index 2 until end.  etc
           int debut, fin;
           if(is_integral(i1)) 
             debut = i1.val;
-          else if(gen2string(i._SYMBptr->feuille._VECTptr->front()).compare("i__s") == 0) // Test for special keyword i__s, which indicates 'start'
+          else if(gen2string(i._SYMBptr->feuille._VECTptr->front()).substr(0,4).compare("i__s") == 0) // Test for special keyword i__s, which indicates 'start'
             debut = 0;
           if(is_integral(i2))
             fin = i2.val;
-          else if(gen2string(i._SYMBptr->feuille._VECTptr->back()).compare("i__e") == 0) // Test for special keyword i__e, which indicates 'end'
+          else if(gen2string(i._SYMBptr->feuille._VECTptr->back()).substr(0,4).compare("i__e") == 0) // Test for special keyword i__e, which indicates 'end'
             fin = int(_VECTptr->size())-1;
           debut=giacmax(debut,0);
           if (type==_STRNG)
@@ -8786,11 +8785,11 @@ namespace giac {
           #ifdef SWIFT_CALCS_OPTIONS // Adds support for i__s and i__e keywords for use in intervals when accessing matrix/list contents.  i__s..3 is start to index 3.  2..i__e is index 2 until end.  etc
             int debut, fin;
             bool start_int = false, end_int = false;
-            if(it->_SYMBptr->feuille._VECTptr->front().type!=_INT_ && (gen2string(it->_SYMBptr->feuille._VECTptr->front()).compare("i__s") == 0)) {// Test for special keyword i__s, which indicates 'start'
+            if(it->_SYMBptr->feuille._VECTptr->front().type!=_INT_ && (gen2string(it->_SYMBptr->feuille._VECTptr->front()).substr(0,4).compare("i__s") == 0)) {// Test for special keyword i__s, which indicates 'start'
               debut = 0;
               start_int = true;
             }
-            if(it->_SYMBptr->feuille._VECTptr->back().type!=_INT_ && (gen2string(it->_SYMBptr->feuille._VECTptr->back()).compare("i__e") == 0)) {// Test for special keyword i__e, which indicates 'end'
+            if(it->_SYMBptr->feuille._VECTptr->back().type!=_INT_ && (gen2string(it->_SYMBptr->feuille._VECTptr->back()).substr(0,4).compare("i__e") == 0)) {// Test for special keyword i__e, which indicates 'end'
               fin = int(res._VECTptr->size())-1;
               end_int = true;
             }
@@ -11613,7 +11612,7 @@ namespace giac {
     if (lv.size()!=ps)
       return gendimerr(contextptr);
     for (unsigned i=0;i<ps;++i){
-      res.push_back(symb_interval(pv[i]+(xcas_mode(contextptr)!=0),lv[i]+(xcas_mode(contextptr)!=0)));
+      res.push_back(symb_interval(pv[i]+(one_indexed() || xcas_mode(contextptr)!=0),lv[i]+(one_indexed() || xcas_mode(contextptr)!=0)));
       if (lv[i].type!=_INT_ || pv[i].type!=_INT_ || lv[i].val<pv[i].val)
 	return gendimerr(contextptr);
       indexes[i]=(lv[i]-pv[i]).val+1;
@@ -11656,7 +11655,7 @@ namespace giac {
     gen_map::const_iterator it=m.begin(),itend=m.end();
     for (;it!=itend;){
       gen bb=it->first;
-      if (bb.type!=_STRNG && (xcas_mode(contextptr) || abs_calc_mode(contextptr)==38)){
+      if (bb.type!=_STRNG && (one_indexed() || xcas_mode(contextptr) || abs_calc_mode(contextptr)==38)){
 	if (bb.type==_VECT)
 	  bb=bb+vecteur(bb._VECTptr->size(),plus_one);
 	else
