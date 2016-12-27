@@ -1003,6 +1003,28 @@ namespace giac {
     if ( (args.type!=_VECT) || (args._VECTptr->size()!=2) )
       return symb_division(args);
     gen a=args._VECTptr->front(),b=args._VECTptr->back();
+#ifdef SWIFT_CALCS_OPTIONS
+    if(a.type == _IDNT) {
+      if(a == _degF_unit) { //degF unit
+        *logptr(contextptr) << gettext("Temperature Units Warning: Multiplication or division of absolute Fahrenheit units (degF) with other units is non-physical.  Calculation is assuming intent was multiplication or division using relative units (deltaF)") << endl;
+        a = _deltaF_unit;
+      } else if(a == _degF_unit) { //degC unit
+        *logptr(contextptr) << gettext("Temperature Units Warning: Multiplication or division of absolute Celsius units (degC) with other units is non-physical.  Calculation is assuming intent was multiplication or division using relative units (deltaC)") << endl;
+        a = _deltaC_unit;
+      } else if(a == _K_unit) a = _deltaK_unit; // K/deltaK/deltaC
+      else if(a == _Rankine_unit) a = _deltaRankine_unit; //Rankine/deltaRankine/deltaF
+    }
+    if(b.type == _IDNT) {
+      if(b == _degF_unit) { //degF unit
+        *logptr(contextptr) << gettext("Temperature Units Warning: Multiplication or division of absolute Fahrenheit units (degF) with other units is non-physical.  Calculation is assuming intent was multiplication or division using relative units (deltaF)") << endl;
+        b = _deltaF_unit;
+      } else if(b == _degC_unit) { //degC unit
+        *logptr(contextptr) << gettext("Temperature Units Warning: Multiplication or division of absolute Celsius units (degC) with other units is non-physical.  Calculation is assuming intent was multiplication or division using relative units (deltaC)") << endl;
+        b = _deltaC_unit;
+      } else if(b == _K_unit) b = _deltaK_unit; // K/deltaK/deltaC
+      else if(b == _Rankine_unit) b = _deltaRankine_unit; //Rankine/deltaRankine/deltaF
+    }
+#endif
     if (a.is_approx()){
       gen b1;
       if (has_evalf(b,b1,1,contextptr) && b.type!=b1.type){

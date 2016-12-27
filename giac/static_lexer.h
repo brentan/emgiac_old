@@ -483,7 +483,9 @@
 {"decrement",13,9,0,*((ulonglong *) at_decrement)| 1},
 #ifdef SWIFT_CALCS_OPTIONS
   {"default_base",13,9,0,*((ulonglong *) at_default_base)},
-	{"default_units",13,9,0,*((ulonglong *) at_default_units)},
+  {"default_units",13,9,0,*((ulonglong *) at_default_units)},
+  {"default_units_coefficient",13,9,0,*((ulonglong *) at_default_units_coefficient)},
+  {"default_units_offset",13,9,0,*((ulonglong *) at_default_units_offset)},
 #endif
 {"degree",13,9,0,*((ulonglong *) at_degree)},
 {"delcols",13,9,0,*((ulonglong *) at_delcols)},
@@ -612,9 +614,6 @@
 {"fin_enregistrement",13,126,0,*((ulonglong *) at_fin_enregistrement)},
 {"find",13,9,0,*((ulonglong *) at_find)},
 {"findhelp",13,9,0,*((ulonglong *) at_findhelp)| 1},
-#ifdef SWIFT_CALCS_OPTIONS
-  {"first_index",13,9,0,*((ulonglong *) at_first_index)},
-#endif
 {"fisher",13,9,0,*((ulonglong *) at_fisher)},
 {"fisher_cdf",13,9,0,*((ulonglong *) at_fisher_cdf)},
 {"fisher_icdf",13,9,0,*((ulonglong *) at_fisher_icdf)},
@@ -817,6 +816,9 @@
 {"jacobi_symbol",13,9,0,*((ulonglong *) at_jacobi_symbol)},
 {"jordan",13,9,0,*((ulonglong *) at_jordan)},
 {"jusque",13,58,0,*((ulonglong *) at_jusque)| 1},
+#ifdef SWIFT_CALCS_OPTIONS
+  {"kelvin",13,9,0,*((ulonglong *) at_kelvin)},
+#endif
 {"ker",13,9,0,*((ulonglong *) at_ker)},
 {"kernel",13,9,0,*((ulonglong *) at_kernel)},
 {"keyboard",13,9,0,*((ulonglong *) at_keyboard)},
@@ -917,10 +919,9 @@
 #ifdef SWIFT_CALCS_OPTIONS
   {"mksa_base",13,9,0,*((ulonglong *) at_mksa_base)},
   {"mksa_base_first",13,9,0,*((ulonglong *) at_mksa_base_first)},
+  {"mksa_coefficient",13,9,0,*((ulonglong *) at_mksa_coefficient)},
+  {"mksa_offset",13,9,0,*((ulonglong *) at_mksa_offset)},
   {"mksa_remove",13,9,0,*((ulonglong *) at_mksa_remove)},
-	{"mksa_var",13,9,0,*((ulonglong *) at_mksa_var)},
-	{"mksareduce_mode",13,9,0,*((ulonglong *) at_mksareduce_mode)},
-	{"mksavariable_mode",13,9,0,*((ulonglong *) at_mksavariable_mode)},
 #endif
 {"modgcd",13,9,0,*((ulonglong *) at_modgcd)},
 {"modgcd_cachesize",13,9,0,*((ulonglong *) at_modgcd_cachesize)},
@@ -980,6 +981,9 @@
 {"odd",13,9,0,*((ulonglong *) at_odd)},
 {"odeplot",13,9,0,*((ulonglong *) at_odeplot)},
 {"odesolve",13,9,0,*((ulonglong *) at_odesolve)},
+#ifdef SWIFT_CALCS_OPTIONS
+  {"one_index",13,9,0,*((ulonglong *) at_one_index)},
+#endif
 {"op",13,9,0,*((ulonglong *) at_op)},
 {"open",13,9,0,*((ulonglong *) at_open)},
 {"open_polygon",13,9,0,*((ulonglong *) at_open_polygon)},

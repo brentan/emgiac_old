@@ -564,7 +564,7 @@ namespace giac {
       return __ZINTptr->ref_count;
 #endif
     }
-    gen(): type(_INT_),subtype(0),val(0) {
+    gen(): type(_INT_),subtype(0),val(0),reserved(0) {
 #ifdef COMPILE_FOR_STABILITY
       control_c();
 #endif

@@ -1082,16 +1082,7 @@ namespace giac {
       	sym_tab::const_iterator it=cur->tabptr->find(id_name);
       	if (it!=cur->tabptr->end()){
       	  if (!it->second.in_eval(level,evaled,contextptr->globalcontextptr)) {
-            #ifdef SWIFT_CALCS_OPTIONS
-            if(contextptr && mksareduce_mode(contextptr)) 
-              evaled = mksa_remove_base(it->second, contextptr);
-            else if(contextptr && mksavariable_mode(contextptr)) 
-              evaled = mksa_to_var(it->second, contextptr);
-            else 
-              evaled=it->second;
-           #else
-             evaled=it->second;
-           #endif
+            evaled=it->second;
           }
       	  return true;
       	}
@@ -1109,17 +1100,15 @@ namespace giac {
       	//if (sto_38 && abs_calc_mode(contextptr)==38)
       	//  return eval_38(level,orig,evaled,id_name,contextptr);
         #ifdef SWIFT_CALCS_OPTIONS
+          // What is the first index?
+          if(strcmp(id_name,"first_index") == 0) {
+            evaled = one_indexed() ? plus_one : zero;
+            return true;
+          }
           // CODE ADDED TO CALL OUTSIDE FUNCTION 'eval_function' AND TEST FOR PRESENCE OF THIS VARIABLE...IF SO, RETURN VALUE!
           if(strstr(id_name, "SWIFTCALCSMETHOD") != NULL) {
             std::string asm_code;
             std::string method_call = id_name;
-            // Catch angle mode lookups here, and drop u__rad, u__deg, and u__grad
-            if(remove_angle_mode(contextptr) && mksavariable_mode(contextptr)) {
-              if((strcmp(id_name, "u__rad") == 0) || (strcmp(id_name, "u__deg") == 0) || (strcmp(id_name, "u__grad") == 0)) {
-                evaled = plus_one;
-                return true;
-              }
-            }
             asm_code += "eval_function( ";
             size_t pos = 0;
             while((pos = method_call.find("'", pos)) != std::string::npos) {
@@ -1135,7 +1124,7 @@ namespace giac {
               if(out.compare(0,5,"ERROR") == 0)
                 evaled = gensizeerr(out.substr(7,string::npos));
               else
-                evaled = gen(out, contextptr);
+                evaled = expand(gen(out, contextptr),contextptr);
               return true;
             }
           }
@@ -1144,16 +1133,7 @@ namespace giac {
       }
       else {
       	if (!it->second.in_eval(level,evaled,contextptr->globalcontextptr)) {
-          #ifdef SWIFT_CALCS_OPTIONS
-          if(contextptr && mksareduce_mode(contextptr)) 
-            evaled = mksa_remove_base(it->second, contextptr);
-          else if(contextptr && mksavariable_mode(contextptr)) 
-            evaled = mksa_to_var(it->second, contextptr);
-          else 
-      	    evaled=it->second;
-         #else
-           evaled=it->second;
-         #endif
+          evaled=it->second;
         }
       	return true;
       }

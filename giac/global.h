@@ -527,10 +527,8 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
     bool _try_parse_i_;
     bool _specialtexprint_double_;
     #ifdef SWIFT_CALCS_OPTIONS
-      bool _mksareduce_mode_;
-      bool _mksavariable_mode_;
-      bool _remove_angle_mode_;
       bool _one_indexed_;
+      bool _remove_angle_mode_;
     #endif
     bool _atan_tan_no_floor_;
     int _angle_mode_;
@@ -732,15 +730,12 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
   bool angle_degree(GIAC_CONTEXT);
 
   #ifdef SWIFT_CALCS_OPTIONS
-    bool & mksareduce_mode(GIAC_CONTEXT);
-    void mksareduce_mode(bool b,GIAC_CONTEXT);
-    bool & mksavariable_mode(GIAC_CONTEXT);
-    void mksavariable_mode(bool b,GIAC_CONTEXT);
-    bool & remove_angle_mode(GIAC_CONTEXT);
-    void remove_angle_mode(bool b,GIAC_CONTEXT);
+    bool one_indexed();
+    void one_indexed(bool b);
+
+    bool remove_angle_mode();
+    void remove_angle_mode(bool b);
   #endif
-  bool one_indexed();
-  void one_indexed(bool b);
 
   bool & show_point(GIAC_CONTEXT);
   void show_point(bool b,GIAC_CONTEXT);

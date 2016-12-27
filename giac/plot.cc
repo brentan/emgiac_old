@@ -998,9 +998,6 @@ namespace giac {
       if (v.size()==1)
 	v.push_back(vx_var);
     }
-#ifdef SWIFT_CALCS_OPTIONS
-    //if(!do_quote_eval) return v;
-#endif
     // find quoted variables from v[1]
     vecteur quoted;
     if ( v[1].type==_SYMB && (v[1]._SYMBptr->sommet==at_equal || v[1]._SYMBptr->sommet==at_equal2 ||v[1]._SYMBptr->sommet==at_same ))
@@ -1236,6 +1233,9 @@ namespace giac {
     }
 #ifndef GNUWINCE
     if (vars.type==_IDNT) { // function plot
+#ifdef SWIFT_CALCS_OPTIONS
+    remove_angle_mode(true);
+#endif
       gen locvar(vars);
       locvar.subtype=0;
       gen y=quotesubst(f,vars,locvar,contextptr),yy;
@@ -1359,6 +1359,9 @@ namespace giac {
       //      if (child_id)
       //	plot_instructions.push_back(res);
 #endif // WIN32
+#ifdef SWIFT_CALCS_OPTIONS
+    remove_angle_mode(false);
+#endif
       if (res.size()==1)
 	return res.front();
       // gen e(res,_SEQ__VECT);
@@ -1782,7 +1785,7 @@ namespace giac {
     int nstep=gnuplot_pixels_per_eval,jstep=0;
     gen attribut=default_color(contextptr);
 #ifdef SWIFT_CALCS_OPTIONS
-    vecteur vargs(plotpreprocess_eval(args,false,contextptr));
+    vecteur vargs(_usimplify_mksa_remove(plotpreprocess_eval(args,false,contextptr),contextptr));
 #else
     vecteur vargs(plotpreprocess(args,contextptr));
 #endif
@@ -7592,6 +7595,9 @@ namespace giac {
     if (function_tstep<=0 || (function_tmax-function_tmin)/function_tstep>max_nstep)
       return gensizeerr(gettext("Plotparam: unable to discretize: tmin, tmax, tstep=")+print_DOUBLE_(function_tmin,12)+","+print_DOUBLE_(function_tmax,12)+","+print_DOUBLE_(function_tstep,12)+gettext("\nTry a larger value for tstep"));
     gen fC(f);
+#ifdef SWIFT_CALCS_OPTIONS
+    remove_angle_mode(true);
+#endif
     if (f.type==_VECT && f._VECTptr->size()==2)
       fC=f._VECTptr->front()+cst_i*f._VECTptr->back();
     gen attribut=attributs.empty()?default_color(contextptr):attributs[0];
@@ -7704,6 +7710,9 @@ namespace giac {
     if (child_id) plot_instructions.push_back(res);
 #endif // WIN32
     // approx_mode(save_approx_mode,contextptr);
+#ifdef SWIFT_CALCS_OPTIONS
+    remove_angle_mode(false);
+#endif
     if (res.size()==1)
       return res.front();
     // gen e(res,_SEQ__VECT);
@@ -7715,7 +7724,11 @@ namespace giac {
     bool f_autoscale=autoscale;
     if (args.type!=_VECT)
       return paramplotparam(gen(makevecteur(args,t__IDNT_e),_SEQ__VECT),densityplot,contextptr);
+#ifdef SWIFT_CALCS_OPTIONS
+    vecteur vargs(_usimplify_mksa_remove(plotpreprocess_eval(args,false,contextptr),contextptr));
+#else
     vecteur vargs(plotpreprocess(args,contextptr));
+#endif
     if (is_undef(vargs))
       return vargs;
     if (vargs.size()<2)
@@ -8010,7 +8023,11 @@ namespace giac {
   gen _plotpolar(const gen & args,const context * contextptr){
     if ( args.type==_STRNG && args.subtype==-1) return  args;
     // args= [rho(theta),theta] should add a theta interval
+#ifdef SWIFT_CALCS_OPTIONS
+    vecteur vargs(_usimplify_mksa_remove(plotpreprocess_eval(args,false,contextptr),contextptr));
+#else
     vecteur vargs(plotpreprocess(args,contextptr));
+#endif
     if (is_undef(vargs))
       return vargs;
     gen rho=vargs.front();

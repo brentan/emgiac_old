@@ -781,6 +781,12 @@ namespace giac {
         string s = e;
         //if(s.compare(string("_")) == 0)
         s.erase(0,1);
+        if ((s.size()== 6) && (s=="deltaF" || s=="deltaC" || s=="deltaK"))
+          return "\\"+s;
+        if ((s.size()== 4) && (s=="degF" || s=="degC"))
+          return "\\"+s;
+        if ((s.size()== 12) && (s=="deltaRankine"))
+          return "\\"+s;
         return s;
       }
       string s = idnt2tex(e,mathmode);

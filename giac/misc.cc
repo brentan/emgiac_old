@@ -2942,6 +2942,9 @@ static define_unary_function_eval (__correlation,&_correlation,_correlation_s);
     if (!ckmatrix(gv))
       return gensizeerr(contextptr);
     vecteur & v = *gv._VECTptr;
+#ifdef SWIFT_CALCS_OPTIONS
+    v = _usimplify_mksa_remove(v,contextptr);
+#endif
     gen n;
     gen sigmax,sigmay,sigmaxy,sigmax2,sigmay2,tmpx,tmpy;
     if (freqcol<-1){
@@ -3037,9 +3040,27 @@ static define_unary_function_eval (__correlation,&_correlation,_correlation_s);
     return gen(makevecteur(a,b),_SEQ__VECT);
   }
 
-  gen _linear_regression(const gen & g,GIAC_CONTEXT){
+  gen _linear_regression_direct(const gen & g,GIAC_CONTEXT){
     if ( g.type==_STRNG && g.subtype==-1) return  g;
     return function_regression(g,zero,zero,contextptr);
+  }
+  gen _linear_regression(const gen & g,GIAC_CONTEXT){
+    if ( g.type==_STRNG && g.subtype==-1) return  g;
+#ifdef SWIFT_CALCS_OPTIONS
+      remove_angle_mode(true);
+      gen res = function_regression(g,zero,zero,contextptr);
+      remove_angle_mode(false);
+      if (res.type==_VECT && res._VECTptr->size()==2){
+        vecteur v(*res._VECTptr);
+        if(is_one(mksa_base_first(g._VECTptr->front(),contextptr)))
+          res = (v[1] + v[0] * gen("x",contextptr)) * mksa_base_first(g._VECTptr->back(),contextptr);
+        else
+          res = (v[1] + v[0] * gen("mksa(x)",contextptr) / mksa_base_first(g._VECTptr->front(),contextptr)) * mksa_base_first(g._VECTptr->back(),contextptr);
+        return symb_program(gen("x",contextptr),zero,res,contextptr);
+      } else return res;
+#else
+    return function_regression(g,zero,zero,contextptr);
+#endif
   }
   static const char _linear_regression_s []="linear_regression";
 static define_unary_function_eval (__linear_regression,&_linear_regression,_linear_regression_s);
@@ -3048,7 +3069,21 @@ static define_unary_function_eval (__linear_regression,&_linear_regression,_line
 
   gen _exponential_regression(const gen & g,GIAC_CONTEXT){
     if ( g.type==_STRNG && g.subtype==-1) return  g;
+#ifdef SWIFT_CALCS_OPTIONS
+      remove_angle_mode(true);
+      gen res = exp(function_regression(g,zero,at_ln,contextptr),contextptr);
+      remove_angle_mode(false);
+      if (res.type==_VECT && res._VECTptr->size()==2){
+        vecteur v(*res._VECTptr);
+        if(is_one(mksa_base_first(g._VECTptr->front(),contextptr)))
+          res = v[1] * mksa_base_first(g._VECTptr->back(),contextptr) * pow(v[0],gen("x",contextptr) ,contextptr);
+        else
+          res = v[1] * mksa_base_first(g._VECTptr->back(),contextptr) * pow(v[0],gen("mksa(x)",contextptr) / mksa_base_first(g._VECTptr->front(),contextptr),contextptr);
+        return symb_program(gen("x",contextptr),zero,res,contextptr);
+      } else return res;
+#else
     return exp(function_regression(g,zero,at_ln,contextptr),contextptr);
+#endif
   }
   static const char _exponential_regression_s []="exponential_regression";
 static define_unary_function_eval (__exponential_regression,&_exponential_regression,_exponential_regression_s);
@@ -3056,7 +3091,21 @@ static define_unary_function_eval (__exponential_regression,&_exponential_regres
 
   gen _logarithmic_regression(const gen & g,GIAC_CONTEXT){
     if ( g.type==_STRNG && g.subtype==-1) return  g;
+#ifdef SWIFT_CALCS_OPTIONS
+      remove_angle_mode(true);
+      gen res = function_regression(g,at_ln,zero,contextptr);
+      remove_angle_mode(false);
+      if (res.type==_VECT && res._VECTptr->size()==2){
+        vecteur v(*res._VECTptr);
+        if(is_one(mksa_base_first(g._VECTptr->front(),contextptr)))
+          res = v[0] * mksa_base_first(g._VECTptr->back(),contextptr) * (ln(gen("x",contextptr),contextptr) + v[1]/v[0]);
+        else
+          res = v[0] * mksa_base_first(g._VECTptr->back(),contextptr) * (ln(gen("mksa(x)",contextptr) / mksa_base_first(g._VECTptr->front(),contextptr),contextptr) + v[1]/v[0]);
+        return symb_program(gen("x",contextptr),zero,res,contextptr);
+      } else return res;
+#else
     return function_regression(g,at_ln,zero,contextptr);
+#endif
   }
   static const char _logarithmic_regression_s []="logarithmic_regression";
 static define_unary_function_eval (__logarithmic_regression,&_logarithmic_regression,_logarithmic_regression_s);
@@ -3068,6 +3117,16 @@ static define_unary_function_eval (__logarithmic_regression,&_logarithmic_regres
     if (args.type!=_VECT) 
       return gensizeerr(contextptr);
     vecteur & v=*args._VECTptr;
+#ifdef SWIFT_CALCS_OPTIONS
+    vecteur x_units;
+    vecteur & xv = *(v[1])._VECTptr;
+    const_iterateur it=xv.begin(),itend=xv.end();
+    x_units.reserve(itend-it);
+    for (;it!=itend;++it) 
+      x_units.push_back(mksa_base_first(*it,contextptr));
+    gen y_units = mksa_base_first(v[0],contextptr);
+    v = _usimplify_mksa_remove(v,contextptr);
+#endif
 
     // Consistency check
     if ((int(v.size()) > 4) || (int(v.size()) < 2))
@@ -3103,7 +3162,9 @@ static define_unary_function_eval (__logarithmic_regression,&_logarithmic_regres
     // If not enough data, don't attempt regression
     if (NDF < 0)
       return gensizeerr(gettext("Not enough data.  Must have more data than independent variables to perform regression."));
-
+#ifdef SWIFT_CALCS_OPTIONS
+    remove_angle_mode(true);
+#endif
     // Solve B=V*C for C
     gen B = X * _tran(Y, contextptr);
     gen V;
@@ -3113,7 +3174,48 @@ static define_unary_function_eval (__logarithmic_regression,&_logarithmic_regres
       V = X * _diag(evalf_double(v[3],1,contextptr), contextptr) * _tran(X, contextptr);  // With weights
     // V now contains the raw least squares matrix
 
+#ifdef SWIFT_CALCS_OPTIONS
+    V = inv(V,contextptr) * B;
+    remove_angle_mode(false);
+    // V is now the result.  It is a column vector with each row representing the regression term for data set 'r', where r is the row number.
+    // If we include non-zero constant term, that is the first row.
+    if(V.type != _VECT) return V;
+    if(is_undef(V)) return V;
+
+    // Build the results function
+    gen res;
+    vecteur & resv = *V._VECTptr;
+    int index = 0;
+    if((int(v.size()) > 2) && is_one(v[2])) { // Include non-zero constant term
+      res = resv[0]._VECTptr->front();
+      index = 1;
+    } else
+      res = zero;
+
+    int count = 1;
+    it=x_units.begin();
+    itend=x_units.end();
+    vecteur param;
+    param.reserve(itend - it);
+    for (;it!=itend;++it) {
+      char outstr[16];
+      sprintf(outstr, "x_%d", count);
+      param.push_back(gen(outstr,contextptr));
+      if(is_one(*it)) 
+        res = res + resv[index]._VECTptr->front() * gen(outstr, contextptr);
+      else {
+        char outstr2[16];
+        sprintf(outstr2, "mksa(x_%d)", count);
+        res = res + resv[index]._VECTptr->front() * gen(outstr2, contextptr) / *it;
+      }
+      index++;
+      count++;
+    }
+    return symb_program(gen(param,_SEQ__VECT),param * zero,res * y_units,contextptr); // Multiply by Y units
+#else
     return inv(V,contextptr) * B;
+#endif
+
     // C is my coefficients vector
 /*
     // Calculate statistics
@@ -3162,11 +3264,26 @@ static define_unary_function_eval (__multi_regression,&_multi_regression,_multi_
 
   gen _power_regression(const gen & g,GIAC_CONTEXT){
     if ( g.type==_STRNG && g.subtype==-1) return  g;
+#ifdef SWIFT_CALCS_OPTIONS
+    remove_angle_mode(true);
+#endif
     gen res= function_regression(evalf(g,1,contextptr),at_ln,at_ln,contextptr);
+#ifdef SWIFT_CALCS_OPTIONS
+    remove_angle_mode(false);
+#endif
     if (res.type==_VECT && res._VECTptr->size()==2){
       vecteur v(*res._VECTptr);
       v[1]=exp(v[1],contextptr);
+#ifdef SWIFT_CALCS_OPTIONS
+      gen res;
+      if(is_one(mksa_base_first(g._VECTptr->front(),contextptr)))
+        res= v[1] * mksa_base_first(g._VECTptr->back(),contextptr) * pow(gen("x",contextptr),v[0],contextptr);
+      else
+        res= v[1] * mksa_base_first(g._VECTptr->back(),contextptr) * pow(gen("mksa(x)",contextptr) / mksa_base_first(g._VECTptr->front(),contextptr),v[0],contextptr);
+      return symb_program(gen("x",contextptr),zero,res,contextptr);
+#else
       return gen(v,_SEQ__VECT);
+#endif
     }
     return res;
   }
@@ -3324,6 +3441,9 @@ static define_unary_function_eval (__power_regression_plot,&_power_regression_pl
   static gen polynomial_regression(const gen & g,int d,const gen & u1, const gen & u2,double & xmin, double & xmax,GIAC_CONTEXT){
     xmin=1e300,xmax=-xmin;
     vecteur v(genpoint2vecteur(g,contextptr));
+#ifdef SWIFT_CALCS_OPTIONS
+    v = _usimplify_mksa_remove(v,contextptr);
+#endif
     if (!ckmatrix(v) || v.empty() || v.front()._VECTptr->size()<2)
       return undef;
     // use first and second column
@@ -3384,7 +3504,42 @@ static define_unary_function_eval (__power_regression_plot,&_power_regression_pl
   gen _polynomial_regression(const gen & g,GIAC_CONTEXT){
     if ( g.type==_STRNG && g.subtype==-1) return  g;
     double xmin,xmax;
+#ifdef SWIFT_CALCS_OPTIONS
+      remove_angle_mode(true);
+      gen res = polynomial_regression(g,xmin,xmax,contextptr);
+      remove_angle_mode(false);
+      if(is_undef(res)) return res;
+      if(res.type != _VECT) return res;
+      vecteur v(*res._VECTptr);
+      vecteur vg(*g._VECTptr);
+      const_iterateur it=res._VECTptr->begin(),itend=res._VECTptr->end();
+      gen out = zero;
+      int power = int(res._VECTptr->size())-1;
+      if(is_one(mksa_base_first(vg[0],contextptr))) {
+        for (;it!=itend;++it){
+          if(power > 1)
+            out = out + *it * pow(gen("x",contextptr),power,contextptr);
+          else if(power == 1)
+            out = out + *it * gen("x",contextptr);
+          else
+            out = out + *it;
+          power--;
+        }
+      } else {
+        for (;it!=itend;++it){
+          if(power > 1)
+            out = out + *it * pow(gen("mksa(x)",contextptr) / mksa_base_first(vg[0],contextptr),power,contextptr);
+          else if(power == 1)
+            out = out + *it * gen("mksa(x)",contextptr) / mksa_base_first(vg[0],contextptr);
+          else
+            out = out + *it;
+          power--;
+        }
+      }
+      return symb_program(gen("x",contextptr),zero,out * mksa_base_first(vg[1],contextptr),contextptr);
+#else
     return polynomial_regression(g,xmin,xmax,contextptr);
+#endif
   }
   static const char _polynomial_regression_s []="polynomial_regression";
 static define_unary_function_eval (__polynomial_regression,&_polynomial_regression,_polynomial_regression_s);
@@ -3415,6 +3570,9 @@ static define_unary_function_eval (__polynomial_regression_plot,&_polynomial_reg
     if (g.type!=_VECT)
       return gensizeerr(contextptr);
     vecteur & v = *g._VECTptr;
+#ifdef SWIFT_CALCS_OPTIONS
+    v=_usimplify_mksa_remove(v,contextptr);
+#endif
     int s=int(v.size());
     if (s<2 || s>3)
       return gendimerr(contextptr);
@@ -3428,7 +3586,7 @@ static define_unary_function_eval (__polynomial_regression_plot,&_polynomial_reg
       if (n<20)
 	return gendimerr(gettext("Guessing initial production requires more than 20 samples"));
       gen args=gen(makevecteur(makevecteur(0,1,2,3,4),ln(vecteur(w.begin(),w.begin()+5),contextptr)),_SEQ__VECT);
-      gen res=_linear_regression(args,contextptr);
+      gen res=_linear_regression_direct(args,contextptr);
       if (res.type!=_VECT || res._VECTptr->size()!=2)
 	return gentypeerr(contextptr);
       gen tmp=_correlation(evalf_double(args,1,contextptr),contextptr);
@@ -3467,7 +3625,7 @@ static define_unary_function_eval (__polynomial_regression_plot,&_polynomial_reg
     }
     // linear regression of quot vs cum
     gen args=gen(makevecteur(cum,quot),_SEQ__VECT);
-    gen res=_linear_regression(args,contextptr);
+    gen res=_linear_regression_direct(args,contextptr);
     r=_correlation(args,contextptr);
     if (r.type==_STRNG && r.subtype==-1) return  r;
     if (res.type!=_VECT || res._VECTptr->size()!=2)
@@ -3483,18 +3641,37 @@ static define_unary_function_eval (__polynomial_regression_plot,&_polynomial_reg
       t[i]=tinit+i*tscale;
     }
     args=gen(makevecteur(t,lnurr),_SEQ__VECT);
-    res=_linear_regression(args,contextptr);
+    res=_linear_regression_direct(args,contextptr);
     if (res.type!=_VECT || res._VECTptr->size()!=2)
       return gendimerr(contextptr);
     gen b2=res._VECTptr->front(),bt0=res._VECTptr->back();
+#ifdef SWIFT_CALCS_OPTIONS
+    return makevecteur(urr, b2, bt0);
+#else
     return makevecteur(urr/(1+exp(b2*vx_var+bt0,contextptr)),urr*b/2/(1+cosh(b2*vx_var+bt0,contextptr)),urr,urr*b/4,-bt0/b2,r);
+#endif
   }
 
   gen _logistic_regression(const gen & g,GIAC_CONTEXT){
     if ( g.type==_STRNG && g.subtype==-1) return  g;
     double xmin,xmax;
     gen r;
+#ifdef SWIFT_CALCS_OPTIONS
+    vecteur & v = *g._VECTptr;
+    gen y_unit = mksa_reduce_base(v[2],contextptr);
+    gen x_unit = mksa_reduce_base(v[1],contextptr);
+    remove_angle_mode(true);
+    gen res = logistic_regression(g,xmin,xmax,r,contextptr);
+    remove_angle_mode(false);
+    if(is_undef(res)) return res;
+    vecteur & resv = *res._VECTptr;
+    if(is_one(x_unit))
+      return symb_program(gen("x",contextptr),zero,y_unit * resv[0] / (1 + exp(resv[1] * gen("x",contextptr) + resv[2],contextptr)),contextptr);
+    else
+      return symb_program(gen("x",contextptr),zero,y_unit * resv[0] / (1 + exp(resv[1] * gen("mksa(x)",contextptr)/x_unit + resv[2],contextptr)),contextptr);
+#else
     return logistic_regression(g,xmin,xmax,r,contextptr);
+#endif
   }
   static const char _logistic_regression_s []="logistic_regression";
 static define_unary_function_eval (__logistic_regression,&_logistic_regression,_logistic_regression_s);

@@ -437,6 +437,8 @@
 #ifdef SWIFT_CALCS_OPTIONS
   *((size_t *) at_default_base),
   *((size_t *) at_default_units),
+  *((size_t *) at_default_units_coefficient),
+  *((size_t *) at_default_units_offset),
 #endif
 *((size_t *) at_degree),
 *((size_t *) at_delcols),
@@ -552,9 +554,6 @@
 *((size_t *) at_filled),
 *((size_t *) at_fin_enregistrement),
 *((size_t *) at_findhelp),
-#ifdef SWIFT_CALCS_OPTIONS
-  *((size_t *) at_first_index),
-#endif
 *((size_t *) at_fisher),
 *((size_t *) at_fisher_cdf),
 *((size_t *) at_fisher_icdf),
@@ -719,6 +718,9 @@
 *((size_t *) at_jacobi_symbol),
 *((size_t *) at_jordan),
 *((size_t *) at_jusque),
+#ifdef SWIFT_CALCS_OPTIONS
+  *((size_t *) at_kelvin),
+#endif
 *((size_t *) at_ker),
 *((size_t *) at_kernel),
 *((size_t *) at_keyboard),
@@ -807,10 +809,9 @@
 #ifdef SWIFT_CALCS_OPTIONS
   *((size_t *) at_mksa_base),
   *((size_t *) at_mksa_base_first),
-	*((size_t *) at_mksa_remove),
-	*((size_t *) at_mksa_var),
-	*((size_t *) at_mksareduce_mode),
-	*((size_t *) at_mksavariable_mode),
+  *((size_t *) at_mksa_coefficient),
+  *((size_t *) at_mksa_offset),
+  *((size_t *) at_mksa_remove),
 #endif
 *((size_t *) at_modgcd),
 *((size_t *) at_modgcd_cachesize),
@@ -864,6 +865,9 @@
 *((size_t *) at_odd),
 *((size_t *) at_odeplot),
 *((size_t *) at_odesolve),
+#ifdef SWIFT_CALCS_OPTIONS
+  *((size_t *) at_one_index),
+#endif
 *((size_t *) at_op),
 *((size_t *) at_open),
 *((size_t *) at_open_polygon),

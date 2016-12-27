@@ -5608,6 +5608,315 @@ namespace giac {
     }
     return g;
   }
+  bool chk_temperature_units(const gen & a_in, GIAC_CONTEXT) {
+    return chk_temperature_units(a_in, false, contextptr);
+  }
+  bool chk_temperature_units(const gen & a_in, const bool include_delta, GIAC_CONTEXT) {
+    if((a_in.type == _SYMB) && a_in.is_symb_of_sommet(at_unit)) return chk_temperature_units(a_in._SYMBptr->feuille._VECTptr->back(),contextptr);
+    if (a_in.type != _IDNT) return false;
+    gen a = expand(a_in,contextptr);
+    if(a == _degF_unit) return true;
+    if(a == _degC_unit) return true;
+    if(a == _K_unit) return true;
+    if(a == _Rankine_unit) return true;
+    if(include_delta) {
+      if(a == _deltaF_unit) return true;
+      if(a == _deltaC_unit) return true;
+      if(a == _deltaK_unit) return true;
+      if(a == _deltaRankine_unit) return true;
+    }
+    return false;
+  }
+  bool chk_temperature_units(const gen & a, const gen & b, GIAC_CONTEXT) {
+    return chk_temperature_units(a, contextptr) || chk_temperature_units(b, contextptr);
+  }
+  int determine_unit_type(const gen & unit_in) {
+    if((unit_in.type == _SYMB) && unit_in.is_symb_of_sommet(at_unit)) return determine_unit_type(unit_in._SYMBptr->feuille._VECTptr->back());
+    if (unit_in.type != _IDNT) return 0;
+    gen unit = expand(unit_in,context0);
+     //0: nothing.  1: some unit.  2: multiplicative temperature unit.  4: degC.  5: degF. 
+    if(unit == _degF_unit) return 5;
+    if(unit == _degC_unit) return 4;
+    if(unit == _K_unit) return 2;
+    if(unit == _deltaK_unit) return 2;
+    if(unit == _Rankine_unit) return 2;
+    if(unit == _deltaRankine_unit) return 2;
+    if(unit == _deltaC_unit) return 2;
+    if(unit == _deltaF_unit) return 2;
+    return 1;
+  }
+  gen adjust_temp(const gen & v_in,GIAC_CONTEXT) {
+#ifdef SWIFT_CALCS_OPTIONS
+    if (v_in.type != _IDNT) return v_in;
+    gen v = expand(v_in,contextptr);
+    if(v == _degF_unit) {
+      *logptr(contextptr) << gettext("Temperature Units Warning: Exponentials, multiplication, and division involving absolute Fahrenheit units (degF) is non-physical.  Calculation is assuming intent was to use relative units (deltaF)") << endl;
+      return _deltaF_unit;
+    } else if(v == _degC_unit) {
+      *logptr(contextptr) << gettext("Temperature Units Warning: Exponential, multiplication, and division involving absolute Celsius units (degC) is non-physical.  Calculation is assuming intent was to use relative units (deltaC)") << endl;
+      return _deltaC_unit;
+    } else if(v == _K_unit) 
+      return _deltaK_unit;
+    else if(v == _Rankine_unit)
+      return _deltaRankine_unit;
+    else
+      return v;
+#else
+    return v_in;
+#endif
+  }
+  gen sym_mult_temp(const gen & a, const gen & b, GIAC_CONTEXT) {
+#ifdef SWIFT_CALCS_OPTIONS
+    // A or B is a degF or degC unit.  These are non-multiplicative and have an offset, so we have to do some work here...
+    if(!b.is_symb_of_sommet(at_unit) || !a.is_symb_of_sommet(at_unit)) return a*b;
+    vecteur & va = *a._SYMBptr->feuille._VECTptr;
+    vecteur & vb = *b._SYMBptr->feuille._VECTptr;
+    va[1] = expand(va[1],contextptr);
+    vb[1] = expand(vb[1],contextptr);
+    // Determine types
+    int a_type = determine_unit_type(va[1]);
+    int b_type = determine_unit_type(vb[1]);
+    gen unit;
+    bool show_notice = true;
+    // Case 1: degF * degF
+    if((a_type == 5) && (b_type == 5)) {
+      unit  = _deltaF_unit * _deltaF_unit;
+    } else if((a_type == 4) && (b_type == 4)) { // Case 2: degC * degC
+      unit  = _deltaC_unit * _deltaC_unit;
+    } else if((a_type == 5) && (b_type == 4)) { // Case 3: degF * degC
+      unit  = _deltaF_unit * _deltaC_unit;
+    } else if((a_type == 4) && (b_type == 5)) { // Case 4: degC * degF
+      unit  = _deltaC_unit * _deltaF_unit;
+    } else if((a_type == 5) && (b_type < 2)) {  // Case 5: degF * other w/o temp
+      unit  = _deltaF_unit * vb[1];
+    } else if((a_type == 4) && (b_type < 2)) {  // Case 6: degC * other w/o temp
+      unit  = _deltaC_unit * vb[1];
+    } else if((a_type < 2) && (b_type == 5)) {  // Case 7: other w/o temp * degF
+      unit  = _deltaF_unit * va[1];
+    } else if((a_type < 2) && (b_type == 4)) {  // Case 8: other w/o temp * degC
+      unit  = _deltaC_unit * va[1];
+    } else if((a_type == 2) && (b_type == 5)) { // Case 9: temp * degF
+      if(va[1] == _K_unit) unit = _deltaK_unit * _deltaF_unit;
+      else if(va[1] == _Rankine_unit) unit = _deltaRankine_unit * _deltaF_unit;
+      else unit = va[1] * _deltaF_unit;
+    } else if((a_type == 2) && (b_type == 4)) { // Case 10: temp * degC
+      if(va[1] == _K_unit) unit = _deltaK_unit * _deltaC_unit;
+      else if(va[1] == _Rankine_unit) unit = _deltaRankine_unit * _deltaC_unit;
+      else unit = va[1] * _deltaC_unit;
+    } else if((a_type == 5) && (b_type == 2)) { // Case 11: degF * temp
+      if(vb[1] == _K_unit) unit = _deltaK_unit * _deltaF_unit;
+      else if(vb[1] == _Rankine_unit) unit = _deltaRankine_unit * _deltaF_unit;
+      else unit = vb[1] * _deltaF_unit;
+    } else if((a_type == 4) && (b_type == 2)) { // Case 12: degC * temp
+      if(vb[1] == _K_unit) unit = _deltaK_unit * _deltaC_unit;
+      else if(vb[1] == _Rankine_unit) unit = _deltaRankine_unit * _deltaC_unit;
+      else unit = vb[1] * _deltaC_unit;
+    } else if((a_type == 2) || (b_type == 2)) { // Case 13: temp * temp, temp * other, other * temp
+      show_notice = false;
+      if((va[1] == _K_unit) && (vb[1] == _K_unit)) unit = _deltaK_unit * _deltaK_unit;
+      else if((va[1] == _Rankine_unit) && (vb[1] == _K_unit)) unit = _deltaRankine_unit * _deltaK_unit;
+      else if((va[1] == _Rankine_unit) && (vb[1] == _Rankine_unit)) unit = _deltaRankine_unit * _deltaRankine_unit;
+      else if((va[1] == _K_unit) && (vb[1] == _Rankine_unit)) unit = _deltaRankine_unit * _deltaK_unit;
+      else if(va[1] == _Rankine_unit) unit = _deltaRankine_unit * vb[1];
+      else if(vb[1] == _Rankine_unit) unit = _deltaRankine_unit * va[1];
+      else if(va[1] == _K_unit) unit = _deltaK_unit * vb[1];
+      else if(vb[1] == _K_unit) unit = _deltaK_unit * va[1];
+      else unit = va[1] * vb[1]; // Shoulnd't happen...
+    } else { // ELSE: other w/o temp * other w/o temp
+      show_notice = false;
+      unit = va[1] * vb[1];
+    }
+    if(show_notice)
+      *logptr(contextptr) << gettext("Temperature Units Warning: Multiplication or division of absolute Celsius/Fahrenheit units (degC or degF) with other units is non-physical.  Calculation is assuming intent was multiplication or division using relative units (deltaC, deltaF)") << endl;
+    unit=expand(unit,contextptr);
+    if (is_one(unit))
+      return va[0]*vb[0];
+    return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_times(va[0],vb[0],contextptr),unit)));
+#else
+    return a*b;
+#endif
+  }
+  gen sym_add_temp(const gen & a, const gen & b, GIAC_CONTEXT) {
+#ifdef SWIFT_CALCS_OPTIONS
+    // A or B is a degF or degC unit.  These are non-multiplicative and have an offset, so we have to do some work here...
+    if(!b.is_symb_of_sommet(at_unit) || !a.is_symb_of_sommet(at_unit)) return a+b;
+    bool subtraction = false;
+    vecteur va;
+    vecteur vb;
+    if(b.reserved == 1) { // if reserved is '1', it means this was 'negated' by operator-, so its not an addition but a subtraction
+      subtraction = true;
+      va=*a._SYMBptr->feuille._VECTptr;
+      vb=*b._SYMBptr->feuille._VECTptr;
+    } else if(a.reserved == 1) { // sometimes giac will reverse things: a-b -> -b+a.  Switch back.
+      subtraction = true;
+      va=*b._SYMBptr->feuille._VECTptr;
+      vb=*a._SYMBptr->feuille._VECTptr;
+    } else { // This is an addition, not a subtraction
+      va=*a._SYMBptr->feuille._VECTptr;
+      vb=*b._SYMBptr->feuille._VECTptr;
+    }
+    va[1] = expand(va[1],contextptr);
+    vb[1] = expand(vb[1],contextptr);
+    // Determine types
+    int a_type = determine_unit_type(va[1]);
+    int b_type = determine_unit_type(vb[1]);
+
+    if((a_type == 5) && (b_type > 1)) {  // Case 1: degF +/- temp
+      if(subtraction) { 
+        if(vb[1] == _degC_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],-(-vb[0]*gen(9./5) + 32),contextptr),_deltaF_unit))); // F - C -> deltaF
+        else if(vb[1] == _degF_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_deltaF_unit))); // F - F -> deltaF
+        else if(vb[1] == _K_unit) {
+          *logptr(contextptr) << gettext("Temperature Units Warning: Difference of degF and K (absolute - absolute => relative).  Ensure you didnt mean degF - deltaK (absolute - relative => absolute)") << endl;
+          return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0] + 459.67,vb[0]*gen(9./5),contextptr),_deltaF_unit))); // F - K -> deltaF 
+        } else if(vb[1] == _Rankine_unit) {
+          *logptr(contextptr) << gettext("Temperature Units Warning: Difference of degF and Rankine (absolute - absolute => relative).  Ensure you didnt mean degF - deltaF (absolute - relative => absolute)") << endl;
+          return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0] + 459.67,vb[0],contextptr),_deltaF_unit))); // F - Rankine -> deltaF
+        } else if((vb[1] == _deltaRankine_unit) || (vb[1] == _deltaF_unit)) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_degF_unit))); // F - deltaF/deltaRankine -> F
+        else return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(9./5),contextptr),_degF_unit))); // F - deltaC/deltaK -> F
+      } else {
+        if(vb[1] == _degC_unit) {
+          *logptr(contextptr) << gettext("Temperature Units Warning: Sum of degF with degC is ambiguous.  Calculation is assuming intent is sum of degF and deltaC (absolute + relative)") << endl;
+          return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(9./5),contextptr),_degF_unit))); // F + C is ambiguous...assume F + deltaC -> F
+        } else if(vb[1] == _degF_unit) {
+          *logptr(contextptr) << gettext("Temperature Units Warning: Sum of degF with degF is ambiguous.  Calculation is assuming intent is sum of degF and deltaF (absolute + relative)") << endl;
+          return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_degF_unit))); // F + F is ambiguous...assume F + deltaF -> F
+        } else if(vb[1] == _K_unit) {
+          *logptr(contextptr) << gettext("Temperature Units Warning: Sum of degF with absolute K is ambiguous.  Calculation is assuming intent is sum of degF and deltaK (absolute + relative)") << endl;
+          return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(9./5),contextptr),_degF_unit))); // F + K is ambiguous...assume F + deltaK -> F
+        } else if(vb[1] == _Rankine_unit) {
+          *logptr(contextptr) << gettext("Temperature Units Warning: Sum of degF with absolute Rankine is ambiguous.  Calculation is assuming intent is sum of degF and deltaRankine (absolute + relative)") << endl;
+          return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_degF_unit))); // F + Rankine is ambiguous...assume F + deltaRankine -> F
+        } else if((vb[1] == _deltaRankine_unit) || (vb[1] == _deltaF_unit)) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_degF_unit))); // F + deltaF/deltaRankine -> F
+        else return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(9./5),contextptr),_degF_unit))); // F + deltaC/deltaK -> F
+      }
+    } else if((a_type == 4) && (b_type > 1)) {  // Case 2: degC +/- temp
+      if(subtraction) { 
+        if(vb[1] == _degC_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_deltaC_unit))); // C - C -> deltaC
+        else if(vb[1] == _degF_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],-(-vb[0]-32)*gen(5./9),contextptr),_deltaC_unit))); // C - F -> deltaC
+        else if(vb[1] == _K_unit) {
+          *logptr(contextptr) << gettext("Temperature Units Warning: Difference of degC and K (absolute - absolute => relative).  Ensure you didnt mean degC - deltaC (absolute - relative => absolute)") << endl;
+          return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0] + 273.15,vb[0],contextptr),_deltaC_unit))); // C - K -> deltaC 
+        } else if(vb[1] == _Rankine_unit) {
+          *logptr(contextptr) << gettext("Temperature Units Warning: Difference of degC and Rankine (absolute - absolute => relative).  Ensure you didnt mean degC - deltaRankine (absolute - relative => absolute)") << endl;
+          return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0] + 273.15,vb[0]*gen(5./9),contextptr),_deltaC_unit))); // C - Rankine -> deltaC MESSAGE
+        } else if((vb[1] == _deltaRankine_unit) || (vb[1] == _deltaF_unit)) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(5./9),contextptr),_degC_unit))); // C - deltaF/deltaRankine -> C
+        else return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_degC_unit))); // C - deltaC/deltaK -> C
+      } else {
+        if(vb[1] == _degC_unit) {
+          *logptr(contextptr) << gettext("Temperature Units Warning: Sum of degC with degC is ambiguous.  Calculation is assuming intent is sum of degC and deltaC (absolute + relative)") << endl;
+          return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_degC_unit))); // C + C is ambiguous...assume C + deltaC -> C
+        } else if(vb[1] == _degF_unit) {
+          *logptr(contextptr) << gettext("Temperature Units Warning: Sum of degC with degF is ambiguous.  Calculation is assuming intent is sum of degC and deltaF (absolute + relative)") << endl;
+          return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(5./9),contextptr),_degC_unit))); // C + F is ambiguous...assume C + deltaF -> C
+        } else if(vb[1] == _K_unit) {
+          *logptr(contextptr) << gettext("Temperature Units Warning: Sum of degC with absolute K is ambiguous.  Calculation is assuming intent is sum of degC and deltaK (absolute + relative)") << endl;
+          return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_degC_unit))); // C + K is ambiguous...assume C + deltaK -> C
+        } else if(vb[1] == _Rankine_unit) {
+          *logptr(contextptr) << gettext("Temperature Units Warning: Sum of degC with absolute Rankine is ambiguous.  Calculation is assuming intent is sum of degC and deltaRankine (absolute + relative)") << endl;
+          return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(5./9),contextptr),_degC_unit))); // C + Rankine is ambiguous...assume C + deltaRankine -> C
+        } else if((vb[1] == _deltaRankine_unit) || (vb[1] == _deltaF_unit)) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(5./9),contextptr),_degC_unit))); // C + deltaF/deltaRankine -> C
+        else return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_degC_unit))); // C + deltaC/deltaK -> C
+      }
+    } else if((a_type == 2) && (b_type == 5)) {  // Case 3: other temp +/- degF
+      if(subtraction) { 
+        if(va[1] == _K_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],-((-vb[0]-32)*gen(5./9)+273.15),contextptr),_deltaK_unit))); // K - F -> deltaK 
+        else if(va[1] == _Rankine_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],-(-vb[0] + 459.67),contextptr),_deltaRankine_unit))); // Rankine - F -> deltaRankine
+        else if((va[1] == _deltaRankine_unit) || (va[1] == _deltaF_unit)) {
+          *logptr(contextptr) << gettext("Temperature Units Warning: Difference of deltaRankine, deltaF with degF (relative - absolute) is unclear.  Calculation is assuming intent was difference of deltaRankine, deltaF with deltaF (relative - relative)") << endl;
+          return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_deltaF_unit))); // deltaRankine/deltaF - F doesn't make sense, assume deltaRankine/deltaF - deltaF -> deltaF
+        } else {
+          *logptr(contextptr) << gettext("Temperature Units Warning: Difference of deltaK, deltaC with degF (relative - absolute) is unclear.  Calculation is assuming intent was difference of deltaK, deltaC with deltaF (relative - relative)") << endl;
+          return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0]*gen(9./5),vb[0],contextptr),_deltaF_unit))); // deltaK/deltaC - F doesn't make sense, assume deltaK/deltaC - deltaF -> deltaF
+        }
+      } else {
+        if(va[1] == _K_unit) {
+          *logptr(contextptr) << gettext("Temperature Units Warning: Sum of absolute K with degF is ambiguous.  Calculation is assuming intent is sum of K and deltaF (absolute + relative)") << endl;
+          return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(5./9),contextptr),_K_unit))); // K + F is ambiguous...assume K + deltaF -> K
+        } else if(va[1] == _Rankine_unit) {
+          *logptr(contextptr) << gettext("Temperature Units Warning: Sum of absolute Rankine with degF is ambiguous.  Calculation is assuming intent is sum of Rankine and deltaF (absolute + relative)") << endl;
+          return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_Rankine_unit))); // Rankine + F is ambiguous...assume Rankine + deltaF -> Rankine
+        } else if((va[1] == _deltaRankine_unit) || (va[1] == _deltaF_unit)) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_degF_unit))); // deltaF/deltaRankine + F -> F
+        else return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0]*gen(9./5),vb[0],contextptr),_degF_unit))); // deltaC/deltaK + F -> F
+      }
+    } else if((a_type == 2) && (b_type == 4)) {  // Case 3: other temp +/- degC
+      if(subtraction) { 
+        if(va[1] == _K_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],-(-vb[0]+273.15),contextptr),_deltaK_unit))); // K - C -> deltaK 
+        else if(va[1] == _Rankine_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],-(-vb[0]*gen(9./5) + 32 + 459.67),contextptr),_deltaRankine_unit))); // Rankine - C -> deltaRankine
+        else if((va[1] == _deltaRankine_unit) || (va[1] == _deltaF_unit)) {
+          *logptr(contextptr) << gettext("Temperature Units Warning: Difference of deltaRankine, deltaF with degC (relative - absolute) is unclear.  Calculation is assuming intent was difference of deltaRankine, deltaF with deltaC (relative - relative)") << endl;
+          return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0]*gen(5./9),vb[0],contextptr),_deltaC_unit))); // deltaRankine/deltaF - C doesn't make sense, assume deltaRankine/deltaF - deltaC -> deltaC
+        } else {
+          *logptr(contextptr) << gettext("Temperature Units Warning: Difference of deltaK, deltaC with degC (relative - absolute) is unclear.  Calculation is assuming intent was difference of deltaK, deltaC with deltaC (relative - relative)") << endl;
+          return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_deltaC_unit))); // deltaK/deltaC - C doesn't make sense, assume deltaK/deltaC - deltaC -> deltaC
+        }
+      } else {
+        if(va[1] == _K_unit) {
+          *logptr(contextptr) << gettext("Temperature Units Warning: Sum of absolute K with degF is ambiguous.  Calculation is assuming intent is sum of K and deltaF (absolute + relative)") << endl;
+          return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_K_unit))); // K + C is ambiguous...assume K + deltaC -> K
+        } else if(va[1] == _Rankine_unit) {
+          *logptr(contextptr) << gettext("Temperature Units Warning: Sum of absolute Rankine with degF is ambiguous.  Calculation is assuming intent is sum of Rankine and deltaF (absolute + relative)") << endl;
+          return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(9./5),contextptr),_Rankine_unit))); // Rankine + C is ambiguous...assume Rankine + deltaC -> Rankine
+        } else if((va[1] == _deltaRankine_unit) || (va[1] == _deltaF_unit)) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0]*gen(5./9),vb[0],contextptr),_degC_unit))); // deltaF/deltaRankine + C -> C
+        else return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_degC_unit))); // deltaC/deltaK + C -> C
+      }
+    } else if((a_type == 2) && (b_type == 2)) {
+      if(va[1] == _K_unit) { // Case 4: K +/- other temp
+        if(subtraction) { 
+          if(vb[1] == _K_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_deltaK_unit))); // K - K -> deltaK
+          else if(vb[1] == _Rankine_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(5./9),contextptr),_deltaK_unit))); // K - Rankine -> deltaK
+          else if((vb[1] == _deltaRankine_unit) || (vb[1] == _deltaF_unit)) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(5./9),contextptr),_K_unit))); // K - deltaF/deltaRankine -> K
+          else return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_K_unit))); // K - deltaC/deltaK -> K
+        } else {
+          if(vb[1] == _K_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_K_unit))); // K + K -> K
+          else if(vb[1] == _Rankine_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(5./9),contextptr),_K_unit))); // K + Rankine -> K
+          else if((vb[1] == _deltaRankine_unit) || (vb[1] == _deltaF_unit)) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(5./9),contextptr),_K_unit))); // K + deltaF/deltaRankine -> K
+          else return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_K_unit))); // K + deltaC/deltaK -> K
+        }
+      } else if(va[1] == _Rankine_unit) { // Case 5: Rankine +/- other temp
+        if(subtraction) { 
+          if(vb[1] == _K_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(9./5),contextptr),_deltaRankine_unit))); // Rankine - K -> deltaRankine
+          else if(vb[1] == _Rankine_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_deltaRankine_unit))); // Rankine - Rankine -> deltaRankine
+          else if((vb[1] == _deltaRankine_unit) || (vb[1] == _deltaF_unit)) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_Rankine_unit))); // Rankine - deltaF/deltaRankine -> Rankine
+          else return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(9./5),contextptr),_Rankine_unit))); // Rankine - deltaC/deltaK -> Rankine
+        } else {
+          if(vb[1] == _K_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(9./5),contextptr),_Rankine_unit))); // Rankine + K -> Rankine
+          else if(vb[1] == _Rankine_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_Rankine_unit))); // Rankine + Rankine -> Rankine
+          else if((vb[1] == _deltaRankine_unit) || (vb[1] == _deltaF_unit)) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_Rankine_unit))); // Rankine + deltaF/deltaRankine -> Rankine
+          else return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(9./5),contextptr),_Rankine_unit))); // Rankine + deltaC/deltaK -> Rankine
+        }
+      } else if((va[1] == _deltaRankine_unit) || (va[1] == _deltaF_unit)) { // Case 6: deltaRankine/deltaF +/- other temp
+        if(subtraction) { 
+          if(vb[1] == _K_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(9./5),contextptr),va[1]))); // deltaRankine - K -> deltaRankine
+          else if(vb[1] == _Rankine_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),va[1]))); // deltaRankine - Rankine -> deltaRankine
+          else if((vb[1] == _deltaRankine_unit) || (vb[1] == _deltaF_unit)) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),va[1]))); // deltaRankine - deltaF/deltaRankine -> deltaRankine
+          else return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(9./5),contextptr),va[1]))); // deltaRankine - deltaC/deltaK -> deltaRankine
+        } else {
+          if(vb[1] == _K_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0]*gen(5./9),vb[0],contextptr),_K_unit))); // deltaRankine + K -> K
+          else if(vb[1] == _Rankine_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_Rankine_unit))); // deltaRankine + Rankine -> Rankine
+          else if((vb[1] == _deltaRankine_unit) || (vb[1] == _deltaF_unit)) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),va[1]))); // deltaRankine + deltaF/deltaRankine -> deltaRankine
+          else return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(9./5),contextptr),va[1]))); // deltaRankine + deltaC/deltaK -> deltaRankine
+        }
+      } else if((va[1] == _deltaK_unit) || (va[1] == _deltaC_unit)) { // Case 7: deltaC/deltaK +/- other temp
+        if(subtraction) { 
+          if(vb[1] == _K_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),va[1]))); // deltaK - K -> deltaK
+          else if(vb[1] == _Rankine_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(5./9),contextptr),va[1]))); // deltaK - Rankine -> deltaK
+          else if((vb[1] == _deltaRankine_unit) || (vb[1] == _deltaF_unit)) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(5./9),contextptr),va[1]))); // deltaK - deltaF/deltaRankine -> deltaK
+          else return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),va[1]))); // deltaK - deltaC/deltaK -> deltaK
+        } else {
+          if(vb[1] == _K_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_K_unit))); // deltaK + K -> K
+          else if(vb[1] == _Rankine_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0]*gen(9./5),vb[0],contextptr),_Rankine_unit))); // deltaK + Rankine -> Rankine
+          else if((vb[1] == _deltaRankine_unit) || (vb[1] == _deltaF_unit)) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(5./9),contextptr),va[1]))); // deltaK + deltaF/deltaRankine -> deltaK
+          else return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),va[1]))); // deltaK + deltaC/deltaK -> deltaK
+        }
+      }
+    }
+#endif
+    // All others, just do a normal addition
+    gen tmp = chk_not_unit_together(a,b,true, contextptr);
+    if (is_undef(tmp))
+      return tmp;
+    return a+b;
+  }
 
 
   gen convert_interval(const gen & g,int nbits,GIAC_CONTEXT){
@@ -7566,370 +7875,377 @@ namespace giac {
     return symbolic(at_unit,makevecteur(1,mksa_register(s,equiv)));
   }
   // fundemental metric units
-  const mksa_unit __m_unit={1,1,0,0,0,0,0,0,0,0};
-  const mksa_unit __kg_unit={1,0,1,0,0,0,0,0,0,0};
-  const mksa_unit __s_unit={1,0,0,1,0,0,0,0,0,0};
-  const mksa_unit __A_unit={1,0,0,0,1,0,0,0,0,0};
-  const mksa_unit __K_unit={1,0,0,0,0,1,0,0,0,0};
-  const mksa_unit __mol_unit={1,0,0,0,0,0,1,0,0,0};
-  const mksa_unit __cd_unit={1,0,0,0,0,0,0,1,0,0};
-  const mksa_unit __E_unit={1,0,0,0,0,0,0,0,1,0};  // CURRENCY- Euro to Franc are only 2 defined.  Perhaps a way in future to define more/define the exchange rate on the fly?
-  const mksa_unit __Bq_unit={1,0,0,-1,0,0,0,0,0,0};
-  const mksa_unit __C_unit={1,0,0,1,1,0,0,0,0,0};
-  const mksa_unit __F_unit={1,-2,-1,4,2,0,0,0,0,0};
-  const mksa_unit __Gy_unit={1,2,0,-2,0,0,0,0,0,0};
-  const mksa_unit __H_unit={1,2,1,-2,-2,0,0,0,0,0};
-  const mksa_unit __Hz_unit={1,0,0,-1,0,0,0,0,0,0};
-  const mksa_unit __J_unit={1,2,1,-2,0,0,0,0,0,0};
-  const mksa_unit __mho_unit={1,-2,-1,3,2,0,0,0,0,0};
-  const mksa_unit __N_unit={1,1,1,-2,0,0,0,0,0,0};
-  const mksa_unit __Ohm_unit={1,2,1,-3,-2,0,0,0,0,0};
-  const mksa_unit __Pa_unit={1,-1,1,-2,0,0,0,0,0,0};
-  const mksa_unit __rad_unit={1,0,0,0,0,0,0,0,0,1};
-  const mksa_unit __S_unit={1,-2,-1,3,2,0,0,0,0,0};
-  const mksa_unit __Sv_unit={1,2,0,-2,0,0,0,0,0,0};
-  const mksa_unit __T_unit={1,0,1,-2,-1,0,0,0,0,0};
-  const mksa_unit __V_unit={1,2,1,-3,-1,0,0,0,0,0};
-  const mksa_unit __W_unit={1,2,1,-3,0,0,0,0,0,0};
-  const mksa_unit __Wb_unit={1,2,1,-2,-1,0,0,0,0,0};
+  const mksa_unit __m_unit={1,1,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __kg_unit={1,0,1,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __s_unit={1,0,0,1,0,0,0,0,0,0,0,0};
+  const mksa_unit __A_unit={1,0,0,0,1,0,0,0,0,0,0,0};
+  const mksa_unit __K_unit={1,0,0,0,0,1,0,0,0,0,0,0};
+  const mksa_unit __mol_unit={1,0,0,0,0,0,1,0,0,0,0,0};
+  const mksa_unit __cd_unit={1,0,0,0,0,0,0,1,0,0,0,0};
+  const mksa_unit __E_unit={1,0,0,0,0,0,0,0,1,0,0,0};  // CURRENCY- Euro to Franc are only 2 defined.  Perhaps a way in future to define more/define the exchange rate on the fly?
+  const mksa_unit __Bq_unit={1,0,0,-1,0,0,0,0,0,0,0,0};
+  const mksa_unit __C_unit={1,0,0,1,1,0,0,0,0,0,0,0};
+  const mksa_unit __F_unit={1,-2,-1,4,2,0,0,0,0,0,0,0};
+  const mksa_unit __Gy_unit={1,2,0,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __H_unit={1,2,1,-2,-2,0,0,0,0,0,0,0};
+  const mksa_unit __Hz_unit={1,0,0,-1,0,0,0,0,0,0,0,0};
+  const mksa_unit __J_unit={1,2,1,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __mho_unit={1,-2,-1,3,2,0,0,0,0,0,0,0};
+  const mksa_unit __N_unit={1,1,1,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __Ohm_unit={1,2,1,-3,-2,0,0,0,0,0,0,0};
+  const mksa_unit __Pa_unit={1,-1,1,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __rad_unit={1,0,0,0,0,0,0,0,0,1,0,0};
+  const mksa_unit __S_unit={1,-2,-1,3,2,0,0,0,0,0,0,0};
+  const mksa_unit __Sv_unit={1,2,0,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __T_unit={1,0,1,-2,-1,0,0,0,0,0,0,0};
+  const mksa_unit __V_unit={1,2,1,-3,-1,0,0,0,0,0,0,0};
+  const mksa_unit __W_unit={1,2,1,-3,0,0,0,0,0,0,0,0};
+  const mksa_unit __Wb_unit={1,2,1,-2,-1,0,0,0,0,0,0,0};
 
-  const mksa_unit __Angstrom_unit={1e-10,1,0,0,0,0,0,0,0,0};
-  const mksa_unit __Btu_unit={1055.05585262,2,1,-2,0,0,0,0,0,0};
-  const mksa_unit __Curie_unit={3.7e10,0,0,-1,0,0,0,0,0,0};
-  const mksa_unit __FF_unit={.152449017237,0,0,0,0,0,0,0,1,0};
-  const mksa_unit __Fdy_unit={96485.3365,0,0,1,1,0,0,0,0,0};
-  const mksa_unit __Gal={0.01,1,0,-2,0,0,0,0,0,0};
-  const mksa_unit __HFCC_unit={1400,1,0,0,0,0,0,0,0,0};
-  const mksa_unit __L_unit={0.001,3,0,0,0,0,0,0,0,0};
-  const mksa_unit __P_unit={.1,-1,1,-1,0,0,0,0,0,0};
-  const mksa_unit __R_unit={0.000258,0,-1,1,1,0,0,0,0,0};
-  const mksa_unit __Rankine_unit={5./9,0,0,0,0,1,0,0,0,0};
-  const mksa_unit __St_unit={0.0001,2,0,-1,0,0,0,0,0,0};
-  const mksa_unit __Wh_unit={3600,2,1,-2,0,0,0,0,0,0};
-  const mksa_unit __a_unit={100,2,0,0,0,0,0,0,0,0};
-  const mksa_unit __acre_unit={4046.87260987,2,0,0,0,0,0,0,0,0};
-  const mksa_unit __arcmin_unit={2.90888208666e-4,0,0,0,0,0,0,0,0,0};
-  const mksa_unit __arcs_unit={4.8481368111e-6,0,0,0,0,0,0,0,0,0};
-  const mksa_unit __atm_unit={101325.0,-1,1,-2,0,0,0,0,0,0};
-  const mksa_unit __au_unit={1.495979e11,1,0,0,0,0,0,0,0,0};
-  const mksa_unit __b_unit={1e-28,2,0,0,0,0,0,0,0,0};
-  const mksa_unit __bar_unit={1e5,-1,1,-2,0,0,0,0,0,0};
-  const mksa_unit __bbl_unit={.158987294928,3,0,0,0,0,0,0,0,0};
-  const mksa_unit __bblep_unit={.158987294928*0.857*41.76e9,2,1,-2,0,0,0,0,0,0};
-  const mksa_unit __boe_unit={.158987294928*0.857*41.76e9,2,1,-2,0,0,0,0,0,0};
-  const mksa_unit __bu={0.036368736,3,0,0,0,0,0,0,0,0};
-  const mksa_unit __buUS={0.03523907,3,0,0,0,0,0,0,0,0};
-  const mksa_unit __cal_unit={4.1868,2,1,-2,0,0,0,0,0,0};
-  const mksa_unit __cf_unit={1.08e6,2,1,-2,0,0,0,0,0,0};
-  const mksa_unit __chain_unit={20.1168402337,1,0,0,0,0,0,0,0,0};
-  const mksa_unit __ct_unit={0.0002,0,1,0,0,0,0,0,0,0};
-  const mksa_unit __dB_unit={1,0,0,0,0,0,0,0,0,0};
-  const mksa_unit __d_unit={86400,0,0,1,0,0,0,0,0,0};
-  const mksa_unit __deg_unit={1.74532925199e-2,0,0,0,0,0,0,0,0,1};
-  // const mksa_unit __degreeF_unit={5./9,0,0,0,0,1,0,0,0,0};
-  const mksa_unit __dyn_unit={1e-5,1,1,-2,0,0,0,0,0,0};
-  const mksa_unit __eV_unit={1.60217733e-19,2,1,-2,0,0,0,0,0,0};
-  const mksa_unit __erg_unit={1e-7,2,1,-2,0,0,0,0,0,0};
-  const mksa_unit __fath_unit={1.82880365761,1,0,0,0,0,0,0,0,0};
-  const mksa_unit __fbm_unit={0.002359737216,3,0,0,0,0,0,0,0,0};
-  const mksa_unit __fc_unit={10.7639104167,1,0,0,0,0,0,0,0,0};
-  const mksa_unit __fermi_unit={1e-15,1,0,0,0,0,0,0,0,0};
-  const mksa_unit __flam_unit={3.42625909964,-2,0,0,0,0,0,1,0,0};
-  const mksa_unit __fm_unit={1.82880365761,1,0,0,0,0,0,0,0,0};
-  const mksa_unit __ft_unit={0.3048,1,0,0,0,0,0,0,0,0};
-  const mksa_unit __ftUS_unit={0.304800609601,1,0,0,0,0,0,0,0,0};
-  const mksa_unit __g_unit={1e-3,0,1,0,0,0,0,0,0,0};
-  const mksa_unit __galC_unit={0.00454609,3,0,0,0,0,0,0,0,0};
-  const mksa_unit __galUK_unit={0.004546092,3,0,0,0,0,0,0,0,0};
-  const mksa_unit __galUS_unit={0.003785411784,3,0,0,0,0,0,0,0,0};
-  const mksa_unit __cu_unit={0.000236588236373,3,0,0,0,0,0,0,0,0};
-  const mksa_unit __gf_unit={0.00980665,1,1,-2,0,0,0,0,0,0};
-  const mksa_unit __gmol_unit={1,0,0,0,0,0,1,0,0,0};
-  const mksa_unit __gon_unit={1.57079632679e-2,0,0,0,0,0,0,0,1};
-  const mksa_unit __grad_unit={1.57079632679e-2,0,0,0,0,0,0,0,0,1};
-  const mksa_unit __grain_unit={0.00006479891,0,1,0,0,0,0,0,0,0};
-  const mksa_unit __h_unit={3600,0,0,1,0,0,0,0,0,0};
-  const mksa_unit __ha_unit={10000,2,0,0,0,0,0,0,0,0};
-  const mksa_unit __hp_unit={745.699871582,2,1,-3,0,0,0,0,0,0};
-  const mksa_unit __in_unit={0.0254,1,0,0,0,0,0,0,0,0};
-  const mksa_unit __inH2O_unit={248.84,-1,1,-2,0,0,0,0,0,0};
-  const mksa_unit __inHg_unit={3386.38815789,-1,1,-2,0,0,0,0,0,0};
-  const mksa_unit __j_unit={86400,0,0,1,0,0,0,0,0,0};
-  const mksa_unit __kip_unit={4448.22161526,1,1,-2,0,0,0,0,0,0};
-  const mksa_unit __knot_unit={0.51444444444,1,0,-1,0,0,0,0,0,0};
-  const mksa_unit __kph_unit={0.2777777777777,1,0,-1,0,0,0,0,0,0};
-  const mksa_unit __l_unit={0.001,3,0,0,0,0,0,0,0,0};
-  const mksa_unit __lam_unit={3183.09886184,-2,0,0,0,0,0,1,0,0};
-  const mksa_unit __lb_unit={0.45359237,0,1,0,0,0,0,0,0,0};
-  const mksa_unit __lbf_unit={4.44922161526,1,1,-2,0,0,0,0,0,0};
-  const mksa_unit __lbmol_unit={453.59237,0,0,0,0,0,1,0,0,0};
-  const mksa_unit __lbt_unit={0.3732417216,0,1,0,0,0,0,0,0,0};
-  const mksa_unit __lep_unit={0.857*41.76e6,2,1,-2,0,0,0,0,0,0};
-  const mksa_unit __liqpt_unit={0.000473176473,3,0,0,0,0,0,0,0,0};
-  const mksa_unit __lyr_unit={9.46052840488e15,1,0,0,0,0,0,0,0,0};
-  const mksa_unit __mi_unit={1609.344,1,0,0,0,0,0,0,0,0};
-  const mksa_unit __miUS_unit={1609.34721869,1,0,0,0,0,0,0,0,0};
-  const mksa_unit __mil_unit={0.0000254,1,0,0,0,0,0,0,0,0};
-  const mksa_unit __mile_unit={1609.344,1,0,0,0,0,0,0,0,0};
-  const mksa_unit __mille_unit={1852,1,0,0,0,0,0,0,0,0};
-  const mksa_unit __mn_unit={60,0,0,1,0,0,0,0,0,0};
-  const mksa_unit __mmHg_unit={133.322368421,-1,1,-2,0,0,0,0,0,0};
-  const mksa_unit __molK_unit={1,0,0,0,0,1,1,0,0,0};
-  const mksa_unit __mph_unit={0.44704,1,0,-1,0,0,0,0,0,0};
-  const mksa_unit __nmi_unit={1852,1,0,0,0,0,0,0,0,0};
-  const mksa_unit __oz_unit={0.028349523125,0,1,0,0,0,0,0,0,0};
-  const mksa_unit __ozUK_unit={2.8413075e-5,3,0,0,0,0,0,0,0,0};
-  const mksa_unit __ozfl_unit={2.95735295625e-5,3,0,0,0,0,0,0,0,0};
-  const mksa_unit __ozt_unit={0.0311034768,0,1,0,0,0,0,0,0,0};
-  const mksa_unit __pc_unit={3.08567818585e16,1,0,0,0,0,0,0,0,0};
-  const mksa_unit __pcf_unit={16.01846337396,-3,1,0,0,0,0,0,0,0};
-  const mksa_unit __pdl_unit={0.138254954376,1,1,-2,0,0,0,0,0,0};
-  const mksa_unit __pk_unit={0.0088097675,3,0,0,0,0,0,0,0,0};
-  const mksa_unit __psi_unit={6894.75729317,-1,1,-2,0,0,0,0,0,0};
-  const mksa_unit __ksi_unit={6894757.29317,-1,1,-2,0,0,0,0,0,0};
-  const mksa_unit __pt_unit={0.000473176473,3,0,0,0,0,0,0,0,0};
-  const mksa_unit __ptUK_unit={0.0005682615,3,0,0,0,0,0,0,0,0};
-  const mksa_unit __qt_unit={0.000946359246,3,0,0,0,0,0,0,0,0};
-  const mksa_unit __rd_unit={0.01,2,0,-2,0,0,0,0,0,0};
-  const mksa_unit __rem_unit={0.01,2,0,-2,0,0,0,0,0,0};
-  const mksa_unit __rod_unit={5.02921005842,1,0,0,0,0,0,0,0,0};
-  const mksa_unit __rpm_unit={0.0166666666667,0,0,-1,0,0,0,0,0,0};
-  const mksa_unit __sb_unit={10000,-2,0,0,0,0,0,1,0,0};
-  const mksa_unit __slug_unit={14.5939029372,0,1,0,0,0,0,0,0,0};
-  const mksa_unit __st_unit={1,3,0,0,0,0,0,0,0,0};
-  const mksa_unit __t_unit={1000,0,1,0,0,0,0,0,0,0};
-  const mksa_unit __tbsp_unit={1.47867647813e-5,3,0,0,0,0,0,0,0,0};
-  const mksa_unit __tec_unit={41.76e9/1.5,2,1,-2,0,0,0,0,0,0};
-  const mksa_unit __tep_unit={41.76e9,2,1,-2,0,0,0,0,0,0};
-  const mksa_unit __tepC_unit={830,1,0,0,0,0,0,0,0,0};
-  const mksa_unit __tepcC_unit={1000,1,0,0,0,0,0,0,0,0};
-  const mksa_unit __tepgC_unit={650,1,0,0,0,0,0,0,0,0};
-  const mksa_unit __tex={1e-6,-1,1,0,0,0,0,0,0,0};
-  const mksa_unit __therm_unit={105506000,2,1,-2,0,0,0,0,0,0};
-  const mksa_unit __toe_unit={41.76e9,2,1,-2,0,0,0,0,0,0};
-  const mksa_unit __ton_unit={907.18474,0,1,0,0,0,0,0,0,0};
-  const mksa_unit __tonUK_unit={1016.0469088,0,1,0,0,0,0,0,0,0};
-  const mksa_unit __torr_unit={133.322368421,-1,1,-2,0,0,0,0,0,0};
-  const mksa_unit __tr_unit={2*M_PI,0,0,0,0,0,0,0,0,0};
-  const mksa_unit __tsp_unit={4.928921614571597e-6,3,0,0,0,0,0,0,0,0};
-  const mksa_unit __u_unit={1.6605402e-27,0,1,0,0,0,0,0,0,0};
-  const mksa_unit __yd_unit={0.9144,1,0,0,0,0,0,0,0,0};
-  const mksa_unit __yr_unit={31556925.9747,0,0,1,0,0,0,0,0,0};
-  const mksa_unit __micron_unit={1e-6,1,0,0,0,0,0,0,0,0};
+  const mksa_unit __degF_unit={5./9,0,0,0,0,0,0,0,0,0,1,0};
+  const mksa_unit __degC_unit={1,0,0,0,0,0,0,0,0,0,0,1};
+  const mksa_unit __deltaF_unit={5./9,0,0,0,0,1,0,0,0,0,0,0};
+  const mksa_unit __deltaC_unit={1,0,0,0,0,1,0,0,0,0,0,0};
+  const mksa_unit __deltaRankine_unit={5./9,0,0,0,0,1,0,0,0,0,0,0};
+  const mksa_unit __deltaK_unit={1,0,0,0,0,1,0,0,0,0,0,0};
 
-  const mksa_unit __hbar_unit={1.05457266e-34,2,1,-1,0,0,0,0,0};        
-  const mksa_unit __c_unit={299792458,1,0,-1,0,0,0,0,0};        
-  const mksa_unit __g__unit={9.80665,1,0,-2,0,0,0,0,0};       
-  const mksa_unit __IO_unit={1e-12,0,1,-3,0,0,0,0,0}; 
-  const mksa_unit __epsilonox_unit={3.9,0,0,0,0,0,0,0,0}; 
-  const mksa_unit __epsilonsi_unit={11.9,0,0,0,0,0,0,0,0,0}; 
-  const mksa_unit __qepsilon0_unit={1.4185979e-30,-3,-1,5,3,0,0,0,0}; 
-  const mksa_unit __epsilon0q_unit={55263469.6,-3,-1,3,1,0,0,0,0}; 
-  const mksa_unit __kq_unit={8.617386e-5,2,1,-3,-1,-1,0,0,0}; 
-  const mksa_unit __c3_unit={.002897756,1,0,0,0,1,0,0,0}; 
-  const mksa_unit __lambdac_unit={ 0.00242631058e-9,1,0,0,0,0,0,0,0,0}; 
-  const mksa_unit __f0_unit={2.4179883e14,0,0,-1,0,0,0,0,0}; 
-  const mksa_unit __lambda0_unit={1239.8425e-9,1,0,0,0,0,0,0,0}; 
-  const mksa_unit __muN_unit={5.0507866e-27,2,0,0,1,0,0,0,0}; 
-  const mksa_unit __muB_unit={ 9.2740154e-24,2,0,0,1,0,0,0,0}; 
-  const mksa_unit __a0_unit={.0529177249e-9,1,0,0,0,0,0,0,0}; 
-  const mksa_unit __Rinfinity_unit={10973731.534,-1,0,0,0,0,0,0,0}; 
-  const mksa_unit __Faraday_unit={96485.309,0,0,1,1,0,-1,0,0}; 
-  const mksa_unit __phi_unit={2.06783461e-15,2,1,-2,-1,0,0,0,0};
-  const mksa_unit __alpha_unit={7.29735308e-3,0,0,0,0,0,0,0,0}; 
-  const mksa_unit __mpme_unit={1836.152701,0,0,0,0,0,0,0,0}; 
-  const mksa_unit __mp_unit={1.6726231e-27,0,1,0,0,0,0,0,0}; 
-  const mksa_unit __qme_unit={1.75881962e11,0,-1,1,1,0,0,0,0};
-  const mksa_unit __me_unit={9.1093897e-31,0,1,0,0,0,0,0,0}; 
-  const mksa_unit __qe_unit={1.60217733e-19,0,0,1,1,0,0,0,0};
-  const mksa_unit __h__unit={6.6260755e-34,2,1,-1,0,0,0,0,0}; 
-  const mksa_unit __G_unit={6.67259e-11,3,-1,-2,0,0,0,0,0}; 
-  const mksa_unit __mu0_unit={1.25663706144e-6,1,1,-2,-2,0,0,0,0}; 
-  const mksa_unit __epsilon0_unit={8.85418781761e-12,-3,-1,4,2,0,0,0,0}; 
-  const mksa_unit __sigma_unit={ 5.67051e-8,0,1,-3,0,-4,0,0,0}; 
-  const mksa_unit __StdP_unit={101325.0,-1,1,-2,0,0,0,0,0}; 
-  const mksa_unit __StdT_unit={273.15,0,0,0,0,1,0,0,0}; 
-  const mksa_unit __R__unit={8.31451,2,1,-2,0,-1,-1,0,0}; 
-  const mksa_unit __Vm_unit={22.4141e-3,3,0,0,0,0,-1,0,0}; 
-  const mksa_unit __k_unit={1.380658e-23,2,1,-2,0,-1,0,0,0}; 
-  const mksa_unit __NA_unit={6.0221367e23,0,0,0,0,0,-1,0,0}; 
-  const mksa_unit __mSun_unit={1.989e30,0,1,0,0,0,0,0,0}; 
-  const mksa_unit __RSun_unit={6.955e8,1,0,0,0,0,0,0,0}; 
-  const mksa_unit __PSun_unit={3.846e26,2,1,-3,0,0,0,0,0}; 
-  const mksa_unit __mEarth_unit={5.9736e24,0,1,0,0,0,0,0,0}; 
-  const mksa_unit __REarth_unit={6.371e6,1,0,0,0,0,0,0,0}; 
-  const mksa_unit __sd_unit={8.61640905e4,0,0,1,0,0,0,0,0}; 
-  const mksa_unit __syr_unit={3.15581498e7,0,0,1,0,0,0,0,0}; 
+  const mksa_unit __Angstrom_unit={1e-10,1,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __Btu_unit={1055.05585262,2,1,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __Curie_unit={3.7e10,0,0,-1,0,0,0,0,0,0,0,0};
+  const mksa_unit __FF_unit={.152449017237,0,0,0,0,0,0,0,1,0,0,0};
+  const mksa_unit __Fdy_unit={96485.3365,0,0,1,1,0,0,0,0,0,0,0};
+  const mksa_unit __Gal={0.01,1,0,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __HFCC_unit={1400,1,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __L_unit={0.001,3,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __P_unit={.1,-1,1,-1,0,0,0,0,0,0,0,0};
+  const mksa_unit __R_unit={0.000258,0,-1,1,1,0,0,0,0,0,0,0};
+  const mksa_unit __Rankine_unit={5./9,0,0,0,0,1,0,0,0,0,0,0};
+  const mksa_unit __St_unit={0.0001,2,0,-1,0,0,0,0,0,0,0,0};
+  const mksa_unit __Wh_unit={3600,2,1,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __a_unit={100,2,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __acre_unit={4046.87260987,2,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __arcmin_unit={2.90888208666e-4,0,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __arcs_unit={4.8481368111e-6,0,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __atm_unit={101325.0,-1,1,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __au_unit={1.495979e11,1,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __b_unit={1e-28,2,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __bar_unit={1e5,-1,1,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __bbl_unit={.158987294928,3,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __bblep_unit={.158987294928*0.857*41.76e9,2,1,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __boe_unit={.158987294928*0.857*41.76e9,2,1,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __bu={0.036368736,3,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __buUS={0.03523907,3,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __cal_unit={4.1868,2,1,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __cf_unit={1.08e6,2,1,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __chain_unit={20.1168402337,1,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __ct_unit={0.0002,0,1,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __dB_unit={1,0,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __d_unit={86400,0,0,1,0,0,0,0,0,0,0,0};
+  const mksa_unit __deg_unit={1.74532925199e-2,0,0,0,0,0,0,0,0,1,0,0};
+  // const mksa_unit __degreeF_unit={5./9,0,0,0,0,1,0,0,0,0,0,0};
+  const mksa_unit __dyn_unit={1e-5,1,1,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __eV_unit={1.60217733e-19,2,1,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __erg_unit={1e-7,2,1,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __fath_unit={1.82880365761,1,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __fbm_unit={0.002359737216,3,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __fc_unit={10.7639104167,1,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __fermi_unit={1e-15,1,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __flam_unit={3.42625909964,-2,0,0,0,0,0,1,0,0,0,0};
+  const mksa_unit __fm_unit={1.82880365761,1,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __ft_unit={0.3048,1,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __ftUS_unit={0.304800609601,1,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __g_unit={1e-3,0,1,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __galC_unit={0.00454609,3,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __galUK_unit={0.004546092,3,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __galUS_unit={0.003785411784,3,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __cu_unit={0.000236588236373,3,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __gf_unit={0.00980665,1,1,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __gmol_unit={1,0,0,0,0,0,1,0,0,0,0,0};
+  const mksa_unit __gon_unit={1.57079632679e-2,0,0,0,0,0,0,0,1,0,0};
+  const mksa_unit __grad_unit={1.57079632679e-2,0,0,0,0,0,0,0,0,1,0,0};
+  const mksa_unit __grain_unit={0.00006479891,0,1,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __h_unit={3600,0,0,1,0,0,0,0,0,0,0,0};
+  const mksa_unit __ha_unit={10000,2,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __hp_unit={745.699871582,2,1,-3,0,0,0,0,0,0,0,0};
+  const mksa_unit __in_unit={0.0254,1,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __inH2O_unit={248.84,-1,1,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __inHg_unit={3386.38815789,-1,1,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __j_unit={86400,0,0,1,0,0,0,0,0,0,0,0};
+  const mksa_unit __kip_unit={4448.22161526,1,1,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __knot_unit={0.51444444444,1,0,-1,0,0,0,0,0,0,0,0};
+  const mksa_unit __kph_unit={0.2777777777777,1,0,-1,0,0,0,0,0,0,0,0};
+  const mksa_unit __l_unit={0.001,3,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __lam_unit={3183.09886184,-2,0,0,0,0,0,1,0,0,0,0};
+  const mksa_unit __lb_unit={0.45359237,0,1,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __lbf_unit={4.44922161526,1,1,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __lbmol_unit={453.59237,0,0,0,0,0,1,0,0,0,0,0};
+  const mksa_unit __lbt_unit={0.3732417216,0,1,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __lep_unit={0.857*41.76e6,2,1,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __liqpt_unit={0.000473176473,3,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __lyr_unit={9.46052840488e15,1,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __mi_unit={1609.344,1,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __miUS_unit={1609.34721869,1,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __mil_unit={0.0000254,1,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __mile_unit={1609.344,1,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __mille_unit={1852,1,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __mn_unit={60,0,0,1,0,0,0,0,0,0,0,0};
+  const mksa_unit __mmHg_unit={133.322368421,-1,1,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __molK_unit={1,0,0,0,0,1,1,0,0,0,0,0};
+  const mksa_unit __mph_unit={0.44704,1,0,-1,0,0,0,0,0,0,0,0};
+  const mksa_unit __nmi_unit={1852,1,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __oz_unit={0.028349523125,0,1,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __ozUK_unit={2.8413075e-5,3,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __ozfl_unit={2.95735295625e-5,3,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __ozt_unit={0.0311034768,0,1,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __pc_unit={3.08567818585e16,1,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __pcf_unit={16.01846337396,-3,1,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __pdl_unit={0.138254954376,1,1,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __pk_unit={0.0088097675,3,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __psi_unit={6894.75729317,-1,1,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __ksi_unit={6894757.29317,-1,1,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __pt_unit={0.000473176473,3,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __ptUK_unit={0.0005682615,3,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __qt_unit={0.000946359246,3,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __rd_unit={0.01,2,0,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __rem_unit={0.01,2,0,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __rod_unit={5.02921005842,1,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __rpm_unit={0.0166666666667,0,0,-1,0,0,0,0,0,0,0,0};
+  const mksa_unit __sb_unit={10000,-2,0,0,0,0,0,1,0,0,0,0};
+  const mksa_unit __slug_unit={14.5939029372,0,1,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __st_unit={1,3,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __t_unit={1000,0,1,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __tbsp_unit={1.47867647813e-5,3,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __tec_unit={41.76e9/1.5,2,1,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __tep_unit={41.76e9,2,1,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __tepC_unit={830,1,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __tepcC_unit={1000,1,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __tepgC_unit={650,1,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __tex={1e-6,-1,1,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __therm_unit={105506000,2,1,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __toe_unit={41.76e9,2,1,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __ton_unit={907.18474,0,1,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __tonUK_unit={1016.0469088,0,1,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __torr_unit={133.322368421,-1,1,-2,0,0,0,0,0,0,0,0};
+  const mksa_unit __tr_unit={2*M_PI,0,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __tsp_unit={4.928921614571597e-6,3,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __u_unit={1.6605402e-27,0,1,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __yd_unit={0.9144,1,0,0,0,0,0,0,0,0,0,0};
+  const mksa_unit __yr_unit={31556925.9747,0,0,1,0,0,0,0,0,0,0,0};
+  const mksa_unit __micron_unit={1e-6,1,0,0,0,0,0,0,0,0,0,0};
+
+  const mksa_unit __hbar_unit={1.05457266e-34,2,1,-1,0,0,0,0,0,0,0};        
+  const mksa_unit __c_unit={299792458,1,0,-1,0,0,0,0,0,0,0};        
+  const mksa_unit __g__unit={9.80665,1,0,-2,0,0,0,0,0,0,0};       
+  const mksa_unit __IO_unit={1e-12,0,1,-3,0,0,0,0,0,0,0}; 
+  const mksa_unit __epsilonox_unit={3.9,0,0,0,0,0,0,0,0,0,0}; 
+  const mksa_unit __epsilonsi_unit={11.9,0,0,0,0,0,0,0,0,0,0,0}; 
+  const mksa_unit __qepsilon0_unit={1.4185979e-30,-3,-1,5,3,0,0,0,0,0,0}; 
+  const mksa_unit __epsilon0q_unit={55263469.6,-3,-1,3,1,0,0,0,0,0,0}; 
+  const mksa_unit __kq_unit={8.617386e-5,2,1,-3,-1,-1,0,0,0,0,0}; 
+  const mksa_unit __c3_unit={.002897756,1,0,0,0,1,0,0,0,0,0}; 
+  const mksa_unit __lambdac_unit={ 0.00242631058e-9,1,0,0,0,0,0,0,0,0,0,0}; 
+  const mksa_unit __f0_unit={2.4179883e14,0,0,-1,0,0,0,0,0,0,0}; 
+  const mksa_unit __lambda0_unit={1239.8425e-9,1,0,0,0,0,0,0,0,0,0}; 
+  const mksa_unit __muN_unit={5.0507866e-27,2,0,0,1,0,0,0,0,0,0}; 
+  const mksa_unit __muB_unit={ 9.2740154e-24,2,0,0,1,0,0,0,0,0,0}; 
+  const mksa_unit __a0_unit={.0529177249e-9,1,0,0,0,0,0,0,0,0,0}; 
+  const mksa_unit __Rinfinity_unit={10973731.534,-1,0,0,0,0,0,0,0,0,0}; 
+  const mksa_unit __Faraday_unit={96485.309,0,0,1,1,0,-1,0,0,0,0}; 
+  const mksa_unit __phi_unit={2.06783461e-15,2,1,-2,-1,0,0,0,0,0,0};
+  const mksa_unit __alpha_unit={7.29735308e-3,0,0,0,0,0,0,0,0,0,0}; 
+  const mksa_unit __mpme_unit={1836.152701,0,0,0,0,0,0,0,0,0,0}; 
+  const mksa_unit __mp_unit={1.6726231e-27,0,1,0,0,0,0,0,0,0,0}; 
+  const mksa_unit __qme_unit={1.75881962e11,0,-1,1,1,0,0,0,0,0,0};
+  const mksa_unit __me_unit={9.1093897e-31,0,1,0,0,0,0,0,0,0,0}; 
+  const mksa_unit __qe_unit={1.60217733e-19,0,0,1,1,0,0,0,0,0,0};
+  const mksa_unit __h__unit={6.6260755e-34,2,1,-1,0,0,0,0,0,0,0}; 
+  const mksa_unit __G_unit={6.67259e-11,3,-1,-2,0,0,0,0,0,0,0}; 
+  const mksa_unit __mu0_unit={1.25663706144e-6,1,1,-2,-2,0,0,0,0,0,0}; 
+  const mksa_unit __epsilon0_unit={8.85418781761e-12,-3,-1,4,2,0,0,0,0,0,0}; 
+  const mksa_unit __sigma_unit={ 5.67051e-8,0,1,-3,0,-4,0,0,0,0,0}; 
+  const mksa_unit __StdP_unit={101325.0,-1,1,-2,0,0,0,0,0,0,0}; 
+  const mksa_unit __StdT_unit={273.15,0,0,0,0,1,0,0,0,0,0}; 
+  const mksa_unit __R__unit={8.31451,2,1,-2,0,-1,-1,0,0,0,0}; 
+  const mksa_unit __Vm_unit={22.4141e-3,3,0,0,0,0,-1,0,0,0,0}; 
+  const mksa_unit __k_unit={1.380658e-23,2,1,-2,0,-1,0,0,0,0,0}; 
+  const mksa_unit __NA_unit={6.0221367e23,0,0,0,0,0,-1,0,0,0,0}; 
+  const mksa_unit __mSun_unit={1.989e30,0,1,0,0,0,0,0,0,0,0}; 
+  const mksa_unit __RSun_unit={6.955e8,1,0,0,0,0,0,0,0,0,0}; 
+  const mksa_unit __PSun_unit={3.846e26,2,1,-3,0,0,0,0,0,0,0}; 
+  const mksa_unit __mEarth_unit={5.9736e24,0,1,0,0,0,0,0,0,0,0}; 
+  const mksa_unit __REarth_unit={6.371e6,1,0,0,0,0,0,0,0,0,0}; 
+  const mksa_unit __sd_unit={8.61640905e4,0,0,1,0,0,0,0,0,0,0}; 
+  const mksa_unit __syr_unit={3.15581498e7,0,0,1,0,0,0,0,0,0,0}; 
 
   #ifdef SWIFT_CALCS_OPTIONS
-    const mksa_unit __USD_unit={1,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __AED_unit={2,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __AFN_unit={3,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __ALL_unit={4,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __AMD_unit={5,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __ANG_unit={6,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __AOA_unit={7,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __ARS_unit={8,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __AUD_unit={9,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __AWG_unit={10,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __AZN_unit={11,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __BAM_unit={12,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __BBD_unit={13,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __BDT_unit={14,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __BGN_unit={15,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __BHD_unit={16,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __BIF_unit={17,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __BMD_unit={18,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __BND_unit={19,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __BOB_unit={20,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __BRL_unit={21,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __BSD_unit={22,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __BTC_unit={23,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __BTN_unit={24,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __BWP_unit={25,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __BYN_unit={26,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __BZD_unit={27,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __CAD_unit={28,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __CDF_unit={29,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __CHF_unit={30,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __CLP_unit={31,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __CNY_unit={32,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __COP_unit={33,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __CRC_unit={34,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __CUC_unit={35,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __CUP_unit={36,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __CVE_unit={37,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __CZK_unit={38,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __DJF_unit={39,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __DKK_unit={40,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __DOP_unit={41,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __DZD_unit={42,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __EEK_unit={43,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __EGP_unit={44,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __ERN_unit={45,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __ETB_unit={46,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __EUR_unit={47,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __FJD_unit={48,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __FKP_unit={49,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __GBP_unit={50,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __GEL_unit={51,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __GGP_unit={52,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __GHS_unit={53,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __GIP_unit={54,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __GMD_unit={55,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __GNF_unit={56,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __GTQ_unit={57,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __GYD_unit={58,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __HKD_unit={59,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __HNL_unit={60,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __HRK_unit={61,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __HTG_unit={62,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __HUF_unit={63,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __IDR_unit={64,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __ILS_unit={65,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __IMP_unit={66,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __INR_unit={67,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __IQD_unit={68,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __IRR_unit={69,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __ISK_unit={70,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __JEP_unit={71,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __JMD_unit={72,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __JOD_unit={73,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __JPY_unit={74,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __KES_unit={75,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __KGS_unit={76,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __KHR_unit={77,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __KMF_unit={78,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __KPW_unit={79,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __KRW_unit={80,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __KWD_unit={81,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __KYD_unit={82,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __KZT_unit={83,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __LAK_unit={84,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __LBP_unit={85,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __LKR_unit={86,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __LRD_unit={87,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __LSL_unit={88,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __LTL_unit={89,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __LVL_unit={90,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __LYD_unit={91,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __MAD_unit={92,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __MDL_unit={93,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __MGA_unit={94,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __MKD_unit={95,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __MMK_unit={96,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __MNT_unit={97,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __MOP_unit={98,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __MRO_unit={99,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __MTL_unit={100,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __MUR_unit={101,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __MVR_unit={102,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __MWK_unit={103,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __MXN_unit={104,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __MYR_unit={105,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __MZN_unit={106,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __NAD_unit={107,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __NGN_unit={108,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __NIO_unit={109,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __NOK_unit={110,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __NPR_unit={111,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __NZD_unit={112,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __OMR_unit={113,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __PAB_unit={114,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __PEN_unit={115,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __PGK_unit={116,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __PHP_unit={117,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __PKR_unit={118,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __PLN_unit={119,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __PYG_unit={120,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __QAR_unit={121,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __RON_unit={122,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __RSD_unit={123,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __RUB_unit={124,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __RWF_unit={125,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __SAR_unit={126,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __SBD_unit={127,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __SCR_unit={128,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __SDG_unit={129,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __SEK_unit={130,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __SGD_unit={131,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __SHP_unit={132,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __SLL_unit={133,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __SOS_unit={134,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __SRD_unit={135,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __SVC_unit={136,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __SYP_unit={137,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __SZL_unit={138,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __THB_unit={139,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __TJS_unit={140,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __TMT_unit={141,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __TND_unit={142,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __TOP_unit={143,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __TRY_unit={144,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __TTD_unit={145,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __TWD_unit={146,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __TZS_unit={147,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __UAH_unit={148,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __UGX_unit={149,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __UYU_unit={150,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __UZS_unit={151,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __VEF_unit={152,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __VND_unit={153,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __VUV_unit={154,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __WST_unit={155,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __XAF_unit={156,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __XAG_unit={157,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __XAU_unit={158,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __XCD_unit={159,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __XDR_unit={160,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __XOF_unit={161,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __XPD_unit={162,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __XPF_unit={163,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __XPT_unit={164,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __YER_unit={165,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __ZAR_unit={166,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __ZMW_unit={167,0,0,0,0,0,0,0,1,0};
-    const mksa_unit __ZWL_unit={168,0,0,0,0,0,0,0,1,0};
+    const mksa_unit __USD_unit={1,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __AED_unit={2,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __AFN_unit={3,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __ALL_unit={4,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __AMD_unit={5,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __ANG_unit={6,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __AOA_unit={7,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __ARS_unit={8,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __AUD_unit={9,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __AWG_unit={10,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __AZN_unit={11,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __BAM_unit={12,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __BBD_unit={13,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __BDT_unit={14,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __BGN_unit={15,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __BHD_unit={16,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __BIF_unit={17,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __BMD_unit={18,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __BND_unit={19,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __BOB_unit={20,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __BRL_unit={21,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __BSD_unit={22,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __BTC_unit={23,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __BTN_unit={24,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __BWP_unit={25,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __BYN_unit={26,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __BZD_unit={27,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __CAD_unit={28,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __CDF_unit={29,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __CHF_unit={30,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __CLP_unit={31,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __CNY_unit={32,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __COP_unit={33,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __CRC_unit={34,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __CUC_unit={35,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __CUP_unit={36,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __CVE_unit={37,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __CZK_unit={38,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __DJF_unit={39,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __DKK_unit={40,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __DOP_unit={41,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __DZD_unit={42,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __EEK_unit={43,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __EGP_unit={44,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __ERN_unit={45,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __ETB_unit={46,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __EUR_unit={47,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __FJD_unit={48,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __FKP_unit={49,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __GBP_unit={50,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __GEL_unit={51,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __GGP_unit={52,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __GHS_unit={53,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __GIP_unit={54,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __GMD_unit={55,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __GNF_unit={56,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __GTQ_unit={57,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __GYD_unit={58,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __HKD_unit={59,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __HNL_unit={60,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __HRK_unit={61,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __HTG_unit={62,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __HUF_unit={63,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __IDR_unit={64,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __ILS_unit={65,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __IMP_unit={66,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __INR_unit={67,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __IQD_unit={68,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __IRR_unit={69,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __ISK_unit={70,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __JEP_unit={71,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __JMD_unit={72,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __JOD_unit={73,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __JPY_unit={74,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __KES_unit={75,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __KGS_unit={76,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __KHR_unit={77,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __KMF_unit={78,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __KPW_unit={79,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __KRW_unit={80,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __KWD_unit={81,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __KYD_unit={82,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __KZT_unit={83,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __LAK_unit={84,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __LBP_unit={85,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __LKR_unit={86,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __LRD_unit={87,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __LSL_unit={88,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __LTL_unit={89,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __LVL_unit={90,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __LYD_unit={91,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __MAD_unit={92,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __MDL_unit={93,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __MGA_unit={94,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __MKD_unit={95,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __MMK_unit={96,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __MNT_unit={97,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __MOP_unit={98,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __MRO_unit={99,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __MTL_unit={100,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __MUR_unit={101,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __MVR_unit={102,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __MWK_unit={103,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __MXN_unit={104,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __MYR_unit={105,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __MZN_unit={106,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __NAD_unit={107,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __NGN_unit={108,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __NIO_unit={109,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __NOK_unit={110,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __NPR_unit={111,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __NZD_unit={112,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __OMR_unit={113,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __PAB_unit={114,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __PEN_unit={115,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __PGK_unit={116,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __PHP_unit={117,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __PKR_unit={118,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __PLN_unit={119,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __PYG_unit={120,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __QAR_unit={121,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __RON_unit={122,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __RSD_unit={123,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __RUB_unit={124,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __RWF_unit={125,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __SAR_unit={126,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __SBD_unit={127,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __SCR_unit={128,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __SDG_unit={129,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __SEK_unit={130,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __SGD_unit={131,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __SHP_unit={132,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __SLL_unit={133,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __SOS_unit={134,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __SRD_unit={135,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __SVC_unit={136,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __SYP_unit={137,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __SZL_unit={138,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __THB_unit={139,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __TJS_unit={140,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __TMT_unit={141,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __TND_unit={142,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __TOP_unit={143,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __TRY_unit={144,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __TTD_unit={145,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __TWD_unit={146,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __TZS_unit={147,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __UAH_unit={148,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __UGX_unit={149,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __UYU_unit={150,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __UZS_unit={151,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __VEF_unit={152,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __VND_unit={153,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __VUV_unit={154,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __WST_unit={155,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __XAF_unit={156,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __XAG_unit={157,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __XAU_unit={158,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __XCD_unit={159,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __XDR_unit={160,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __XOF_unit={161,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __XPD_unit={162,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __XPF_unit={163,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __XPT_unit={164,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __YER_unit={165,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __ZAR_unit={166,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __ZMW_unit={167,0,0,0,0,0,0,0,1,0,0,0};
+    const mksa_unit __ZWL_unit={168,0,0,0,0,0,0,0,1,0,0,0};
   #endif
 
   // table of alpha-sorted units
@@ -8004,6 +8320,12 @@ namespace giac {
     &__d_unit,
     &__dB_unit,
     &__deg_unit,
+    &__degF_unit,
+    &__degC_unit,
+    &__deltaF_unit,
+    &__deltaC_unit,
+    &__deltaK_unit,
+    &__deltaRankine_unit,
     // &__degreeF_unit,
     &__dyn_unit,
     &__eV_unit,
@@ -8373,6 +8695,12 @@ namespace giac {
     "_d",
     "_dB",
     "_deg",
+    "_degF",
+    "_degC",
+    "_deltaF",
+    "_deltaC",
+    "_deltaK",
+    "_deltaRankine",
     // "_degreeF",
     "_dyn",
     "_eV",
@@ -8723,6 +9051,12 @@ namespace giac {
   gen _Curie_unit(mksa_register("_Curie",&__Curie_unit));
   gen _ct_unit(mksa_register("_ct",&__ct_unit));
   gen _deg_unit(mksa_register("_deg",&__deg_unit));
+  gen _degF_unit(mksa_register("_degF",&__degF_unit));
+  gen _degC_unit(mksa_register("_degC",&__degC_unit));
+  gen _deltaF_unit(mksa_register("_deltaF",&__deltaF_unit));
+  gen _deltaC_unit(mksa_register("_deltaC",&__deltaC_unit));
+  gen _deltaK_unit(mksa_register("_deltaK",&__deltaK_unit));
+  gen _deltaRankine_unit(mksa_register("_deltaRankine",&__deltaRankine_unit));
   gen _d_unit(mksa_register("_d",&__d_unit));
   gen _dB_unit(mksa_register("_dB",&__dB_unit));
   gen _dyn_unit(mksa_register("_dyn",&__dyn_unit));
@@ -9205,7 +9539,7 @@ namespace giac {
 
   static vecteur mksa_unit2vecteur(const mksa_unit * tmp){ 
     vecteur v;
-    if (tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0 && tmp->E==0){
+    if (tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0 && tmp->E==0 && tmp->F==0 && tmp->C==0){
       if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0){
         v.push_back(tmp->coeff);
       }
@@ -9218,9 +9552,9 @@ namespace giac {
         v.push_back(tmp->A);
       }
     } else {
-      v.reserve(10);
+      v.reserve(12);
 #ifdef SWIFT_CALCS_OPTIONS
-      if (tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0 && tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0) {
+      if (tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0 && tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->F==0 && tmp->C==0) {
         // Currency unit: We need to find the correct conversion coefficient to mksa (USD)
         double conv_coeff = _currency_conversion_[((int)tmp->coeff)-1];
         if(conv_coeff == 0) 
@@ -9238,6 +9572,8 @@ namespace giac {
       v.push_back(tmp->cd);
       v.push_back(tmp->E);
       v.push_back(tmp->d);
+      v.push_back(tmp->F);
+      v.push_back(tmp->C);
     }
     return v;
   }
@@ -9261,7 +9597,7 @@ namespace giac {
       coeff = coeff / std::pow(defaults.cd,tmp->cd);
     if(tmp->d != 0) 
       coeff = coeff / std::pow(defaults.d,tmp->d);
-    if (tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0 && tmp->E==0){
+    if (tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0 && tmp->E==0 && tmp->F==0 && tmp->C==0){
       if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0){
         v.push_back(coeff);
       }
@@ -9275,9 +9611,9 @@ namespace giac {
       }
     }
     else {
-      v.reserve(10);
+      v.reserve(12);
 #ifdef SWIFT_CALCS_OPTIONS
-      if (tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0 && tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0) {
+      if (tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0 && tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->F==0 && tmp->C==0) {
         // Currency unit: We need to find the correct conversion coefficient to mksa (USD) 
         double conv_coeff = _currency_conversion_[((int)tmp->coeff)-1];
         if(conv_coeff == 0) 
@@ -9295,6 +9631,8 @@ namespace giac {
       v.push_back(tmp->cd);
       v.push_back(tmp->E);
       v.push_back(tmp->d);
+      v.push_back(tmp->F);
+      v.push_back(tmp->C);
     }
     return v;
   }
@@ -9315,7 +9653,7 @@ namespace giac {
   unit_convert_out unit_convert_routine(const identificateur & g, bool mksa, GIAC_CONTEXT) {
     unit_convert_out output;
     output.coeff = 1.0;
-    mksa_unit blank_unit={0,0,0,0,0,0,0,0,0,0};
+    mksa_unit blank_unit={0,0,0,0,0,0,0,0,0,0,0,0};
     output.mksa_vector = &blank_unit;
     string s=g.print(contextptr);
     // Find prefix in unit
@@ -9433,7 +9771,7 @@ namespace giac {
       v = mksa_unit2vecteur(it->second);
     else
       v = default_unit_unit2vecteur(it->second);
-    if (it->second->K==0 && it->second->mol==0 && it->second->cd==0 && it->second->d==1 && it->second->E==0 && it->second->m==0 && it->second->kg==0 && it->second->s==0 && it->second->A==0) {
+    if (it->second->K==0 && it->second->mol==0 && it->second->cd==0 && it->second->d==1 && it->second->E==0 && it->second->m==0 && it->second->kg==0 && it->second->s==0 && it->second->A==0 && it->second->F==0 && it->second->C==0) {
       // This is an angle.  MKSA or default should 'be' whatever the current angle mode is:
 
       // Test for conversion and use symoblics instead to keep things in symbolic notation
@@ -9448,7 +9786,7 @@ namespace giac {
         v[0] = plus_one;
       res_d=res_d * it->second->coeff;
 #ifdef SWIFT_CALCS_OPTIONS
-    } else if (it->second->K==0 && it->second->mol==0 && it->second->cd==0 && it->second->d==0 && it->second->E==1 && it->second->m==0 && it->second->kg==0 && it->second->s==0 && it->second->A==0) {
+    } else if (it->second->K==0 && it->second->mol==0 && it->second->cd==0 && it->second->d==0 && it->second->E==1 && it->second->m==0 && it->second->kg==0 && it->second->s==0 && it->second->A==0 && it->second->F==0 && it->second->C==0) {
       // This is a currency.  Need to ask for the right coefficient
       double conv_coeff = _currency_conversion_[((int)it->second->coeff)-1];
       if(conv_coeff == 0) 
@@ -9492,6 +9830,12 @@ namespace giac {
       vecteur res0=unit_convert(v[1], mksa, contextptr);
       vecteur res1=unit_convert(v[0], mksa, contextptr);
       vecteur res=addvecteur(res0,res1);
+      int s=int(res.size());
+      for (int i=1;i<s;++i) {
+        if(is_exactly_zero(fPart(res[i],contextptr))) continue;
+        if(is_greater(1e-6,abs(abs(fPart(res[i],contextptr)-0.5,contextptr)-0.5),contextptr))  //Very small fractional part...float error
+          res[i] = _round(res[i],contextptr);
+      }
       res.front()=normal(operator_times(res0.front(),res1.front(),contextptr),contextptr);
       return res;
     }
@@ -9542,11 +9886,11 @@ namespace giac {
         for (unsigned i=0;i<f._VECTptr->size();++i){
           vecteur tmp(unit_convert((*f._VECTptr)[i], mksa, contextptr));
           int s=int(tmp.size());
-          for (int j=s;j<10;++j)
+          for (int j=s;j<12;++j)
             tmp.push_back(zero);
           if(i == 0) {
             // First loop, seed res with tmp
-            for (int j=1;j<10;++j)
+            for (int j=1;j<12;++j)
               res.push_back(tmp[j]);
           } else {
             // Second+ loop, make sure unit dimensions match, if not just return the input directly (we don't throw an error as there could be variable in the input, like 'x + 1_in')
@@ -9569,15 +9913,15 @@ namespace giac {
         vecteur & v=*f._VECTptr;
         vecteur num(unit_convert((*f._VECTptr)[0], mksa, contextptr));
         int s=int(num.size());
-        for (int j=s;j<10;++j)
+        for (int j=s;j<12;++j)
           num.push_back(zero);
         vecteur den(unit_convert((*f._VECTptr)[1], mksa, contextptr));
         s=int(den.size());
-        for (int j=s;j<10;++j)
+        for (int j=s;j<12;++j)
           den.push_back(zero);
         vecteur res(makevecteur(zero));
         res[0] = operator_times(num[0], inv(den[0], contextptr), contextptr);
-        for (int j=1;j<10;++j)
+        for (int j=1;j<12;++j)
           res.push_back(num[j] - den[j]);
         return res;
       }
@@ -9596,6 +9940,8 @@ namespace giac {
       return plus_one;
     if (is_one(exponent))
       return g;
+    if (is_zero(exponent))
+      return plus_one;
     return symbolic(at_pow,gen(makevecteur(g,exponent),_SEQ__VECT));
   }
   
@@ -9634,6 +9980,9 @@ namespace giac {
       return zero;
   }
   void default_unit(gen g, double d, int index) {
+#ifdef SWIFT_CALCS_OPTIONS
+    int type;
+#endif
     switch(index) {
       case 1:
         _default_unit_.m = d;
@@ -9652,8 +10001,27 @@ namespace giac {
         _default_unit_.A_base = g;
         break;
       case 5:
+#ifdef SWIFT_CALCS_OPTIONS
+        if(g == _degF_unit) { // set degF as default.  Set to deltaF 
+          _default_unit_.K = 5./9;
+          _default_unit_.K_base = _deltaF_unit;
+        } else if(g == _degC_unit) { // set degC as default.  Set to deltaC
+          _default_unit_.K = 1.0;
+          _default_unit_.K_base = _deltaC_unit;
+        } else if(g == _deltaK_unit) { 
+          _default_unit_.K = 1.0;
+          _default_unit_.K_base = _K_unit;
+        } else if(g == _deltaRankine_unit) { 
+          _default_unit_.K = 5./9;
+          _default_unit_.K_base = _Rankine_unit;
+        } else {
+          _default_unit_.K = d;
+          _default_unit_.K_base = g;
+        }
+#else
         _default_unit_.K = d;
         _default_unit_.K_base = g;
+#endif
         break;
       case 6:
         _default_unit_.mol = d;
@@ -9670,23 +10038,9 @@ namespace giac {
     }  
   }
   #ifdef SWIFT_CALCS_OPTIONS
-    // Mode switch: all units will be converted to mksa and have the unit portion dropped
-    gen mksareduce_mode(const gen & g,GIAC_CONTEXT){
-      if ( g.type==_STRNG &&  g.subtype==-1) return  g;
-      gen args(g);
-      if (g.type==_DOUBLE_)
-        args=int(g._DOUBLE_val);    
-      if (args.type!=_INT_)
-        return mksareduce_mode(contextptr);
-      mksareduce_mode((args.val)!=0,contextptr);
-      return args;
-    }
-    static const char _mksareduce_mode_s []="mksareduce_mode";
-    static define_unary_function_eval (__mksareduce_mode,&mksareduce_mode,_mksareduce_mode_s);
-    define_unary_function_ptr5( at_mksareduce_mode ,alias_at_mksareduce_mode ,&__mksareduce_mode,0,true);
 
     // Mode switch: if one indexed or zero indexed
-    gen first_index(const gen & g,GIAC_CONTEXT){
+    gen one_index(const gen & g,GIAC_CONTEXT){
       if ( g.type==_STRNG &&  g.subtype==-1) return  g;
       gen args(g);
       if (g.type==_DOUBLE_)
@@ -9696,24 +10050,9 @@ namespace giac {
       one_indexed((args.val)!=0);
       return args;
     }
-    static const char _first_index_s []="first_index";
-    static define_unary_function_eval (__first_index,&first_index,_first_index_s);
-    define_unary_function_ptr5( at_first_index ,alias_at_first_index ,&__first_index,0,true);
-
-    // Mode switch: all units will be converted to mksa and have trailing variables added that represent mksa units
-    gen mksavariable_mode(const gen & g,GIAC_CONTEXT){
-      if ( g.type==_STRNG &&  g.subtype==-1) return  g;
-      gen args(g);
-      if (g.type==_DOUBLE_)
-        args=int(g._DOUBLE_val);    
-      if (args.type!=_INT_)
-        return mksavariable_mode(contextptr);
-      mksavariable_mode((args.val)!=0,contextptr);
-      return args;
-    }
-    static const char _mksavariable_mode_s []="mksavariable_mode";
-    static define_unary_function_eval (__mksavariable_mode,&mksavariable_mode,_mksavariable_mode_s);
-    define_unary_function_ptr5( at_mksavariable_mode ,alias_at_mksavariable_mode ,&__mksavariable_mode,0,true);
+    static const char _one_index_s []="one_index";
+    static define_unary_function_eval (__one_index,&one_index,_one_index_s);
+    define_unary_function_ptr5( at_one_index ,alias_at_one_index ,&__one_index,0,true);
 
     // Like unitpow, but returns the actual exponent
     double unitpow_double(const gen & g,const gen & exponent_){
@@ -9724,197 +10063,24 @@ namespace giac {
         return 0;
       return exponent._DOUBLE_val;
     }
-
-    // Function that takes a unit and returns an expression with variables in mksa space (u__[UNIT]) with the correct powers.  Example: 1_in/1_h -> u__m^1 * u__s^-1
-    gen mksa_to_var(const gen & g,GIAC_CONTEXT){
-      if (g.type==_VECT)
-        return apply(g,mksa_to_var,contextptr);
-      vecteur v(mksa_convert(g,contextptr));
-      if (is_undef(v)) return v;
-      int s=int(v.size());
-      int length = 0;
-      double exponent;
-      char outstr[256];
-      length += sprintf(outstr + length, "1");
-      if (s>2) {
-        exponent = unitpow_double(_kg_unit,v[2]);
-        if(exponent != 0) {
-          /*if(ceilf(exponent) == exponent)
-          COMMENTED BECAUSE THIS FOR SOME REASONS BREAKS DESOLVE.  IT WON'T FIND SOLUTION WITH EXACT SYMOBLICS, BUT WILL WITH DECIMAL IN THE EXPONENT...THIS MAY POPUP ELSEWHERE TOO...
-            length += sprintf(outstr + length, "*u__kg^(%d)", int(exponent));
-          else*/
-            length += sprintf(outstr + length, "*u__kg^(%f)", exponent);
-        }
-      }
-      if (s>1) {
-        exponent = unitpow_double(_m_unit,v[1]);
-        if(exponent != 0){
-          /*if(ceilf(exponent) == exponent)
-            length += sprintf(outstr + length, "*u__m^(%d)", int(exponent));
-          else*/
-            length += sprintf(outstr + length, "*u__m^(%f)", exponent);
-        }
-      }
-      if (s>3) {
-        exponent = unitpow_double(_s_unit,v[3]);
-        if(exponent != 0){
-          /*if(ceilf(exponent) == exponent)
-            length += sprintf(outstr + length, "*u__s^(%d)", int(exponent));
-          else*/
-            length += sprintf(outstr + length, "*u__s^(%f)", exponent);
-        }
-      }
-      if (s>4) {
-        exponent = unitpow_double(_A_unit,v[4]);
-        if(exponent != 0){
-          /*if(ceilf(exponent) == exponent)
-            length += sprintf(outstr + length, "*u__A^(%d)", int(exponent));
-          else*/
-            length += sprintf(outstr + length, "*u__A^(%f)", exponent);
-        }
-      }
-      if (s>5) {
-        exponent = unitpow_double(_K_unit,v[5]);
-        if(exponent != 0){
-          /*if(ceilf(exponent) == exponent)
-            length += sprintf(outstr + length, "*u__K^(%d)", int(exponent));
-          else*/
-            length += sprintf(outstr + length, "*u__K^(%f)", exponent);
-        }
-      }
-      if (s>6) {
-        exponent = unitpow_double(_mol_unit,v[6]);
-        if(exponent != 0){
-          /*if(ceilf(exponent) == exponent)
-            length += sprintf(outstr + length, "*u__mol^(%d)", int(exponent));
-          else*/
-            length += sprintf(outstr + length, "*u__mol^(%f)", exponent);
-        }
-      }
-      if (s>7) {
-        exponent = unitpow_double(_cd_unit,v[7]);
-        if(exponent != 0){
-          /*if(ceilf(exponent) == exponent)
-            length += sprintf(outstr + length, "*u__cd^(%d)", int(exponent));
-          else*/
-            length += sprintf(outstr + length, "*u__cd^(%f)", exponent);
-        }
-      }
-      if (s>8) {
-#ifdef SWIFT_CALCS_OPTIONS
-        exponent = unitpow_double(_USD_unit,v[8]);
-#else
-        exponent = unitpow_double(_E_unit,v[8]);
-#endif
-        if(exponent != 0){
-          /*if(ceilf(exponent) == exponent)
-            length += sprintf(outstr + length, "*u__E^(%d)", int(exponent));
-          else*/
-#ifdef SWIFT_CALCS_OPTIONS
-            length += sprintf(outstr + length, "*u__USD^(%f)", exponent);
-#else
-            length += sprintf(outstr + length, "*u__E^(%f)", exponent);
-#endif
-        }
-      }
-      if (s>9) { // The 'MKSA' angle unit is dependant on whatever the current angle mode is
-        exponent = unitpow_double(_rad_unit,v[9]);
-        if(exponent != 0) {
-          /*if(ceilf(exponent) == exponent) {
-            if(angle_radian(contextptr))
-              length += sprintf(outstr + length, "*u__rad^(%d)", int(exponent));
-            else if(angle_degree(contextptr))
-              length += sprintf(outstr + length, "*u__deg^(%d)", int(exponent));
-            else
-              length += sprintf(outstr + length, "*u__grad^(%d)", int(exponent));
-          } else {*/
-            if(angle_radian(contextptr))
-              length += sprintf(outstr + length, "*u__rad^(%f)", exponent);
-            else if(angle_degree(contextptr))
-              length += sprintf(outstr + length, "*u__deg^(%f)", exponent);
-            else
-              length += sprintf(outstr + length, "*u__grad^(%f)", exponent);
-          //}
-        }
-      }
-      return symb_prod(mksa_remove_base(g,contextptr), gen(outstr,contextptr));
-    }
-    static const char _mksa_var_s []="mksa_var";
-    static define_unary_function_eval (__mksa_var,&mksa_to_var,_mksa_var_s);
-    define_unary_function_ptr5( at_mksa_var ,alias_at_mksa_var,&__mksa_var,0,true);
     
   // Function returns the base of the units in default unit space.  Example 1_in -> 1_m, 23_h -> 1_s (assuming mksa is default)
   gen default_units_reduce_base(const gen & g,GIAC_CONTEXT){ //mksa_reduce_base, but instead for the default units
-    if (g.type==_VECT)
+    if (g.type==_VECT) 
       return apply(g,default_units_reduce_base,contextptr);
-    vecteur v(unit_convert(g, false, contextptr));
-    if (is_undef(v)) return v;
-    gen res1=v[0];
-    gen num = plus_one;
-    gen den = plus_one;
-    int s=int(v.size());
-    if (s>2) {
-      if(is_greater(0, v[2], contextptr))
-        den = den * unitpow(default_unit(2, contextptr),-1*v[2]);
-      else
-        num = num * unitpow(default_unit(2, contextptr),v[2]);
-    }
-    if (s>1) {
-      if(is_greater(0, v[1], contextptr))
-        den = den * unitpow(default_unit(1, contextptr),-1*v[1]);
-      else
-        num = num * unitpow(default_unit(1, contextptr),v[1]);
-    }
-    if (s>3) {
-      if(is_greater(0, v[3], contextptr))
-        den = den * unitpow(default_unit(3, contextptr),-1*v[3]);
-      else
-        num = num * unitpow(default_unit(3, contextptr),v[3]);
-    }
-    if (s>4) {
-      if(is_greater(0, v[4], contextptr))
-        den = den * unitpow(default_unit(4, contextptr),-1*v[4]);
-      else
-        num = num * unitpow(default_unit(4, contextptr),v[4]);
-    }
-    if (s>5) {
-      if(is_greater(0, v[5], contextptr))
-        den = den * unitpow(default_unit(5, contextptr),-1*v[5]);
-      else
-        num = num * unitpow(default_unit(5, contextptr),v[5]);
-    }
-    if (s>6) {
-      if(is_greater(0, v[6], contextptr))
-        den = den * unitpow(default_unit(6, contextptr),-1*v[6]);
-      else
-        num = num * unitpow(default_unit(6, contextptr),v[6]);
-    }
-    if (s>7) {
-      if(is_greater(0, v[7], contextptr))
-        den = den * unitpow(default_unit(7, contextptr),-1*v[7]);
-      else
-        num = num * unitpow(default_unit(7, contextptr),v[7]);
-    }
-    if (s>8) {
-      if(is_greater(0, v[8], contextptr))
-        den = den * unitpow(default_unit(8, contextptr),-1*v[8]);
-      else
-        num = num * unitpow(default_unit(8, contextptr),v[8]);
-    }
-    if (s>9) {
-      if(is_greater(0, v[9], contextptr))
-        den = den * unitpow(default_unit(9, contextptr),-1*v[9]);
-      else
-        num = num * unitpow(default_unit(9, contextptr),v[9]);
-    }
-    if(is_one(num) && is_one(den))
+    gen g2 = default_units_function(g,true,contextptr);
+    if (is_undef(g2)) return g2;
+    if(g2.is_symb_of_sommet(at_unit)) {
+        if(g._SYMBptr->feuille._VECTptr->back()==_deltaK_unit || g._SYMBptr->feuille._VECTptr->back()==_deltaF_unit || g._SYMBptr->feuille._VECTptr->back()==_deltaC_unit || g._SYMBptr->feuille._VECTptr->back()==_deltaRankine_unit) {
+          if(default_unit(5, contextptr) == _deltaC_unit) return symbolic(at_unit,makevecteur(plus_one,_deltaC_unit));
+          if(default_unit(5, contextptr) == _deltaF_unit) return symbolic(at_unit,makevecteur(plus_one,_deltaF_unit));
+          if(default_unit(5, contextptr) == _K_unit) return symbolic(at_unit,makevecteur(plus_one,_deltaK_unit));
+          if(default_unit(5, contextptr) == _Rankine_unit) return symbolic(at_unit,makevecteur(plus_one,_deltaRankine_unit));
+        }
+      vecteur & v = *g2._SYMBptr->feuille._VECTptr;
+      return symbolic(at_unit,makevecteur(plus_one,v[1]));
+    } else
       return plus_one;
-    else if(is_one(num))
-      return plus_one / symbolic(at_unit,makevecteur(plus_one, den));
-    else if(is_one(den))
-      return symbolic(at_unit,makevecteur(plus_one,num));
-    else
-      return symbolic(at_unit,makevecteur(plus_one, num/den ));
   }
   static const char _default_base_s []="default_base";
   static define_unary_function_eval (__default_base,&default_units_reduce_base,_default_base_s);
@@ -9924,41 +10090,14 @@ namespace giac {
     gen mksa_reduce_base(const gen & g,GIAC_CONTEXT){
       if (g.type==_VECT) 
         return apply(g,mksa_reduce_base,contextptr);
-      
-      vecteur v(mksa_convert(g,contextptr));
-      if (is_undef(v)) return v;
-      gen res1=v[0];
-      gen res=plus_one;
-      int s=int(v.size());
-      if (s>2)
-        res = res *unitpow(_kg_unit,v[2]);
-      if (s>1)
-        res = res *unitpow(_m_unit,v[1]);
-      if (s>3)
-        res = res *unitpow(_s_unit,v[3]);
-      if (s>4)
-        res = res * unitpow(_A_unit,v[4]);
-      if (s>5)
-        res = res * unitpow(_K_unit,v[5]);
-      if (s>6)
-        res = res * unitpow(_mol_unit,v[6]);
-      if (s>7)
-        res = res * unitpow(_cd_unit,v[7]);
-      if (s>8)
-#ifdef SWIFT_CALCS_OPTIONS
-        res = res * unitpow(_USD_unit,v[8]);
-#else
-        res = res * unitpow(_E_unit,v[8]);
-#endif
-      if (s>9) { // MKSA angle is based on current angle mode
-        if(angle_radian(contextptr)) res = res * unitpow(_rad_unit,v[9]);
-        else if(angle_degree(contextptr)) res = res * unitpow(_deg_unit,v[9]);
-        else res = res * unitpow(_grad_unit,v[9]); 
-      }
-      if (is_one(res))
+      gen g2 = mksa_reduce(g, contextptr);
+      if (is_undef(g2)) return g2;
+      if(g2.is_symb_of_sommet(at_unit)) {
+        if(g._SYMBptr->feuille._VECTptr->back()==_deltaK_unit || g._SYMBptr->feuille._VECTptr->back()==_deltaF_unit || g._SYMBptr->feuille._VECTptr->back()==_deltaC_unit || g._SYMBptr->feuille._VECTptr->back()==_deltaRankine_unit) return symbolic(at_unit,makevecteur(plus_one,_deltaK_unit));
+        vecteur & v = *g2._SYMBptr->feuille._VECTptr;
+        return symbolic(at_unit,makevecteur(plus_one,v[1]));
+      } else
         return plus_one;
-      else
-        return symbolic(at_unit,makevecteur(plus_one,res));
     }
     static const char _mksa_base_s []="mksa_base";
     static define_unary_function_eval (__mksa_base,&mksa_reduce_base,_mksa_base_s);
@@ -9975,17 +10114,156 @@ namespace giac {
     define_unary_function_ptr5( at_mksa_base_first ,alias_at_mksa_base_first,&__mksa_base_first,0,true);
     
     // Function returns the value of the unit in mksa space, with unit removed.  1_h -> 3600, 1_in -> 0.0254
-    gen mksa_remove_base(const gen & g,GIAC_CONTEXT){
+    gen mksa_value(const gen & g,GIAC_CONTEXT){
       if (g.type==_VECT) 
-        return apply(g,mksa_remove_base,contextptr);
+        return apply(g,mksa_value,contextptr);
       vecteur v(mksa_convert(g,contextptr));
-      if (is_undef(v)) return v;
-      gen res1=v[0];
-      return res1;
+      // Check for temperature units, which are special
+      if(g.is_symb_of_sommet(at_unit)) {
+        vecteur & vg = *g._SYMBptr->feuille._VECTptr;
+        int type = determine_unit_type(vg[1]);
+        // We are doing a pure temperature conversion, so we need to see if we have to handle it in any special way
+        // (note: multiplicative conversions are auto handled to deltaC/deltaF/K/Rankine.  Its only absolute ones we need to deal with)
+        if(type == 5) {
+          // want to convert from degF (assume deltaF) to mksa, which is K
+          v = mksa_convert(symbolic(at_unit, makenewvecteur(vg[0]+459.67, _Rankine_unit)),contextptr);
+          //*logptr(contextptr) << gettext("Temperature Units Warning: Use of absolute Fahrenheit units (degF) is ambiguous for this calculation.  Calculation is assuming all degF values are intended to be deltaF, and the answer may not be as intended.  Change all unit inputs to multiplicative temperature units (K, Rankine, deltaF, deltaC) to remove ambiguity and ensure answer is as intended.") << endl;
+        } else if(type == 4) {
+          // want to convert from degC (assume deltaC) to mksa, which is K
+          v = mksa_convert(symbolic(at_unit, makenewvecteur(vg[0]+273.15, _K_unit)),contextptr);
+          //*logptr(contextptr) << gettext("Temperature Units Warning: Use of absolute Fahrenheit units (degF) is ambiguous for this calculation.  Calculation is assuming all degF values are intended to be deltaF, and the answer may not be as intended.  Change all unit inputs to multiplicative temperature units (K, Rankine, deltaF, deltaC) to remove ambiguity and ensure answer is as intended.") << endl;
+        }
+      }
+      return v[0];
     }
     static const char _mksa_remove_s []="mksa_remove";
-    static define_unary_function_eval (__mksa_remove,&mksa_remove_base,_mksa_remove_s);
+    static define_unary_function_eval (__mksa_remove,&mksa_value,_mksa_remove_s);
     define_unary_function_ptr5( at_mksa_remove ,alias_at_mksa_remove,&__mksa_remove,0,true);
+
+    // Function returns the multiplicative conversion factor from mksa to this unit.  1_h -> 1/3600, 1_in -> 1/0.0254.  No offset included
+    gen mksa_coefficient(const gen & g,GIAC_CONTEXT){
+      if (g.type==_VECT) 
+        return apply(g,mksa_coefficient,contextptr);
+      vecteur v;
+      // Check for temperature units, which are special
+      if(g.is_symb_of_sommet(at_unit)) {
+        vecteur & vg = *g._SYMBptr->feuille._VECTptr;
+        int type = determine_unit_type(vg[1]);
+        // We are doing a pure temperature conversion, so we need to see if we have to handle it in any special way
+        // (note: multiplicative conversions are auto handled to deltaC/deltaF/K/Rankine.  Its only absolute ones we need to deal with)
+        if(type == 5) {
+          // want to convert from degF (assume deltaF) to mksa, which is K
+          v = mksa_convert(symbolic(at_unit, makenewvecteur(vg[0], _Rankine_unit)),contextptr);
+          return (v[0]);
+        } else if(type == 4) {
+          // want to convert from degC (assume deltaC) to mksa, which is K
+          v = mksa_convert(symbolic(at_unit, makenewvecteur(vg[0], _K_unit)),contextptr);
+          return (v[0]);
+        }
+      }
+      return mksa_value(g,contextptr);
+    }
+    static const char _mksa_coefficient_s []="mksa_coefficient";
+    static define_unary_function_eval (__mksa_coefficient,&mksa_coefficient,_mksa_coefficient_s);
+    define_unary_function_ptr5( at_mksa_coefficient ,alias_at_mksa_coefficient,&__mksa_coefficient,0,true);
+
+    // Function returns the offset from mksa to this unit, BEFORE multiplication by the coeff
+    gen mksa_offset(const gen & g,GIAC_CONTEXT){
+      if (g.type==_VECT) 
+        return apply(g,mksa_offset,contextptr);
+      if(g.is_symb_of_sommet(at_unit)) {
+        vecteur & vg = *g._SYMBptr->feuille._VECTptr;
+        int type = determine_unit_type(vg[1]);
+        // We are doing a pure temperature conversion, so we need to see if we have to handle it in any special way
+        // (note: multiplicative conversions are auto handled to deltaC/deltaF/K/Rankine.  Its only absolute ones we need to deal with)
+        if(type == 5) return gen(459.67); //degF
+        if(type == 4) return gen(273.15); //degF
+      }
+      return zero;
+    }
+    static const char _mksa_offset_s []="mksa_offset";
+    static define_unary_function_eval (__mksa_offset,&mksa_offset,_mksa_offset_s);
+    define_unary_function_ptr5( at_mksa_offset ,alias_at_mksa_offset,&__mksa_offset,0,true);
+
+    // Function returns the multiplicative conversion factor from default to this unit.  1_h -> 1/3600, 1_in -> 1/0.0254 (assuming default is mksa).  No offset included
+    gen default_units_coefficient(const gen & g,GIAC_CONTEXT){
+      if (g.type==_VECT) 
+        return apply(g,default_units_coefficient,contextptr);
+      vecteur v;
+      // Check for temperature units, which are special
+      if(g.is_symb_of_sommet(at_unit)) {
+        vecteur & vg = *g._SYMBptr->feuille._VECTptr;
+        int type = determine_unit_type(vg[1]);
+        if((type == 2) || (type == 4) || (type == 5)) {
+        // We are doing a pure temperature conversion, so we need to see if we have to handle it in any special way
+        // (note: multiplicative conversions are auto handled to deltaC/deltaF/K/Rankine.  Its only absolute ones we need to deal with)
+          if(default_unit(5, contextptr) == _deltaC_unit) {
+            // want to convert to deltaC/degC...check if input is in K, Rankine, or degF:
+            if(vg[1] == _K_unit) return vg[0];
+            if(vg[1] == _Rankine_unit) return vg[0]*gen(5./9);
+            if(type == 5) return vg[0]*gen(5./9);
+            if(type == 4) return vg[0];
+          }
+          if(default_unit(5, contextptr) == _deltaF_unit) {
+            // want to convert to deltaF/degF...check if input is in K, Rankine, or degC:
+            if(vg[1] == _K_unit) return vg[0]*gen(9./5);
+            if(vg[1] == _Rankine_unit) return vg[0];
+            if(type == 5) return vg[0];
+            if(type == 4) return vg[0]*gen(9./5);
+          }
+          if(default_unit(5, contextptr) == _K_unit) {
+            // want to convert from to K...check if input is in degF or degC:
+            if(type == 4) return vg[0];
+            if(type == 5) return vg[0]*gen(5./9);
+          }
+          if(default_unit(5, contextptr) == _Rankine_unit) {
+            // want to convert from to Rankine...check if input is in degF or degC:
+            if(type == 5) return vg[0];
+            if(type == 4) return vg[0]*gen(9./5);
+          }
+        }
+      }
+      return default_unit_remove_base(g,contextptr);
+    }
+    static const char _default_units_coefficient_s []="default_units_coefficient";
+    static define_unary_function_eval (__default_units_coefficient,&default_units_coefficient,_default_units_coefficient_s);
+    define_unary_function_ptr5( at_default_units_coefficient ,alias_at_default_units_coefficient,&__default_units_coefficient,0,true);
+
+    // Function returns the offset from this unit to default unit, after multiplication by the coeff
+    gen default_units_offset(const gen & g,GIAC_CONTEXT){
+      if (g.type==_VECT) 
+        return apply(g,default_units_offset,contextptr);
+      if(g.is_symb_of_sommet(at_unit)) {
+        vecteur & vg = *g._SYMBptr->feuille._VECTptr;
+        int type = determine_unit_type(vg[1]);
+        if((type == 2) || (type == 4) || (type == 5)) {
+          // We are doing a pure temperature conversion, so we need to see if we have to handle it in any special way
+          // (note: multiplicative conversions are auto handled to deltaC/deltaF/K/Rankine.  Its only absolute ones we need to deal with)
+          if(default_unit(5, contextptr) == _deltaC_unit) {
+            // want to convert to deltaC/degC...check if input is in K, Rankine, or degF:
+            if((vg[1] == _K_unit) || (vg[1] == _Rankine_unit)) return gen(-273.15);
+            if(type == 5) return gen(-32*5./9);
+          }
+          if(default_unit(5, contextptr) == _deltaF_unit) {
+            // want to convert to deltaF/degF...check if input is in K, Rankine, or degC:
+            if((vg[1] == _K_unit) || (vg[1] == _Rankine_unit)) return gen(-459.67);
+            if(type == 4) return gen(32);
+          }
+          if(default_unit(5, contextptr) == _K_unit) {
+            // want to convert from to K...check if input is in degF or degC:
+            if((type == 4) || (type == 5)) return gen(273.15);
+          }
+          if(default_unit(5, contextptr) == _Rankine_unit) {
+            // want to convert from to Rankine...check if input is in degF or degC:
+            if((type == 4) || (type == 5)) return gen(459.67);
+          }
+        }
+      }
+      return zero;
+    }
+    static const char _default_units_offset_s []="default_units_offset";
+    static define_unary_function_eval (__default_units_offset,&default_units_offset,_default_units_offset_s);
+    define_unary_function_ptr5( at_default_units_offset ,alias_at_default_units_offset,&__default_units_offset,0,true);
 
     // Function returns the value of the unit in default unit space, with unit removed.  1_h -> 3600, 1_in -> 0.0254 (assuming mksa is default)
     gen default_unit_remove_base(const gen & g,GIAC_CONTEXT){
@@ -9993,6 +10271,36 @@ namespace giac {
         return apply(g,default_unit_remove_base,contextptr);
       vecteur v(unit_convert(g,false,contextptr));
       if (is_undef(v)) return v;
+      // Check for temperature units, which are special
+      if(g.is_symb_of_sommet(at_unit)) {
+        vecteur & vg = *g._SYMBptr->feuille._VECTptr;
+        int type = determine_unit_type(vg[1]);
+        if((type == 2) || (type == 4) || (type == 5)) {
+          // We are doing a pure temperature conversion, so we need to see if we have to handle it in any special way
+          // (note: multiplicative conversions are auto handled to deltaC/deltaF/K/Rankine.  Its only absolute ones we need to deal with)
+          if(default_unit(5, contextptr) == _deltaC_unit) {
+            // want to convert to deltaC/degC...check if input is in K, Rankine, or degF:
+            if(vg[1] == _K_unit) return vg[0] - 273.15;
+            if(vg[1] == _Rankine_unit) return vg[0]*gen(5./9) - 273.15;
+            if(type == 5) return (vg[0]-32)*gen(5./9);
+            if(type == 4) return v[0];
+          }
+          if(default_unit(5, contextptr) == _deltaF_unit) {
+            // want to convert to deltaF/degF...check if input is in K, Rankine, or degC:
+            if(vg[1] == _K_unit) return vg[0]*gen(9./5) - 459.67;
+            if(vg[1] == _Rankine_unit) return vg[0] - 459.67;
+            if(type == 5) return v[0];
+            if(type == 4) return vg[0]*gen(9./5)+32;
+          }
+          if(type == 5) {
+            // want to convert from degF to default, which is either K or Rankine (degC/degF already handled)
+            v = unit_convert(symbolic(at_unit, makenewvecteur(vg[0] + 459.67, _Rankine_unit)),false,contextptr);
+          } else if(type == 4) {
+            // want to convert from degC to default, which is either K or Rankine (degC/degF already handled)
+            v = unit_convert(symbolic(at_unit, makenewvecteur(vg[0] + 273.15, _K_unit)),false,contextptr);
+          }
+        }
+      }
       gen res1=v[0];
       return res1;
     }
@@ -10009,33 +10317,41 @@ namespace giac {
       const mksa_unit * tmp = mksa_convert_unit(*g._IDNTptr,contextptr);
       bool base_unit = false;
       int index;
-      if (tmp->m==1 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==0 && tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0) {
+      if (tmp->m==1 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==0 && tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0 && tmp->F==0 && tmp->C==0) {
         base_unit = true;
         index = 1;
-      } else if (tmp->m==0 && tmp->kg==1 && tmp->s==0 && tmp->A==0 && tmp->E==0 && tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0) {
+      } else if (tmp->m==0 && tmp->kg==1 && tmp->s==0 && tmp->A==0 && tmp->E==0 && tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0 && tmp->F==0 && tmp->C==0) {
         base_unit = true;
         index = 2;
-      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==1 && tmp->A==0 && tmp->E==0 && tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0) {
+      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==1 && tmp->A==0 && tmp->E==0 && tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0 && tmp->F==0 && tmp->C==0) {
         base_unit = true;
         index = 3;
-      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==1 && tmp->E==0 && tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0) {
+      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==1 && tmp->E==0 && tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0 && tmp->F==0 && tmp->C==0) {
         base_unit = true;
         index = 4;
-      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==0 && tmp->K==1 && tmp->mol==0 && tmp->cd==0 && tmp->d==0) {
+      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==0 && tmp->K==1 && tmp->mol==0 && tmp->cd==0 && tmp->d==0 && tmp->F==0 && tmp->C==0) {
         base_unit = true;
         index = 5;
-      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==0 && tmp->K==0 && tmp->mol==1 && tmp->cd==0 && tmp->d==0) {
+      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==0 && tmp->K==0 && tmp->mol==1 && tmp->cd==0 && tmp->d==0 && tmp->F==0 && tmp->C==0) {
         base_unit = true;
         index = 6;
-      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==0 && tmp->K==0 && tmp->mol==0 && tmp->cd==1 && tmp->d==0) {
+      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==0 && tmp->K==0 && tmp->mol==0 && tmp->cd==1 && tmp->d==0 && tmp->F==0 && tmp->C==0) {
         base_unit = true;
         index = 7;
-      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==1 && tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0) {
+      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==1 && tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0 && tmp->F==0 && tmp->C==0) {
         base_unit = true;
         index = 8;
-      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==0 && tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==1) {
+      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==0 && tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==1 && tmp->F==0 && tmp->C==0) {
         base_unit = true;
         index = 9;
+#ifdef SWIFT_CALCS_OPTIONS
+      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==0 && tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0 && tmp->F==1 && tmp->C==0) {
+        base_unit = true;
+        index = 5;
+      } else if (tmp->m==0 && tmp->kg==0 && tmp->s==0 && tmp->A==0 && tmp->E==0 && tmp->K==0 && tmp->mol==0 && tmp->cd==0 && tmp->d==0 && tmp->F==0 && tmp->C==1) {
+        base_unit = true;
+        index = 5;
+#endif
       } 
       if(base_unit) 
         default_unit(g, mksa_convert_coeff(*g._IDNTptr,contextptr), index);
@@ -10064,11 +10380,41 @@ namespace giac {
   static define_unary_function_eval (__clear_usual_units,&clear_usual_units,_clear_usual_units_s);
   define_unary_function_ptr5( at_clear_usual_units ,alias_at_clear_usual_units,&__clear_usual_units,0,true);
 
-  gen default_units(const gen & g,GIAC_CONTEXT){ //mksa_reduce, but instead for the default units
-    if (g.type==_VECT)
-      return apply(g,default_units,contextptr);
+  gen default_units_function(const gen & g,bool force_at_unit,GIAC_CONTEXT){ //mksa_reduce, but instead for the default units
     vecteur v(unit_convert(g, false, contextptr));
     if (is_undef(v)) return v;
+#ifdef SWIFT_CALCS_OPTIONS
+    // Check for temperature units, which are special
+    if(g.is_symb_of_sommet(at_unit)) {
+      vecteur & vg = *g._SYMBptr->feuille._VECTptr;
+      int type = determine_unit_type(vg[1]);
+      if((type == 2) || (type == 4) || (type == 5)) {
+        // We are doing a pure temperature conversion, so we need to see if we have to handle it in any special way
+        // (note: multiplicative conversions are auto handled to deltaC/deltaF/K/Rankine.  Its only absolute ones we need to deal with)
+        if(default_unit(5, contextptr) == _deltaC_unit) {
+          // want to convert to deltaC/degC...check if input is in K, Rankine, or degF:
+          if(vg[1] == _K_unit) return symbolic(at_unit,makevecteur(vg[0] - 273.15, _degC_unit ));
+          if(vg[1] == _Rankine_unit) return symbolic(at_unit,makevecteur(vg[0]*gen(5./9) - 273.15, _degC_unit ));
+          if(type == 5) return symbolic(at_unit,makevecteur((vg[0]-32)*gen(5./9), _degC_unit ));
+          if(type == 4) return g;
+        }
+        if(default_unit(5, contextptr) == _deltaF_unit) {
+          // want to convert to deltaF/degF...check if input is in K, Rankine, or degC:
+          if(vg[1] == _K_unit) return symbolic(at_unit,makevecteur(vg[0]*gen(9./5) - 459.67, _degF_unit ));
+          if(vg[1] == _Rankine_unit) return symbolic(at_unit,makevecteur(vg[0] - 459.67, _degF_unit ));
+          if(type == 5) return g;
+          if(type == 4) return symbolic(at_unit,makevecteur(vg[0]*gen(9./5)+32, _degF_unit ));
+        }
+        if(type == 5) {
+          // want to convert from degF to default, which is either K or Rankine (degC/degF already handled)
+          v = unit_convert(symbolic(at_unit, makenewvecteur(vg[0] + 459.67, _Rankine_unit)),false,contextptr);
+        } else if(type == 4) {
+          // want to convert from degC to default, which is either K or Rankine (degC/degF already handled)
+          v = unit_convert(symbolic(at_unit, makenewvecteur(vg[0] + 273.15, _K_unit)),false,contextptr);
+        }
+      }
+    }
+#endif
     gen res1=v[0];
     gen num = plus_one;
     gen den = plus_one;
@@ -10127,14 +10473,33 @@ namespace giac {
       else
         num = num * unitpow(default_unit(9, contextptr),v[9]);
     }
+    if (s>10) {
+      if(is_greater(0, v[10], contextptr))
+        den = den * unitpow(_degF_unit,-1*v[10]);
+      else
+        num = num * unitpow(_degF_unit,v[10]);
+    }
+    if (s>11) {
+      if(is_greater(0, v[11], contextptr))
+        den = den * unitpow(_degC_unit,-1*v[11]);
+      else
+        num = num * unitpow(_degC_unit,v[11]);
+    }
     if(is_one(num) && is_one(den))
       return res1;
+    else if(is_one(num) && force_at_unit)
+      return symbolic(at_unit,makevecteur(res1, plus_one/den));
     else if(is_one(num))
       return operator_times(res1, plus_one / symbolic(at_unit,makevecteur(plus_one, den)), contextptr);
     else if(is_one(den))
       return symbolic(at_unit,makevecteur(res1,num));
     else
       return symbolic(at_unit,makevecteur(res1, num/den ));
+  }
+  gen default_units(const gen & g,GIAC_CONTEXT){ //mksa_reduce, but instead for the default units
+    if (g.type==_VECT)
+      return apply(g,default_units,contextptr);
+    return default_units_function(g,false,contextptr);
   }
   static const char _default_units_s []="default_units";
   static define_unary_function_eval (__default_units,&default_units,_default_units_s);
@@ -10145,6 +10510,22 @@ namespace giac {
       return apply(g,mksa_reduce,contextptr);
     vecteur v(mksa_convert(g,contextptr));
     if (is_undef(v)) return v;
+#ifdef SWIFT_CALCS_OPTIONS
+    // Check for temperature units, which are special
+    if(g.is_symb_of_sommet(at_unit)) {
+      vecteur & vg = *g._SYMBptr->feuille._VECTptr;
+      int type = determine_unit_type(vg[1]);
+      // We are doing a pure temperature conversion, so we need to see if we have to handle it in any special way
+      // (note: multiplicative conversions are auto handled to deltaC/deltaF/K/Rankine.  Its only absolute ones we need to deal with)
+      if(type == 5) {
+        // want to convert from degF to mksa, which is K
+        v = mksa_convert(symbolic(at_unit, makenewvecteur(vg[0] + 459.67, _Rankine_unit)),contextptr);
+      } else if(type == 4) {
+        // want to convert from degC to mksa, which is K
+        v = mksa_convert(symbolic(at_unit, makenewvecteur(vg[0] + 273.15, _K_unit)),contextptr);
+      }
+    }
+#endif
     gen res1=v[0];
     gen res=plus_one;
     int s=int(v.size());
@@ -10173,6 +10554,10 @@ namespace giac {
       else if(angle_degree(contextptr)) res = res * unitpow(_deg_unit,v[9]);
       else res = res * unitpow(_grad_unit,v[9]);
     }
+    if (s>10)
+      res = res * unitpow(_degF_unit,v[10]);
+    if (s>11)
+      res = res * unitpow(_degC_unit,v[11]);
     if (is_one(res))
       return res1;
     else
@@ -10181,11 +10566,63 @@ namespace giac {
   static const char _mksa_s []="mksa";
   static define_unary_function_eval (__mksa,&mksa_reduce,_mksa_s);
   define_unary_function_ptr5( at_mksa ,alias_at_mksa,&__mksa,0,true);
+
+  gen _kelvin(const gen & g,GIAC_CONTEXT) {
+    if (g.type==_VECT) return apply(g,_kelvin,contextptr);
+    if(chk_temperature_units(g,contextptr)) return mksa_reduce(g,contextptr);
+    return g;
+  }
+  static const char _kelvin_s []="kelvin";
+  static define_unary_function_eval (__kelvin,&_kelvin,_kelvin_s);
+  define_unary_function_ptr5( at_kelvin ,alias_at_kelvin,&__kelvin,0,true);
   
   gen _ufactor(const gen & g,GIAC_CONTEXT){
     if ( g.type==_STRNG &&  g.subtype==-1) return  g;
     if (g.type==_VECT && g.subtype==_SEQ__VECT && g._VECTptr->size()==2){
       vecteur & v=*g._VECTptr;
+#ifdef SWIFT_CALCS_OPTIONS
+      if(v.front().is_symb_of_sommet(at_unit) && v.back().is_symb_of_sommet(at_unit) && chk_temperature_units(v.front(),v.back(),contextptr)) {
+        vecteur & va = *v.front()._SYMBptr->feuille._VECTptr;
+        vecteur & vb = *v.back()._SYMBptr->feuille._VECTptr;
+        // Determine types
+        int a_type = determine_unit_type(va[1]);
+        int b_type = determine_unit_type(vb[1]);
+        // Case 1: degF -> degC
+        if((a_type == 5) && (b_type == 4))
+          return new_ref_symbolic(symbolic(at_unit,makenewvecteur((va[0]-32)*gen(5./9),vb[1])));
+        // Case 2: degC -> degF
+        if((a_type == 4) && (b_type == 5))
+          return new_ref_symbolic(symbolic(at_unit,makenewvecteur(va[0]*gen(9./5)+32,vb[1])));
+        // Case 3: degF -> other temp
+        if((a_type == 5) && (b_type == 2)) // Convert to Rankine and then let conversion continue
+          return _ufactor(makesequence(symbolic(at_unit,makenewvecteur(va[0]+459.67,_Rankine_unit)),v.back()),contextptr);
+        // Case 4: degC -> other temp
+        if((a_type == 4) && (b_type == 2)) // Convert to Kelvin and then let conversion continue
+          return _ufactor(makesequence(symbolic(at_unit,makenewvecteur(va[0]+273.15,_K_unit)),v.back()),contextptr);
+        // Case 5: K/Rankine -> degF
+        if(((va[1] == _K_unit) || (va[1] == _Rankine_unit)) && (b_type == 5)) { // Convert to Rankine and then move to F 
+          gen a1 = _usimplify_base(_ufactor(makesequence(v.front(),symbolic(at_unit,makenewvecteur(plus_one,_Rankine_unit))),contextptr),contextptr);
+          if(a1.is_symb_of_sommet(at_unit) && (a1._SYMBptr->feuille._VECTptr->back() == _Rankine_unit)) {
+            vecteur & a1v = *a1._SYMBptr->feuille._VECTptr;
+            return new_ref_symbolic(symbolic(at_unit,makenewvecteur(a1v[0]-gen(459.67),_degF_unit)));
+          }
+        }
+        // Case 6: K/Rankine -> degC
+        if(((va[1] == _K_unit) || (va[1] == _Rankine_unit)) && (b_type == 4)) { // Convert to Kelvin and then move to C
+          gen a2 = _usimplify_base(_ufactor(makesequence(v.front(),symbolic(at_unit,makenewvecteur(plus_one,_K_unit))),contextptr),contextptr);
+          if(a2.is_symb_of_sommet(at_unit) && (a2._SYMBptr->feuille._VECTptr->back() == _K_unit)) {
+            vecteur & a2v = *a2._SYMBptr->feuille._VECTptr;
+            return new_ref_symbolic(symbolic(at_unit,makenewvecteur(a2v[0]-gen(273.15),_degC_unit)));
+          }
+        }
+        // Case 7: other unit -> degF, switch to deltaF
+        if(b_type == 5) 
+          return _ufactor(makesequence(v.front(),symbolic(at_unit,makenewvecteur(plus_one,_deltaF_unit))),contextptr);
+        // Case 8: other unit -> degC, switch to deltaC
+        if(b_type == 4) 
+          return _ufactor(makesequence(v.front(),symbolic(at_unit,makenewvecteur(plus_one,_deltaC_unit))),contextptr);
+      }
+#endif
       return operator_times(v.back(), default_units(operator_times(v.front(),plus_one/v.back(),contextptr),contextptr), contextptr);
     }
     return gensizeerr(contextptr);
@@ -10197,22 +10634,39 @@ namespace giac {
 #ifdef SWIFT_CALCS_OPTIONS
     // Will simply look to see if passed unit is really of dimension 0 (_m/_in, etc), useful for cos() etc where we need to remove units if possible (angle mode will strip _rad, _deg, and _grad and convert to current default angle)
     gen _usimplify_angle(const gen & g,GIAC_CONTEXT) {
-      remove_angle_mode(true, contextptr); 
-      gen out = _usimplify_base_function(eval(g,1,contextptr), true, contextptr);
-      remove_angle_mode(false, contextptr);
+      gen out = _usimplify_base_function(eval(g,1,contextptr), true, false, contextptr);
       return out;
     }
     gen _usimplify_base(const gen & g,GIAC_CONTEXT) {
-      return _usimplify_base_function(g, false, contextptr);
+      return _usimplify_base_function(g, false, false, contextptr);
     }
-    gen _usimplify_base_function(const gen & g, const bool angle_mode, GIAC_CONTEXT) {
+    gen _usimplify_mksa_remove(const gen & g,GIAC_CONTEXT) {
+      return _usimplify_base_function(g, false, true, contextptr);
+    }
+    vecteur _usimplify_mksa_remove(const vecteur & v,GIAC_CONTEXT) {
+      const_iterateur it=v.begin(),itend=v.end();
+      vecteur vout;
+      vout.reserve(itend-it);
+      for (;it!=itend;++it){
+        gen tmp=_usimplify_mksa_remove(*it,contextptr);
+        if (is_undef(tmp))
+          return gen2vecteur(tmp);
+        vout.push_back(tmp);
+      }
+      return vout;
+    }
+    static const char _usimplify_mksa_remove_s []="usimplify_mksa_remove";
+    static define_unary_function_eval (__usimplify_mksa_remove,&_usimplify_mksa_remove,_usimplify_mksa_remove_s);
+    define_unary_function_ptr5( at_usimplify_mksa_remove ,alias_at_usimplify_mksa_remove,&__usimplify_mksa_remove,0,true);
+
+    gen _usimplify_base_function(const gen & g, const bool angle_mode, const bool mksa_remove, GIAC_CONTEXT) {
       if ( g.type==_STRNG &&  g.subtype==-1) return g;
       if (g.type==_VECT) {
         const_iterateur it=g._VECTptr->begin(),itend=g._VECTptr->end();
         vecteur v;
         v.reserve(itend-it);
         for (;it!=itend;++it){
-          gen tmp=_usimplify_base_function(*it,angle_mode, contextptr);
+          gen tmp=_usimplify_base_function(*it,angle_mode, mksa_remove, contextptr);
           if (is_undef(tmp))
             return gen2vecteur(tmp);
           v.push_back(tmp);
@@ -10224,41 +10678,22 @@ namespace giac {
           return g;
         if (is_inf(g)) 
           return g;
-        if (g._SYMBptr->sommet==at_inv)
-          return inv(_usimplify_base_function(g._SYMBptr->feuille, angle_mode, contextptr),contextptr);
-        if (g._SYMBptr->sommet==at_pow) {
-          gen & f=g._SYMBptr->feuille;
-          if (f.type!=_VECT||f._VECTptr->size()!=2)
-            return vecteur(1,gensizeerr(contextptr));
-          return pow(_usimplify_base_function(f._VECTptr->front(), angle_mode, contextptr), f._VECTptr->back(), contextptr);
-        }
-        if (g._SYMBptr->sommet==at_prod){
-          gen & f=g._SYMBptr->feuille;
-          if (f.type!=_VECT)
-            return _usimplify_base_function(f, angle_mode, contextptr);
+        gen & f=g._SYMBptr->feuille;
+        if (g._SYMBptr->sommet==at_program) {
           vecteur & v=*f._VECTptr;
-          gen out = plus_one;
-          const_iterateur it=v.begin(),itend=v.end();
-          for (;it!=itend;++it){
-            out = operator_times(out, _usimplify_base_function(*it, angle_mode, contextptr), contextptr);
-          }
-          return normal(out,contextptr);
+          return symbolic(at_program,gen(makevecteur(v[0],_usimplify_base_function(evalf(v[1],1,contextptr),angle_mode, mksa_remove, contextptr),_usimplify_base_function(evalf(v[2],1,contextptr),angle_mode, mksa_remove, contextptr)),_SEQ__VECT));
         }
-        #ifdef SWIFT_CALCS_OPTIONS
-          if (g._SYMBptr->sommet==at_plus) {
-            gen & f=g._SYMBptr->feuille;
-            if (f.type!=_VECT)
-              return _usimplify_base_function(f, angle_mode, contextptr);
-            gen out = zero;
-            for (unsigned i=0;i<f._VECTptr->size();++i){
-              out = operator_plus(out, _usimplify_base_function((*f._VECTptr)[i], angle_mode, contextptr), contextptr);
-            }
-            return out;
+        if (f.type==_VECT) {
+          vecteur & v=*f._VECTptr;
+          vecteur out;
+          const_iterateur it=v.begin(),itend=v.end();
+          out.reserve(itend - it);
+          for (;it!=itend;++it){
+            out.push_back(_usimplify_base_function(*it, angle_mode, mksa_remove, contextptr));
           }
-          if (g._SYMBptr->sommet==at_neg) 
-            return operator_times(minus_one, _usimplify_base_function(g._SYMBptr->feuille, angle_mode, contextptr), contextptr);
-        #endif
-        return g;
+          return symbolic(g._SYMBptr->sommet, out);
+        } else
+          return symbolic(g._SYMBptr->sommet, _usimplify_base_function(g._SYMBptr->feuille, angle_mode, mksa_remove, contextptr));
       }
       vecteur v = unit_convert(g, true, contextptr);
       if (is_undef(v)) return v;
@@ -10271,11 +10706,12 @@ namespace giac {
           is_angle = true;
         if(is_greater(abs(v[i], contextptr), 1e-6, contextptr)) {
           all_zero = false;
-          break;
+          if(i != 9) is_angle = false;
         }
       }
       if(angle_mode && is_angle) return v[0];
       if(all_zero) return v[0];
+      if(mksa_remove) return mksa_value(g,contextptr);
       return g;
     }
     static const char _usimplify_base_s []="usimplify_base";
@@ -10290,7 +10726,7 @@ namespace giac {
         int l = int(v.size());
         for(int i=1; i<l; ++i)
           v[i] = operator_times(v[i], pow, contextptr);
-        for(int i=l; i<10; ++i)
+        for(int i=l; i<12; ++i)
           v.push_back(zero);
         v.push_back(pow);
         v[0] = *g._IDNTptr;
@@ -10347,7 +10783,7 @@ namespace giac {
           gen frac = zero;
           l = int(output_units.size());
           for(int j=0; j<l; j++) {
-            for(int i=1; i<10; i++) {
+            for(int i=1; i<12; i++) {
               if(is_greater(abs(output_units[j][i], contextptr), 1e-6, contextptr) && is_greater(abs((*it)[i], contextptr), 1e-6, contextptr)) {
                 if(is_zero(frac)) frac = (*it)[i] / output_units[j][i];
                 else if(is_greater(abs(frac - (*it)[i] / output_units[j][i], contextptr), 1e-6, contextptr)) {
@@ -10364,9 +10800,9 @@ namespace giac {
             }
             if(!is_zero(frac)) { //Matches already added unit 
               vecteur output_unit = gen2vecteur(output_units[j]);
-              output_unit[10] = operator_plus(output_unit[10], (*it)[10], contextptr);
+              output_unit[12] = operator_plus(output_unit[12], (*it)[12], contextptr);
               output_units[j] = output_unit;
-              coeff = operator_times(coeff, pow(_usimplify_base(symbolic(at_unit,makevecteur(1,operator_times(output_units[j][0], inv((*it)[0], contextptr), contextptr))), contextptr), operator_times(minus_one,(*it)[10],contextptr), contextptr), contextptr);
+              coeff = operator_times(coeff, pow(_usimplify_base(symbolic(at_unit,makevecteur(1,operator_times(output_units[j][0], inv((*it)[0], contextptr), contextptr))), contextptr), operator_times(minus_one,(*it)[12],contextptr), contextptr), contextptr);
               break;
             }
           }
@@ -10376,14 +10812,14 @@ namespace giac {
         l = int(output_units.size());
         gen out = plus_one;
         for(int j=0; j<l; j++) {
-          if (is_one(output_units[j][10]))
+          if (is_one(output_units[j][12]))
             out = operator_times(out, output_units[j][0], contextptr);
-          else if(is_minus_one(output_units[j][10]))
+          else if(is_minus_one(output_units[j][12]))
             out = operator_times(out, inv(output_units[j][0],contextptr), contextptr);
-          else if(is_greater(output_units[j][10], zero, contextptr))
-            out = operator_times(out, pow(output_units[j][0], output_units[j][10], contextptr), contextptr);
+          else if(is_greater(output_units[j][12], zero, contextptr))
+            out = operator_times(out, pow(output_units[j][0], output_units[j][12], contextptr), contextptr);
           else
-            out = operator_times(out, inv(pow(output_units[j][0], -1*output_units[j][10], contextptr), contextptr), contextptr);
+            out = operator_times(out, inv(pow(output_units[j][0], -1*output_units[j][12], contextptr), contextptr), contextptr);
         }
         return symbolic(at_unit,makevecteur(coeff, out));
       }
@@ -10441,15 +10877,16 @@ namespace giac {
     bool all_zero = true;
     bool is_angle = false;
     for (int i=1;i<ss;++i) {
-      if((i < 9) && is_greater(abs(v[i], contextptr), 1e-6, contextptr)) {
+      if((i != 9) && is_greater(abs(v[i], contextptr), 1e-6, contextptr)) {
         all_zero = false;
+        is_angle = false;
         break;
       } else if((i == 9) && !is_greater(abs(v[i]-1, contextptr), 1e-6, contextptr)) 
         is_angle= true;
       else if(i == 9) 
         all_zero = false;
     }
-    for (int i=ss;i<10;++i)
+    for (int i=ss;i<12;++i)
       v.push_back(zero);
     // Test if this unit is an angle or no units
     if(all_zero && is_angle) {
@@ -10470,10 +10907,10 @@ namespace giac {
         tmp=mksa_unit2vecteur(unit_conversion_map()[s.substr(1,s.size()-1).c_str()]); 
       vecteur tmp_i;
       ss=int(tmp.size());
-      for (int i=ss;i<10;++i)
+      for (int i=ss;i<12;++i)
         tmp.push_back(zero);
       tmp_i.push_back(plus_one);
-      for (int i = 1;i < 10;++i)
+      for (int i = 1;i <12;++i)
         tmp_i.push_back(operator_times(tmp[i], minus_one, contextptr));
       tmp[0]=plus_one;  
       if (tmp==v) // If a 'usual unit' matches the unit dimension of the unit being simplified, convert to the 'usual_unit'
@@ -10502,7 +10939,7 @@ namespace giac {
       else  
         tmp=mksa_unit2vecteur(unit_conversion_map()[s.substr(1,s.size()-1).c_str()]); 
       ss=int(tmp.size());
-      for (int i=ss;i<10;++i)
+      for (int i=ss;i<12;++i)
         tmp.push_back(zero);
       for (int j=0;j<2;j++){
         vecteur vw;
@@ -10510,7 +10947,7 @@ namespace giac {
           vw=addvecteur(v,tmp);
         else
           vw=subvecteur(v,tmp);
-        for (int i=1;i<10;++i){
+        for (int i=1;i<12;++i){
           if (is_greater(1e-6,abs(vw[i],contextptr),contextptr))
             continue;
           if (pos) {
@@ -10541,7 +10978,7 @@ namespace giac {
       else  
         tmp=mksa_unit2vecteur(unit_conversion_map()[s.substr(1,s.size()-1).c_str()]); 
       ss=int(tmp.size());
-      for (int i=ss;i<10;++i)
+      for (int i=ss;i<12;++i)
         tmp.push_back(zero);
       it2=usual_units().begin();
       for (;it2!=itend;++it2){
@@ -10553,7 +10990,7 @@ namespace giac {
         else  
           tmp2=mksa_unit2vecteur(unit_conversion_map()[s2.substr(1,s2.size()-1).c_str()]); 
         ss=int(tmp2.size());
-        for (int i=ss;i<10;++i)
+        for (int i=ss;i<12;++i)
           tmp2.push_back(zero);
         for (int j=0;j<4;j++){
           vecteur vw;
@@ -10566,7 +11003,7 @@ namespace giac {
           else
             vw=subvecteur(v, subvecteur(tmp,tmp2));
           pos = 0;
-          for (int i=1;i<10;++i){
+          for (int i=1;i<12;++i){
             if (is_greater(1e-6,abs(vw[i],contextptr),contextptr))
               continue;
             pos=1;
@@ -10597,7 +11034,7 @@ namespace giac {
       else  
         tmp=mksa_unit2vecteur(unit_conversion_map()[s.substr(1,s.size()-1).c_str()]); 
       ss=int(tmp.size());
-      for (int i=ss;i<10;++i)
+      for (int i=ss;i<12;++i)
         tmp.push_back(zero);
       for (int j=0;j<2;j++){
         vecteur vw;
@@ -10605,7 +11042,7 @@ namespace giac {
           vw=addvecteur(v,tmp);
         else
           vw=subvecteur(v,tmp);
-        for (int i=1;i<10;++i){
+        for (int i=1;i<12;++i){
           if (is_greater(1e-6,abs(vw[i],contextptr),contextptr))
             continue;
           if (pos) {
@@ -10647,12 +11084,6 @@ namespace giac {
     for (;it!=itend;++it){
       find_or_make_symbol("_"+it->print(contextptr),*it,0,false,contextptr);
     }
-    #ifdef SWIFT_CALCS_OPTIONS
-    if(mksareduce_mode(contextptr))
-      return mksa_remove_base(symbolic(at_unit,makevecteur(a,subst(b,v,w,true,contextptr))), contextptr);
-    if(mksavariable_mode(contextptr))
-      return mksa_to_var(symbolic(at_unit,makevecteur(a,subst(b,v,w,true,contextptr))), contextptr);
-    #endif
     return symbolic(at_unit,makevecteur(a,subst(b,v,w,true,contextptr)));
   }
   string printasunit(const gen & feuille,const char * sommetstr,GIAC_CONTEXT){
@@ -10684,12 +11115,6 @@ namespace giac {
   static gen unit(const gen & g,GIAC_CONTEXT){
     if (g.type!=_VECT || g._VECTptr->size()!=2)
       return gensizeerr(contextptr);
-    #ifdef SWIFT_CALCS_OPTIONS
-      if(mksareduce_mode(contextptr))
-        return mksa_remove_base(symbolic(at_unit,g), contextptr);
-      if(mksavariable_mode(contextptr))
-        return mksa_to_var(symbolic(at_unit,g), contextptr);
-    #endif
     return symbolic(at_unit,g);
   }
   static const char _unit_s []="_";

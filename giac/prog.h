@@ -308,12 +308,8 @@ namespace giac {
   #ifdef SWIFT_CALCS_OPTIONS
     gen set_units(const gen & args,GIAC_CONTEXT);
     extern const unary_function_ptr * const  at_set_units;
-    gen mksareduce_mode(const gen & args,GIAC_CONTEXT);
-    extern const unary_function_ptr * const  at_mksareduce_mode;
-    gen mksavariable_mode(const gen & args,GIAC_CONTEXT);
-    extern const unary_function_ptr * const  at_mksavariable_mode;
-    gen first_index(const gen & args,GIAC_CONTEXT);
-    extern const unary_function_ptr * const  at_first_index;
+    gen one_index(const gen & args,GIAC_CONTEXT);
+    extern const unary_function_ptr * const  at_one_index;
   #endif
  
   gen _epsilon(const gen & args,GIAC_CONTEXT);
@@ -595,6 +591,8 @@ namespace giac {
     float cd;
     float E;
     float d;
+    float F;
+    float C;
   };
   struct unit_system {
     double m;
@@ -643,12 +641,24 @@ namespace giac {
   gen clear_usual_units(const gen & g, GIAC_CONTEXT);
   #ifdef SWIFT_CALCS_OPTIONS
     gen mksa_reduce_base(const gen & g,GIAC_CONTEXT);
-    gen mksa_remove_base(const gen & g,GIAC_CONTEXT);
+    gen mksa_coefficient(const gen & g,GIAC_CONTEXT);
+    gen mksa_offset(const gen & g,GIAC_CONTEXT);
+    gen mksa_base_first(const gen & g, GIAC_CONTEXT);
+    gen mksa_value(const gen & g,GIAC_CONTEXT);
     gen mksa_to_var(const gen & g,GIAC_CONTEXT);
     gen default_units(const gen & g,GIAC_CONTEXT);
+    gen default_units_function(const gen & g,bool force_at_unit,GIAC_CONTEXT);
+    gen default_unit_remove_base(const gen & g,GIAC_CONTEXT);
   #endif
   gen chk_not_unit(const gen & g);
   gen chk_not_unit_together(const gen & a, const gen & b, const bool compare,GIAC_CONTEXT);
+  bool chk_temperature_units(const gen & a, const gen & b, GIAC_CONTEXT);
+  bool chk_temperature_units(const gen & a_in, const bool include_delta, GIAC_CONTEXT);
+  bool chk_temperature_units(const gen & a, GIAC_CONTEXT);
+  gen sym_add_temp(const gen & a, const gen & b, GIAC_CONTEXT);
+  gen sym_mult_temp(const gen & a, const gen & b, GIAC_CONTEXT);
+  gen adjust_temp(const gen & v,GIAC_CONTEXT);
+
   gen find_or_make_symbol(const std::string & s,bool check38,GIAC_CONTEXT);
   std::map<const char *, const mksa_unit *,ltstr> & unit_conversion_map();
   gen mksa_register(const char * s,const mksa_unit * equiv);
@@ -660,7 +670,9 @@ namespace giac {
   #ifdef SWIFT_CALCS_OPTIONS
   gen _usimplify_base(const gen & g,GIAC_CONTEXT);
   gen _usimplify_angle(const gen & g,GIAC_CONTEXT);
-  gen _usimplify_base_function(const gen & g,const bool angle_mode, GIAC_CONTEXT);
+  gen _usimplify_mksa_remove(const gen & g,GIAC_CONTEXT);
+  vecteur _usimplify_mksa_remove(const vecteur & g,GIAC_CONTEXT);
+  gen _usimplify_base_function(const gen & g,const bool angle_mode, const bool mksa_remove, GIAC_CONTEXT);
   #endif
 
   extern const mksa_unit __m_unit;
@@ -715,6 +727,14 @@ namespace giac {
   extern const mksa_unit __dyn_unit;
   extern const mksa_unit __erg_unit;
   extern const mksa_unit __eV_unit;
+
+  extern const mksa_unit __degF_unit;
+  extern const mksa_unit __deltaF_unit;
+  extern const mksa_unit __degC_unit;
+  extern const mksa_unit __deltaC_unit;
+  extern const mksa_unit __deltaK_unit;
+  extern const mksa_unit __deltaRankine_unit;
+
   // extern const mksa_unit __degreeF_unit;
   extern const mksa_unit __Rankine_unit;
   extern const mksa_unit __fath_unit;
@@ -891,6 +911,13 @@ namespace giac {
   extern gen _d_unit;
   extern gen _dB_unit;
   extern gen _deg_unit;
+  extern gen _degF_unit;
+  extern gen _degC_unit;
+  extern gen _deltaF_unit;
+  extern gen _deltaC_unit;
+  extern gen _deltaK_unit;
+  extern gen _deltaRankine_unit;
+  extern gen _Rankine_unit;
   extern gen _dyn_unit;
   extern gen _erg_unit;
   extern gen _eV_unit;

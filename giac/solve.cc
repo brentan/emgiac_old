@@ -1598,9 +1598,6 @@ namespace giac {
     vecteur eid=lidnt(e);
     if (eid.size()==1 && lvar(e)==eid)
       return sol; // it was a univariate polynomial equation, no need to check
-#ifdef SWIFT_CALCS_OPTIONS
-      remove_angle_mode(true, contextptr); 
-#endif
     for (unsigned i=0;i<sol.size();++i){
       gen tmp=subst(e,x,sol[i],false,contextptr);
 #ifdef HAVE_LIBMPFR
@@ -1617,9 +1614,6 @@ namespace giac {
       if ((tmp.type>_CPLX && tmp.type!=_FLOAT_) || is_greater(1e-6,abs(tmp,contextptr),contextptr))
 	res.push_back(sol[i]);
     }
-#ifdef SWIFT_CALCS_OPTIONS
-      remove_angle_mode(false, contextptr); 
-#endif
     return res;
   }
 
@@ -3244,9 +3238,18 @@ namespace giac {
     if ( args.type==_STRNG && args.subtype==-1) return  args;
     if (calc_mode(contextptr)==1 && args.type!=_VECT)
       return _fsolve(makesequence(args,ggb_var(args)),contextptr);
+#ifdef SWIFT_CALCS_OPTIONS
+    remove_angle_mode(true);
+#endif
     vecteur v(plotpreprocess(args,contextptr));
+#ifdef SWIFT_CALCS_OPTIONS
+    v = _usimplify_mksa_remove(v,contextptr);
+#endif
     gen res=undef;
     res=in_fsolve(v,contextptr);
+#ifdef SWIFT_CALCS_OPTIONS
+    remove_angle_mode(false);
+#endif
     if (calc_mode(contextptr)!=1)
       return res;
     // ggb always in a list
@@ -3310,7 +3313,7 @@ namespace giac {
       return in_fsolve(v,contextptr);
     }
     gen v0=remove_equal(v[0]);
-    vecteur I1(lidnt(v[1]));
+    vecteur I1(lidnt(v[1])); 
     vecteur I0(true_lidnt(v0)); // should remove embedded fsolve/sum/int
     I0=lidnt(makevecteur(evalf(I0,1,contextptr),I1));
     if (_sort(I0,contextptr)!=_sort(I1,contextptr))
@@ -5802,12 +5805,13 @@ namespace giac {
       return multvecteur(inv(g._FRACptr->den,context0),*g._FRACptr->num._VECTptr);
     return gen2vecteur(g);
   }
-
   vecteur gsolve(const vecteur & eq_orig,const vecteur & var_orig,bool complexmode,int evalf_after,GIAC_CONTEXT){
     // replace variables in var_orig by true identificators
     vecteur var(var_orig);
-    if (!lop(eq_orig,*at_unit).empty())
+#ifndef SWIFT_CALCS_OPTIONS
+    if (!lop(eq_orig,*at_unit).empty()) 
       *logptr(contextptr) << "Units are not supported"<<endl;
+#endif
     // check if the whole system is linear
     if (is_zero(derive(derive(eq_orig,var,contextptr),var,contextptr),contextptr)){
       gen sol=_linsolve(makesequence(eq_orig,var),contextptr);

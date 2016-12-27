@@ -331,8 +331,21 @@ namespace giac {
       return inv(args,contextptr);
     iterateur it=args._VECTptr->begin(), itend=args._VECTptr->end();
     gen prod(1);
-    for (;it!=itend;++it)
+    for (;it!=itend;++it) {
+#ifndef SWIFT_CALCS_OPTIONS
+      if(it->type == _IDNT) {
+        if(*it == _degF_unit) { //degF unit
+          *logptr(contextptr) << gettext("Temperature Units Warning: Multiplication or division of absolute Fahrenheit units (degF) with other units is non-physical.  Calculation is assuming intent was multiplication or division using relative units (deltaF)") << endl;
+          *it = _deltaF_unit;
+        } else if(*it == _degC_unit) { //degC unit
+          *logptr(contextptr) << gettext("Temperature Units Warning: Multiplication or division of absolute Celsius units (degC) with other units is non-physical.  Calculation is assuming intent was multiplication or division using relative units (deltaC)") << endl;
+          *it = _deltaC_unit;
+        } else if(*it == _K_unit) *it = _deltaK_unit; // K/deltaK/deltaC
+        else if(*it == _Rankine_unit) *it = _deltaRankine_unit; //Rankine/deltaRankine/deltaF
+      }
+#endif
       prod = prod * (*it);
+    }
     return inv(prod,contextptr);
   }
   static const char _inv_s []="inv";
@@ -576,12 +589,8 @@ namespace giac {
   }
   gen add_trig_unit(const gen & e, const gen & u, GIAC_CONTEXT) {
 #ifdef SWIFT_CALCS_OPTIONS
-    if(mksareduce_mode(contextptr))
-      return mksa_remove_base(symbolic(at_unit, makevecteur(e, u)), contextptr);
-    else if(remove_angle_mode(contextptr) && mksavariable_mode(contextptr))
-      return e; // No need to add u__rad just to then remove it
-    else if(mksavariable_mode(contextptr))
-      return mksa_to_var(symbolic(at_unit, makevecteur(e, u)), contextptr);
+    if(remove_angle_mode())
+      return mksa_value(symbolic(at_unit, makevecteur(e, u)), contextptr);
     else
       return symbolic(at_unit, makevecteur(e, u));
 #else
@@ -4629,6 +4638,18 @@ namespace giac {
     if (debug_infolevel>2)
       CERR << CLOCK() << " begin _prod" << endl;
     for (;it!=itend;++it){
+#ifdef SWIFT_CALCS_OPTIONS
+      if(it->type == _IDNT) {
+        if(*it == _degF_unit) { //degF unit
+          *logptr(contextptr) << gettext("Temperature Units Warning: Multiplication or division of absolute Fahrenheit units (degF) with other units is non-physical.  Calculation is assuming intent was multiplication or division using relative units (deltaF)") << endl;
+          *it = _deltaF_unit;
+        } else if(*it == _degC_unit) { //degC unit
+          *logptr(contextptr) << gettext("Temperature Units Warning: Multiplication or division of absolute Celsius units (degC) with other units is non-physical.  Calculation is assuming intent was multiplication or division using relative units (deltaC)") << endl;
+          *it = _deltaC_unit;
+        } else if(*it == _K_unit) *it = _deltaK_unit; // K/deltaK/deltaC
+        else if(*it == _Rankine_unit) *it = _deltaRankine_unit; //Rankine/deltaRankine/deltaF
+      }
+#endif
       if ( (it->type==_SYMB) && (it->_SYMBptr->sommet==at_inv) && (it->_SYMBptr->feuille.type!=_VECT) )
 	prod = rdiv(prod,it->_SYMBptr->feuille,contextptr);
       else {
@@ -4687,8 +4708,18 @@ namespace giac {
       if (b.val==1)
 	return a;
       if (a.type==_IDNT){
-	if (a==undef)
-	  return a;
+        if (a==undef)
+          return a;
+#ifdef SWIFT_CALCS_OPTIONS
+        if(a == _degF_unit) { //degF unit
+          *logptr(contextptr) << gettext("Temperature Units Warning: Exponential involving absolute Fahrenheit units (degF) is non-physical.  Calculation is assuming intent was exponential using relative units (deltaF)") << endl;
+          return b.val?symbolic(at_pow, makevecteur(new ref_identificateur("_deltaF"),b)):gen(1);
+        } else if(a == _degC_unit) { //degC unit
+          *logptr(contextptr) << gettext("Temperature Units Warning: Exponential involving absolute Celsius units (degC) is non-physical.  Calculation is assuming intent was exponential using relative units (deltaC)") << endl;
+          return b.val?symbolic(at_pow, makevecteur(new ref_identificateur("_deltaC"),b)):gen(1);
+        } else if(a == _K_unit) return b.val?symbolic(at_pow, makevecteur(new ref_identificateur("_deltaK"),b)):gen(1); // K/deltaK/deltaC
+        else if(a == _Rankine_unit) return b.val?symbolic(at_pow, makevecteur(new ref_identificateur("_deltaRankine"),b)):gen(1); //Rankine/deltaRankine/deltaF
+#endif
 	if (a!=unsigned_inf)
 	  return b.val?symbolic(at_pow,args):gen(1);
       }
@@ -5724,9 +5755,45 @@ namespace giac {
         if (a._VECTptr->front().is_symb_of_sommet(at_unit) || a._VECTptr->back().is_symb_of_sommet(at_unit)) {
           gen a1e = a._VECTptr->front().evalf(1, contextptr);
           gen a2e = a._VECTptr->back().evalf(1, contextptr);
+          // Temperature checks
+          if((a1e.is_symb_of_sommet(at_unit) && (a1e._SYMBptr->feuille._VECTptr->back() == _degF_unit))        
+              && (a2e.is_symb_of_sommet(at_unit) && (a2e._SYMBptr->feuille._VECTptr->back() == _deltaF_unit || a2e._SYMBptr->feuille._VECTptr->back() == _deltaC_unit || a2e._SYMBptr->feuille._VECTptr->back() == _deltaK_unit || a2e._SYMBptr->feuille._VECTptr->back() == _deltaRankine_unit))) {
+            *logptr(contextptr) << gettext("Temperature Units Warning: Comparison of absolute Fahrenheit units (degF) with relative temperatures is non-physical.  Calculation is assuming intent was to use relative units (deltaF)") << endl;
+            a1e = symbolic(at_unit, makenewvecteur(a1e._SYMBptr->feuille._VECTptr->front(),_Rankine_unit));       
+          } else if((a1e.is_symb_of_sommet(at_unit) && (a1e._SYMBptr->feuille._VECTptr->back() == _degC_unit))        
+              && (a2e.is_symb_of_sommet(at_unit) && (a2e._SYMBptr->feuille._VECTptr->back() == _deltaF_unit || a2e._SYMBptr->feuille._VECTptr->back() == _deltaC_unit || a2e._SYMBptr->feuille._VECTptr->back() == _deltaK_unit || a2e._SYMBptr->feuille._VECTptr->back() == _deltaRankine_unit))) {
+            *logptr(contextptr) << gettext("Temperature Units Warning: Comparison of absolute Celsius units (degC) with relative temperatures is non-physical.  Calculation is assuming intent was to use relative units (deltaC)") << endl;
+            a1e = symbolic(at_unit, makenewvecteur(a1e._SYMBptr->feuille._VECTptr->front(),_K_unit));       
+          } else if((a2e.is_symb_of_sommet(at_unit) && (a2e._SYMBptr->feuille._VECTptr->back() == _degF_unit))        
+              && (a1e.is_symb_of_sommet(at_unit) && (a1e._SYMBptr->feuille._VECTptr->back() == _deltaF_unit || a1e._SYMBptr->feuille._VECTptr->back() == _deltaC_unit || a1e._SYMBptr->feuille._VECTptr->back() == _deltaK_unit || a1e._SYMBptr->feuille._VECTptr->back() == _deltaRankine_unit))) {
+            *logptr(contextptr) << gettext("Temperature Units Warning: Comparison of absolute Fahrenheit units (degF) with relative temperatures is non-physical.  Calculation is assuming intent was to use relative units (deltaF)") << endl;
+            a2e = symbolic(at_unit, makenewvecteur(a2e._SYMBptr->feuille._VECTptr->front(),_Rankine_unit));       
+          } else if((a2e.is_symb_of_sommet(at_unit) && (a2e._SYMBptr->feuille._VECTptr->back() == _degC_unit))        
+              && (a1e.is_symb_of_sommet(at_unit) && (a1e._SYMBptr->feuille._VECTptr->back() == _deltaF_unit || a1e._SYMBptr->feuille._VECTptr->back() == _deltaC_unit || a1e._SYMBptr->feuille._VECTptr->back() == _deltaK_unit || a1e._SYMBptr->feuille._VECTptr->back() == _deltaRankine_unit))) {
+            *logptr(contextptr) << gettext("Temperature Units Warning: Comparison of absolute Celsius units (degC) with relative temperatures is non-physical.  Calculation is assuming intent was to use relative units (deltaC)") << endl;
+            a2e = symbolic(at_unit, makenewvecteur(a2e._SYMBptr->feuille._VECTptr->front(),_K_unit));       
+          }
+          if(a1e.is_symb_of_sommet(at_unit) && (a1e._SYMBptr->feuille._VECTptr->back() == _degF_unit))
+            a1e = symbolic(at_unit, makenewvecteur(a1e._SYMBptr->feuille._VECTptr->front() + 459.67,_deltaRankine_unit));
+          else if(a1e.is_symb_of_sommet(at_unit) && (a1e._SYMBptr->feuille._VECTptr->back() == _degC_unit))
+            a1e = symbolic(at_unit, makenewvecteur(a1e._SYMBptr->feuille._VECTptr->front() + 273.15,_deltaK_unit));
+          else if(a1e.is_symb_of_sommet(at_unit) && (a1e._SYMBptr->feuille._VECTptr->back() == _K_unit))
+            a1e = symbolic(at_unit, makenewvecteur(a1e._SYMBptr->feuille._VECTptr->front(),_deltaK_unit));
+          else if(a1e.is_symb_of_sommet(at_unit) && (a1e._SYMBptr->feuille._VECTptr->back() == _Rankine_unit))
+            a1e = symbolic(at_unit, makenewvecteur(a1e._SYMBptr->feuille._VECTptr->front(),_deltaRankine_unit));
+          if(a2e.is_symb_of_sommet(at_unit) && (a2e._SYMBptr->feuille._VECTptr->back() == _degF_unit))
+            a2e = symbolic(at_unit, makenewvecteur(a2e._SYMBptr->feuille._VECTptr->front() + 459.67,_deltaRankine_unit));
+          else if(a2e.is_symb_of_sommet(at_unit) && (a2e._SYMBptr->feuille._VECTptr->back() == _degC_unit))
+            a2e = symbolic(at_unit, makenewvecteur(a2e._SYMBptr->feuille._VECTptr->front() + 273.15,_deltaK_unit));
+          else if(a2e.is_symb_of_sommet(at_unit) && (a2e._SYMBptr->feuille._VECTptr->back() == _K_unit))
+            a2e = symbolic(at_unit, makenewvecteur(a2e._SYMBptr->feuille._VECTptr->front(),_deltaK_unit));
+          else if(a2e.is_symb_of_sommet(at_unit) && (a2e._SYMBptr->feuille._VECTptr->back() == _Rankine_unit))
+            a2e = symbolic(at_unit, makenewvecteur(a2e._SYMBptr->feuille._VECTptr->front(),_deltaRankine_unit));
+
           gen tmp = chk_not_unit_together(a1e,a2e,true,contextptr);
           if(is_undef(tmp) && !is_zero(a1e) && !is_zero(a2e)) return tmp;
-          res = _simplify(mksa_remove_base(a._VECTptr->front() - a._VECTptr->back(), contextptr),contextptr);
+          res = _simplify(mksa_value(a1e - a2e, contextptr),contextptr);
+          if(is_greater(1e-6,abs(res,contextptr),contextptr)) res = zero; // Deal with float rounding errors
         } else
           res = _simplify(a._VECTptr->front() - a._VECTptr->back(), contextptr);
 #else

@@ -5609,8 +5609,16 @@ namespace giac {
     if ( args.type==_STRNG && args.subtype==-1) return  args;
     if ( (args.type!=_VECT) || (args._VECTptr->size()<3 ) )
       return symbolic(at_odesolve,args);
+#ifdef SWIFT_CALCS_OPTIONS
+    remove_angle_mode(true);
+    vecteur v(_usimplify_mksa_remove(*args._VECTptr,contextptr));
+    gen res = odesolve(v,contextptr);
+    remove_angle_mode(false);
+    return res;
+#else
     vecteur v(*args._VECTptr);
     return odesolve(v,contextptr);
+#endif
   }
   static const char _odesolve_s []="odesolve";
   static define_unary_function_eval (__odesolve,&_odesolve,_odesolve_s);
