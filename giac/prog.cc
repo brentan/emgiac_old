@@ -5650,10 +5650,10 @@ namespace giac {
     if (v_in.type != _IDNT) return v_in;
     gen v = expand(v_in,contextptr);
     if(v == _degF_unit) {
-      *logptr(contextptr) << gettext("Temperature Units Warning: Exponentials, multiplication, and division involving absolute Fahrenheit units (degF) is non-physical.  Calculation is assuming intent was to use relative units (deltaF)") << endl;
+      *logptr(contextptr) << gettext("Temperature Units Warning: Exponentials, multiplication, and division with degF is non-physical.  Substituting deltaF.") << endl;
       return _deltaF_unit;
     } else if(v == _degC_unit) {
-      *logptr(contextptr) << gettext("Temperature Units Warning: Exponential, multiplication, and division involving absolute Celsius units (degC) is non-physical.  Calculation is assuming intent was to use relative units (deltaC)") << endl;
+      *logptr(contextptr) << gettext("Temperature Units Warning: Exponential, multiplication, and division with degC is non-physical.  Substituting deltaC.") << endl;
       return _deltaC_unit;
     } else if(v == _K_unit) 
       return _deltaK_unit;
@@ -5727,7 +5727,7 @@ namespace giac {
       unit = va[1] * vb[1];
     }
     if(show_notice)
-      *logptr(contextptr) << gettext("Temperature Units Warning: Multiplication or division of absolute Celsius/Fahrenheit units (degC or degF) with other units is non-physical.  Calculation is assuming intent was multiplication or division using relative units (deltaC, deltaF)") << endl;
+      *logptr(contextptr) << gettext("Temperature Units Warning: Multiplication or division of degC or degF with other units is non-physical.  Substituting deltaC and deltaF.") << endl;
     unit=expand(unit,contextptr);
     if (is_one(unit))
       return va[0]*vb[0];
@@ -5766,7 +5766,7 @@ namespace giac {
         if(vb[1] == _degC_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],-(-vb[0]*gen(9./5) + 32),contextptr),_deltaF_unit))); // F - C -> deltaF
         else if(vb[1] == _degF_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_deltaF_unit))); // F - F -> deltaF
         else if(vb[1] == _K_unit) {
-          *logptr(contextptr) << gettext("Temperature Units Warning: Difference of degF and K (absolute - absolute => relative).  Ensure you didnt mean degF - deltaK (absolute - relative => absolute)") << endl;
+          *logptr(contextptr) << gettext("Temperature Units Warning: Difference of degF and K (absolute - absolute => relative).  Ensure you didnt mean degF - deltaC (absolute - relative => absolute)") << endl;
           return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0] + 459.67,vb[0]*gen(9./5),contextptr),_deltaF_unit))); // F - K -> deltaF 
         } else if(vb[1] == _Rankine_unit) {
           *logptr(contextptr) << gettext("Temperature Units Warning: Difference of degF and Rankine (absolute - absolute => relative).  Ensure you didnt mean degF - deltaF (absolute - relative => absolute)") << endl;
@@ -5775,16 +5775,16 @@ namespace giac {
         else return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(9./5),contextptr),_degF_unit))); // F - deltaC/deltaK -> F
       } else {
         if(vb[1] == _degC_unit) {
-          *logptr(contextptr) << gettext("Temperature Units Warning: Sum of degF with degC is ambiguous.  Calculation is assuming intent is sum of degF and deltaC (absolute + relative)") << endl;
+          *logptr(contextptr) << gettext("Temperature Units Warning: Sum of degF with degC is ambiguous.  Substituting degF + deltaC.") << endl;
           return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(9./5),contextptr),_degF_unit))); // F + C is ambiguous...assume F + deltaC -> F
         } else if(vb[1] == _degF_unit) {
-          *logptr(contextptr) << gettext("Temperature Units Warning: Sum of degF with degF is ambiguous.  Calculation is assuming intent is sum of degF and deltaF (absolute + relative)") << endl;
+          *logptr(contextptr) << gettext("Temperature Units Warning: Sum of degF with degF is ambiguous.  Substituting degF + deltaF.") << endl;
           return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_degF_unit))); // F + F is ambiguous...assume F + deltaF -> F
         } else if(vb[1] == _K_unit) {
-          *logptr(contextptr) << gettext("Temperature Units Warning: Sum of degF with absolute K is ambiguous.  Calculation is assuming intent is sum of degF and deltaK (absolute + relative)") << endl;
+          //*logptr(contextptr) << gettext("Temperature Units Warning: Sum of degF with K is ambiguous.  Calculation is assuming intent is sum of degF and deltaK (absolute + relative)") << endl;
           return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(9./5),contextptr),_degF_unit))); // F + K is ambiguous...assume F + deltaK -> F
         } else if(vb[1] == _Rankine_unit) {
-          *logptr(contextptr) << gettext("Temperature Units Warning: Sum of degF with absolute Rankine is ambiguous.  Calculation is assuming intent is sum of degF and deltaRankine (absolute + relative)") << endl;
+          //*logptr(contextptr) << gettext("Temperature Units Warning: Sum of degF with Rankine is ambiguous.  Calculation is assuming intent is sum of degF and deltaRankine (absolute + relative)") << endl;
           return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_degF_unit))); // F + Rankine is ambiguous...assume F + deltaRankine -> F
         } else if((vb[1] == _deltaRankine_unit) || (vb[1] == _deltaF_unit)) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_degF_unit))); // F + deltaF/deltaRankine -> F
         else return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(9./5),contextptr),_degF_unit))); // F + deltaC/deltaK -> F
@@ -5797,22 +5797,22 @@ namespace giac {
           *logptr(contextptr) << gettext("Temperature Units Warning: Difference of degC and K (absolute - absolute => relative).  Ensure you didnt mean degC - deltaC (absolute - relative => absolute)") << endl;
           return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0] + 273.15,vb[0],contextptr),_deltaC_unit))); // C - K -> deltaC 
         } else if(vb[1] == _Rankine_unit) {
-          *logptr(contextptr) << gettext("Temperature Units Warning: Difference of degC and Rankine (absolute - absolute => relative).  Ensure you didnt mean degC - deltaRankine (absolute - relative => absolute)") << endl;
+          *logptr(contextptr) << gettext("Temperature Units Warning: Difference of degC and Rankine (absolute - absolute => relative).  Ensure you didnt mean degC - deltaF (absolute - relative => absolute)") << endl;
           return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0] + 273.15,vb[0]*gen(5./9),contextptr),_deltaC_unit))); // C - Rankine -> deltaC MESSAGE
         } else if((vb[1] == _deltaRankine_unit) || (vb[1] == _deltaF_unit)) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(5./9),contextptr),_degC_unit))); // C - deltaF/deltaRankine -> C
         else return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_degC_unit))); // C - deltaC/deltaK -> C
       } else {
         if(vb[1] == _degC_unit) {
-          *logptr(contextptr) << gettext("Temperature Units Warning: Sum of degC with degC is ambiguous.  Calculation is assuming intent is sum of degC and deltaC (absolute + relative)") << endl;
+          *logptr(contextptr) << gettext("Temperature Units Warning: Sum of degC with degC is ambiguous.  Substituting degC + deltaC.") << endl;
           return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_degC_unit))); // C + C is ambiguous...assume C + deltaC -> C
         } else if(vb[1] == _degF_unit) {
-          *logptr(contextptr) << gettext("Temperature Units Warning: Sum of degC with degF is ambiguous.  Calculation is assuming intent is sum of degC and deltaF (absolute + relative)") << endl;
+          *logptr(contextptr) << gettext("Temperature Units Warning: Sum of degC with degF is ambiguous.  Substituting degC + deltaF.") << endl;
           return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(5./9),contextptr),_degC_unit))); // C + F is ambiguous...assume C + deltaF -> C
         } else if(vb[1] == _K_unit) {
-          *logptr(contextptr) << gettext("Temperature Units Warning: Sum of degC with absolute K is ambiguous.  Calculation is assuming intent is sum of degC and deltaK (absolute + relative)") << endl;
+          //*logptr(contextptr) << gettext("Temperature Units Warning: Sum of degC with K is ambiguous.  Calculation is assuming intent is sum of degC and deltaK (absolute + relative)") << endl;
           return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_degC_unit))); // C + K is ambiguous...assume C + deltaK -> C
         } else if(vb[1] == _Rankine_unit) {
-          *logptr(contextptr) << gettext("Temperature Units Warning: Sum of degC with absolute Rankine is ambiguous.  Calculation is assuming intent is sum of degC and deltaRankine (absolute + relative)") << endl;
+          //*logptr(contextptr) << gettext("Temperature Units Warning: Sum of degC with Rankine is ambiguous.  Calculation is assuming intent is sum of degC and deltaRankine (absolute + relative)") << endl;
           return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(5./9),contextptr),_degC_unit))); // C + Rankine is ambiguous...assume C + deltaRankine -> C
         } else if((vb[1] == _deltaRankine_unit) || (vb[1] == _deltaF_unit)) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(5./9),contextptr),_degC_unit))); // C + deltaF/deltaRankine -> C
         else return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_degC_unit))); // C + deltaC/deltaK -> C
@@ -5822,18 +5822,20 @@ namespace giac {
         if(va[1] == _K_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],-((-vb[0]-32)*gen(5./9)+273.15),contextptr),_deltaK_unit))); // K - F -> deltaK 
         else if(va[1] == _Rankine_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],-(-vb[0] + 459.67),contextptr),_deltaRankine_unit))); // Rankine - F -> deltaRankine
         else if((va[1] == _deltaRankine_unit) || (va[1] == _deltaF_unit)) {
-          *logptr(contextptr) << gettext("Temperature Units Warning: Difference of deltaRankine, deltaF with degF (relative - absolute) is unclear.  Calculation is assuming intent was difference of deltaRankine, deltaF with deltaF (relative - relative)") << endl;
+          if(va[1] == _deltaF_unit) *logptr(contextptr) << gettext("Temperature Units Warning: Difference of deltaF with degF (relative - absolute) is unclear.  Substituting deltaF - deltaF.") << endl;
+          else *logptr(contextptr) << gettext("Temperature Units Warning: Difference of relative Rankine with degF (relative - absolute) is unclear.  Substituting relative Rankine - deltaF.") << endl;
           return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_deltaF_unit))); // deltaRankine/deltaF - F doesn't make sense, assume deltaRankine/deltaF - deltaF -> deltaF
         } else {
-          *logptr(contextptr) << gettext("Temperature Units Warning: Difference of deltaK, deltaC with degF (relative - absolute) is unclear.  Calculation is assuming intent was difference of deltaK, deltaC with deltaF (relative - relative)") << endl;
+          if(va[1] == _deltaC_unit) *logptr(contextptr) << gettext("Temperature Units Warning: Difference of deltaC with degF (relative - absolute) is unclear.  Substituting deltaC - deltaF.") << endl;
+          else *logptr(contextptr) << gettext("Temperature Units Warning: Difference of relative K with degF (relative - absolute) is unclear.  Substituting relative K - deltaF.") << endl;
           return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0]*gen(9./5),vb[0],contextptr),_deltaF_unit))); // deltaK/deltaC - F doesn't make sense, assume deltaK/deltaC - deltaF -> deltaF
         }
       } else {
         if(va[1] == _K_unit) {
-          *logptr(contextptr) << gettext("Temperature Units Warning: Sum of absolute K with degF is ambiguous.  Calculation is assuming intent is sum of K and deltaF (absolute + relative)") << endl;
+          *logptr(contextptr) << gettext("Temperature Units Warning: Sum of K with degF is ambiguous.  Substituting K + deltaF.") << endl;
           return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(5./9),contextptr),_K_unit))); // K + F is ambiguous...assume K + deltaF -> K
         } else if(va[1] == _Rankine_unit) {
-          *logptr(contextptr) << gettext("Temperature Units Warning: Sum of absolute Rankine with degF is ambiguous.  Calculation is assuming intent is sum of Rankine and deltaF (absolute + relative)") << endl;
+          *logptr(contextptr) << gettext("Temperature Units Warning: Sum of Rankine with degF is ambiguous.  Substituting Rankine + deltaF.") << endl;
           return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_Rankine_unit))); // Rankine + F is ambiguous...assume Rankine + deltaF -> Rankine
         } else if((va[1] == _deltaRankine_unit) || (va[1] == _deltaF_unit)) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_degF_unit))); // deltaF/deltaRankine + F -> F
         else return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0]*gen(9./5),vb[0],contextptr),_degF_unit))); // deltaC/deltaK + F -> F
@@ -5843,18 +5845,20 @@ namespace giac {
         if(va[1] == _K_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],-(-vb[0]+273.15),contextptr),_deltaK_unit))); // K - C -> deltaK 
         else if(va[1] == _Rankine_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],-(-vb[0]*gen(9./5) + 32 + 459.67),contextptr),_deltaRankine_unit))); // Rankine - C -> deltaRankine
         else if((va[1] == _deltaRankine_unit) || (va[1] == _deltaF_unit)) {
-          *logptr(contextptr) << gettext("Temperature Units Warning: Difference of deltaRankine, deltaF with degC (relative - absolute) is unclear.  Calculation is assuming intent was difference of deltaRankine, deltaF with deltaC (relative - relative)") << endl;
+          if(va[1] == _deltaF_unit) *logptr(contextptr) << gettext("Temperature Units Warning: Difference of deltaF with degC (relative - absolute) is unclear.  Substituting deltaF - deltaC.") << endl;
+          else *logptr(contextptr) << gettext("Temperature Units Warning: Difference of relative Rankine with degC (relative - absolute) is unclear.  Substituting relative Rankine - deltaC.") << endl;
           return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0]*gen(5./9),vb[0],contextptr),_deltaC_unit))); // deltaRankine/deltaF - C doesn't make sense, assume deltaRankine/deltaF - deltaC -> deltaC
         } else {
-          *logptr(contextptr) << gettext("Temperature Units Warning: Difference of deltaK, deltaC with degC (relative - absolute) is unclear.  Calculation is assuming intent was difference of deltaK, deltaC with deltaC (relative - relative)") << endl;
+          if(va[1] == _deltaC_unit) *logptr(contextptr) << gettext("Temperature Units Warning: Difference of deltaC with degC (relative - absolute) is unclear.  Substituting deltaC - deltaC.") << endl;
+          else *logptr(contextptr) << gettext("Temperature Units Warning: Difference of relative K with degC (relative - absolute) is unclear.  Substituting relative K - deltaC.") << endl;
           return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_deltaC_unit))); // deltaK/deltaC - C doesn't make sense, assume deltaK/deltaC - deltaC -> deltaC
         }
       } else {
         if(va[1] == _K_unit) {
-          *logptr(contextptr) << gettext("Temperature Units Warning: Sum of absolute K with degF is ambiguous.  Calculation is assuming intent is sum of K and deltaF (absolute + relative)") << endl;
+          *logptr(contextptr) << gettext("Temperature Units Warning: Sum of K with degF is ambiguous.  Substituting K + deltaF.") << endl;
           return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_K_unit))); // K + C is ambiguous...assume K + deltaC -> K
         } else if(va[1] == _Rankine_unit) {
-          *logptr(contextptr) << gettext("Temperature Units Warning: Sum of absolute Rankine with degF is ambiguous.  Calculation is assuming intent is sum of Rankine and deltaF (absolute + relative)") << endl;
+          *logptr(contextptr) << gettext("Temperature Units Warning: Sum of Rankine with degF is ambiguous.  Substituting Rankine + deltaF.") << endl;
           return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(9./5),contextptr),_Rankine_unit))); // Rankine + C is ambiguous...assume Rankine + deltaC -> Rankine
         } else if((va[1] == _deltaRankine_unit) || (va[1] == _deltaF_unit)) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0]*gen(5./9),vb[0],contextptr),_degC_unit))); // deltaF/deltaRankine + C -> C
         else return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_degC_unit))); // deltaC/deltaK + C -> C

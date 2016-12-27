@@ -6968,10 +6968,10 @@ namespace giac {
 	return 0;
 #ifdef SWIFT_CALCS_OPTIONS
         if(a == _degF_unit) { //degF unit
-          *logptr(contextptr) << gettext("Temperature Units Warning: Multiplication or division of absolute Fahrenheit units (degF) with other units is non-physical.  Calculation is assuming intent was multiplication or division using relative units (deltaF)") << endl;
+          *logptr(contextptr) << gettext("Temperature Units Warning: Multiplication or division of degF with other units is non-physical.  Substituting deltaF.") << endl;
           return new_ref_symbolic(symbolic(at_inv,new ref_identificateur("_deltaF")));
         } else if(a == _degC_unit) { //degC unit
-          *logptr(contextptr) << gettext("Temperature Units Warning: Multiplication or division of absolute Celsius units (degC) with other units is non-physical.  Calculation is assuming intent was multiplication or division using relative units (deltaC)") << endl;
+          *logptr(contextptr) << gettext("Temperature Units Warning: Multiplication or division of degC with other units is non-physical.  Substituting deltaC.") << endl;
           return new_ref_symbolic(symbolic(at_inv,new ref_identificateur("_deltaC")));
         } else if(a == _K_unit) return new_ref_symbolic(symbolic(at_inv,new ref_identificateur("_deltaK"))); // K/deltaK/deltaC
         else if(a == _Rankine_unit) return new_ref_symbolic(symbolic(at_inv,new ref_identificateur("_deltaRankine"))); //Rankine/deltaRankine/deltaF
@@ -8299,19 +8299,19 @@ namespace giac {
         // Temperature checks
         if((ae.is_symb_of_sommet(at_unit) && (ae._SYMBptr->feuille._VECTptr->back() == _degF_unit))        
             && (be.is_symb_of_sommet(at_unit) && (be._SYMBptr->feuille._VECTptr->back() == _deltaF_unit || be._SYMBptr->feuille._VECTptr->back() == _deltaC_unit || be._SYMBptr->feuille._VECTptr->back() == _deltaK_unit || be._SYMBptr->feuille._VECTptr->back() == _deltaRankine_unit))) {
-          *logptr(contextptr) << gettext("Temperature Units Warning: Comparison of absolute Fahrenheit units (degF) with relative temperatures is non-physical.  Calculation is assuming intent was to use relative units (deltaF)") << endl;
+          *logptr(contextptr) << gettext("Temperature Units Warning: Comparison of degF with relative temperatures is non-physical. Substituting deltaF.") << endl;
           ae = symbolic(at_unit, makenewvecteur(ae._SYMBptr->feuille._VECTptr->front(),_deltaRankine_unit));       
         } else if((ae.is_symb_of_sommet(at_unit) && (ae._SYMBptr->feuille._VECTptr->back() == _degC_unit))        
             && (be.is_symb_of_sommet(at_unit) && (be._SYMBptr->feuille._VECTptr->back() == _deltaF_unit || be._SYMBptr->feuille._VECTptr->back() == _deltaC_unit || be._SYMBptr->feuille._VECTptr->back() == _deltaK_unit || be._SYMBptr->feuille._VECTptr->back() == _deltaRankine_unit))) {
-          *logptr(contextptr) << gettext("Temperature Units Warning: Comparison of absolute Celsius units (degC) with relative temperatures is non-physical.  Calculation is assuming intent was to use relative units (deltaC)") << endl;
+          *logptr(contextptr) << gettext("Temperature Units Warning: Comparison of degC with relative temperatures is non-physical. Substituting deltaC.") << endl;
           ae = symbolic(at_unit, makenewvecteur(ae._SYMBptr->feuille._VECTptr->front(),_deltaK_unit));       
         } else if((be.is_symb_of_sommet(at_unit) && (be._SYMBptr->feuille._VECTptr->back() == _degF_unit))        
             && (ae.is_symb_of_sommet(at_unit) && (ae._SYMBptr->feuille._VECTptr->back() == _deltaF_unit || ae._SYMBptr->feuille._VECTptr->back() == _deltaC_unit || ae._SYMBptr->feuille._VECTptr->back() == _deltaK_unit || ae._SYMBptr->feuille._VECTptr->back() == _deltaRankine_unit))) {
-          *logptr(contextptr) << gettext("Temperature Units Warning: Comparison of absolute Fahrenheit units (degF) with relative temperatures is non-physical.  Calculation is assuming intent was to use relative units (deltaF)") << endl;
+          *logptr(contextptr) << gettext("Temperature Units Warning: Comparison of degF with relative temperatures is non-physical.  Substituting deltaF.") << endl;
           be = symbolic(at_unit, makenewvecteur(be._SYMBptr->feuille._VECTptr->front(),_deltaRankine_unit));       
         } else if((be.is_symb_of_sommet(at_unit) && (be._SYMBptr->feuille._VECTptr->back() == _degC_unit))        
             && (ae.is_symb_of_sommet(at_unit) && (ae._SYMBptr->feuille._VECTptr->back() == _deltaF_unit || ae._SYMBptr->feuille._VECTptr->back() == _deltaC_unit || ae._SYMBptr->feuille._VECTptr->back() == _deltaK_unit || ae._SYMBptr->feuille._VECTptr->back() == _deltaRankine_unit))) {
-          *logptr(contextptr) << gettext("Temperature Units Warning: Comparison of absolute Celsius units (degC) with relative temperatures is non-physical.  Calculation is assuming intent was to use relative units (deltaC)") << endl;
+          *logptr(contextptr) << gettext("Temperature Units Warning: Comparison of degC with relative temperatures is non-physical.  Substituting deltaC.") << endl;
           be = symbolic(at_unit, makenewvecteur(be._SYMBptr->feuille._VECTptr->front(),_deltaK_unit));       
         }
         if(ae.is_symb_of_sommet(at_unit) && (ae._SYMBptr->feuille._VECTptr->back() == _degF_unit))
