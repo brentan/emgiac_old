@@ -5612,7 +5612,7 @@ namespace giac {
     return chk_temperature_units(a_in, false, contextptr);
   }
   bool chk_temperature_units(const gen & a_in, const bool include_delta, GIAC_CONTEXT) {
-    if((a_in.type == _SYMB) && a_in.is_symb_of_sommet(at_unit)) return chk_temperature_units(a_in._SYMBptr->feuille._VECTptr->back(),contextptr);
+    if((a_in.type == _SYMB) && a_in.is_symb_of_sommet(at_unit)) return chk_temperature_units(a_in._SYMBptr->feuille._VECTptr->back(),include_delta,contextptr);
     if (a_in.type != _IDNT) return false;
     gen a = expand(a_in,contextptr);
     if(a == _degF_unit) return true;
@@ -10056,6 +10056,9 @@ namespace giac {
     static const char _one_index_s []="one_index";
     static define_unary_function_eval (__one_index,&one_index,_one_index_s);
     define_unary_function_ptr5( at_one_index ,alias_at_one_index ,&__one_index,0,true);
+    static const char _first_index_s []="first_index";
+    static define_unary_function_eval (__first_index,&one_index,_first_index_s);
+    define_unary_function_ptr5( at_first_index ,alias_at_first_index ,&__first_index,0,true);
 
     // Like unitpow, but returns the actual exponent
     double unitpow_double(const gen & g,const gen & exponent_){

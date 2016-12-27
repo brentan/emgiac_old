@@ -1101,7 +1101,7 @@ namespace giac {
       	//  return eval_38(level,orig,evaled,id_name,contextptr);
         #ifdef SWIFT_CALCS_OPTIONS
           // What is the first index?
-          if(strcmp(id_name,"first_index") == 0) {
+          if(strcmp(id_name,"firstIndex") == 0) {
             evaled = one_indexed() ? plus_one : zero;
             return true;
           }

@@ -2524,9 +2524,29 @@ namespace giac {
     }
     return res;
   }
+#ifdef SWIFT_CALCS_OPTIONS
+  gen _solve_no_bracket(const gen & args, GIAC_CONTEXT){
+    #ifdef SWIFT_CALCS_OPTIONS
+      gen res = _solve(args,contextptr);
+      if((res.type==_VECT) && (int(res._VECTptr->size()) == 1)) return res._VECTptr->front(); // Remove brackets if only one answer
+      return res;
+    #else
+      return _solve(args,contextptr);
+    #endif
+  }
+  // if 1 answer, solutions will be in list
+  static const char _solver_s []="solver";
+  static define_unary_function_eval_quoted (__solver,&_solve,_solver_s);
+  define_unary_function_ptr5( at_solver ,alias_at_solver,&__solver,_QUOTE_ARGUMENTS,true);
+  // if 1 answer, solutions won't be in list
+  static const char _solve_s []="solve";
+  static define_unary_function_eval_quoted (__solve,&_solve_no_bracket,_solve_s);
+  define_unary_function_ptr5( at_solve ,alias_at_solve,&__solve,_QUOTE_ARGUMENTS,true);
+#else
   static const char _solve_s []="solve";
   static define_unary_function_eval_quoted (__solve,&_solve,_solve_s);
   define_unary_function_ptr5( at_solve ,alias_at_solve,&__solve,_QUOTE_ARGUMENTS,true);
+#endif
 
   gen _realproot(const gen & e,GIAC_CONTEXT) {
     gen g=_proot(e,contextptr);

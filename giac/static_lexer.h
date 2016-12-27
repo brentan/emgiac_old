@@ -614,6 +614,9 @@
 {"fin_enregistrement",13,126,0,*((ulonglong *) at_fin_enregistrement)},
 {"find",13,9,0,*((ulonglong *) at_find)},
 {"findhelp",13,9,0,*((ulonglong *) at_findhelp)| 1},
+#ifdef SWIFT_CALCS_OPTIONS
+  {"first_index",13,9,0,*((ulonglong *) at_first_index)},
+#endif
 {"fisher",13,9,0,*((ulonglong *) at_fisher)},
 {"fisher_cdf",13,9,0,*((ulonglong *) at_fisher_cdf)},
 {"fisher_icdf",13,9,0,*((ulonglong *) at_fisher_icdf)},
