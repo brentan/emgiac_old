@@ -9938,6 +9938,9 @@ namespace giac {
       return gensizeerr(gettext("Invalid unit exponent")+exponent.print());
     if (std::abs(exponent._DOUBLE_val)<1e-6)
       return plus_one;
+    double in;
+    if(std::abs(std::abs(std::modf(exponent._DOUBLE_val, &in)-0.5)-0.5) < 1e-6)  //Very small fractional part...float error
+      exponent = _round(exponent,context0);
     if (is_one(exponent))
       return g;
     if (is_zero(exponent))
