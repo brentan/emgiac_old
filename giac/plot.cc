@@ -1198,8 +1198,41 @@ namespace giac {
   }
 
   double max_nstep=2e4;
+#ifdef SWIFT_CALCS_OPTIONS
+
+  template<typename T = double>
+  class Logspace {
+  private:
+    T curValue, step;
+
+  public:
+    Logspace(T first, T last, int num) : curValue(first) {
+      step = (last - first)/(num-1);
+    }
+
+    T operator()() {
+      T retval = std::pow(10, curValue);
+      curValue += step;
+      return retval;
+    }
+  };
+  std::vector<double> genLogspace(double start, double stop, int num = 50) {
+    double realStart = std::log10(start);
+    double realStop = std::log10(stop);
+
+    std::vector<double> retval;
+    retval.reserve(num);
+    std::generate_n(std::back_inserter(retval), num, Logspace<>(realStart,realStop,num));
+    return retval;
+  }
 
   gen plotfunc(const gen & f,const gen & vars,const vecteur & attributs,bool densityplot,double function_xmin,double function_xmax,double function_ymin,double function_ymax,double function_zmin, double function_zmax,int nstep,int jstep,bool showeq,const context * contextptr){
+    return plotfunc(f,vars,attributs,false,zero,densityplot,function_xmin,function_xmax,function_ymin,function_ymax,function_zmin,function_zmax,nstep,jstep,showeq,contextptr);
+  }
+  gen plotfunc(const gen & f,const gen & vars,const vecteur & attributs,const bool logx, const gen & x_offset, bool densityplot,double function_xmin,double function_xmax,double function_ymin,double function_ymax,double function_zmin, double function_zmax,int nstep,int jstep,bool showeq,const context * contextptr){
+#else
+  gen plotfunc(const gen & f,const gen & vars,const vecteur & attributs,bool densityplot,double function_xmin,double function_xmax,double function_ymin,double function_ymax,double function_zmin, double function_zmax,int nstep,int jstep,bool showeq,const context * contextptr){
+#endif
     double step=(function_xmax-function_xmin)/nstep;
     if (debug_infolevel)
       CERR << "plot " << f << " x=" << function_xmin << ".." << function_xmax << " " << step << endl;
@@ -1223,7 +1256,11 @@ namespace giac {
 	vecteur cur_attributs(1,vattribut[i]);
 	if (attributs.size()>1 && attributs[1].type==_VECT && attributs[1]._VECTptr->size()>i)
 	  cur_attributs.push_back((*attributs[1]._VECTptr)[i]);
+#ifdef SWIFT_CALCS_OPTIONS
+        gen tmp=plotfunc(vf[i],vars,cur_attributs,logx, x_offset, false,function_xmin,function_xmax,function_ymin,function_ymax,function_zmin,function_zmax,nstep,jstep,showeq,contextptr);
+#else
 	gen tmp=plotfunc(vf[i],vars,cur_attributs,false,function_xmin,function_xmax,function_ymin,function_ymax,function_zmin,function_zmax,nstep,jstep,showeq,contextptr);
+#endif
 	if (tmp.type==_VECT) 
 	  res=mergevecteur(res,*tmp._VECTptr);
 	else
@@ -1233,24 +1270,60 @@ namespace giac {
     }
 #ifndef GNUWINCE
     if (vars.type==_IDNT) { // function plot
-#ifdef SWIFT_CALCS_OPTIONS
-    remove_angle_mode(true);
-#endif
       gen locvar(vars);
       locvar.subtype=0;
+#ifdef SWIFT_CALCS_OPTIONS
+      remove_angle_mode(true);
+      bool has_offset_units = _usimplify_hits_temperature(f,contextptr);
+      gen y,yy;
+      if(has_offset_units)
+        y=quotesubst(f,vars,locvar,contextptr);
+      else
+        y=quotesubst(mksa_value(f,contextptr),vars,locvar,contextptr);
+#else
       gen y=quotesubst(f,vars,locvar,contextptr),yy;
+#endif
       // gen y=f.evalf2double(),yy;
       double j,entrej,oldj=0,xmin=function_xmin,xmax=function_xmax+step/2;
+#ifdef SWIFT_CALCS_OPTIONS
+      std::vector<double> i_vals;
+      int count = 0;
+      double i, ii, i_no_offset;
+      double x_offset_d = x_offset.evalf2double(eval_level(contextptr),contextptr)._DOUBLE_val;
+      if(logx) {
+        if(xmin <= 0) {
+          remove_angle_mode(false);
+          return gensizeerr(gettext("Log plot error: x limits must be positive, provided x_min is ")+print_DOUBLE_(function_xmin,12)+".");
+          }
+        i_vals = genLogspace(xmin, function_xmax, nstep+1);
+      } 
+#else
+      double i, ii;
+#endif
+      ii=xmin;
       bool joindre;
       vecteur localvar(1,vars);
       context * newcontextptr= (context *) contextptr;
       int protect=giac::bind(vecteur(1,xmin),localvar,newcontextptr);
       vecteur chemin;
-      double i=xmin;
-      for (;i<xmax;i+= step){
+      for (;ii<xmax;ii+= step){
+#ifdef SWIFT_CALCS_OPTIONS
+        // All the offset backflips due to float calc errors wiping out small values with an offset
+        if(logx) i_no_offset = i_vals[count];
+        else i_no_offset = ii;
+        i = i_no_offset + x_offset_d;
+        count++;
+#else
+        i = ii;
+#endif
 	// yy=evalf_double(subst(f,vars,i,false,contextptr),1,contextptr);
 	local_sto_double(i,*vars._IDNTptr,newcontextptr);
 	// vars._IDNTptr->localvalue->back()._DOUBLE_val =i;
+#ifdef SWIFT_CALCS_OPTIONS
+        if(has_offset_units)
+          yy = evalf2double_nock(mksa_value(y.evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
+        else
+#endif
 	yy=y.evalf2double(eval_level(contextptr),newcontextptr);
 	if (yy.type!=_DOUBLE_){
 #ifdef SWIFT_CALCS_OPTIONS
@@ -1263,7 +1336,7 @@ namespace giac {
 	    CERR << y << " not real at " << i << " " << yy << endl;
           if (!chemin.empty()) {
 #ifdef SWIFT_CALCS_OPTIONS // Swift Calcs options to output 2d array of x y pairs, instead of points etc as we do our own plotting
-	    chemin.push_back(makevecteur(i,plus_inf));
+	    chemin.push_back(makevecteur(i_no_offset,plus_inf));
             res = mergevecteur(res, chemin);
 #else
             res.push_back(pnt_attrib(symb_curve(gen(makevecteur(vars+cst_i*f,vars,xmin,i,showeq),_PNT__VECT),gen(chemin,_GROUP__VECT)),attributs.empty()?color:attributs,contextptr));
@@ -1289,8 +1362,28 @@ namespace giac {
 #endif
       if (debug_infolevel)
 	      CERR << y << " checking step at " << i << " " << yy << endl;
+#ifdef SWIFT_CALCS_OPTIONS
+            if(logx) {
+              if(count == 1) {
+                local_sto_double(i - (i_vals[count] - i_vals[count-1])/2.,*vars._IDNTptr,newcontextptr);
+                i_no_offset = i_no_offset - (i_vals[count] - i_vals[count-1])/2.;
+              } else {
+                local_sto_double(i - (i_vals[count-1] - i_vals[count-2])/2.,*vars._IDNTptr,newcontextptr);
+                i_no_offset = i_no_offset - (i_vals[count-1] - i_vals[count-2])/2.;
+              }
+            } else {
+              local_sto_double_increment(-step/2,*vars._IDNTptr,newcontextptr);
+              i_no_offset = i_no_offset - step/2.;
+            }
+#else
 	    local_sto_double_increment(-step/2,*vars._IDNTptr,newcontextptr);
+#endif
 	    // vars._IDNTptr->localvalue->back()._DOUBLE_val -= step/2;
+#ifdef SWIFT_CALCS_OPTIONS
+            if(has_offset_units)
+              yy = evalf2double_nock(mksa_value(y.evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
+            else
+#endif
 	    yy=y.evalf2double(eval_level(contextptr),newcontextptr);
 
 	    if (yy.type!=_DOUBLE_)
@@ -1302,7 +1395,22 @@ namespace giac {
 	      else
 		joindre=(j<=entrej) && (entrej<=oldj);
 	    }
+#ifdef SWIFT_CALCS_OPTIONS
+            if(logx) {
+              if(count >= nstep) {
+                local_sto_double(i + (i_vals[count-1] - i_vals[count-2])/2.,*vars._IDNTptr,newcontextptr);
+                i_no_offset = i_no_offset + (i_vals[count-1] - i_vals[count-2])/2.;
+              } else {
+                local_sto_double(i + (i_vals[count] - i_vals[count-1])/2.,*vars._IDNTptr,newcontextptr);
+                i_no_offset = i_no_offset + (i_vals[count] - i_vals[count-1])/2.;
+              }
+            } else {
+              local_sto_double_increment(step/2,*vars._IDNTptr,newcontextptr);
+              i_no_offset = i_no_offset + step/2.;
+            }
+#else
 	    local_sto_double_increment(step/2,*vars._IDNTptr,newcontextptr);
+#endif
 	    // vars._IDNTptr->localvalue->back()._DOUBLE_val += step/2;
 	  }
 	  else
@@ -1312,7 +1420,7 @@ namespace giac {
 	  joindre=false;
 	if (joindre) {
 #ifdef SWIFT_CALCS_OPTIONS
-	  chemin.push_back(makevecteur(i,j));
+	  chemin.push_back(makevecteur(i_no_offset,j));
 #else
           chemin.push_back(gen(i,j));
 #endif
@@ -1323,22 +1431,32 @@ namespace giac {
 	      CERR << "curve " << chemin.size() << " " << chemin.front() << " .. " << chemin.back() << endl;
 	    }
 #ifdef SWIFT_CALCS_OPTIONS
-            if(oldj < 0)
-              chemin.push_back(makevecteur(i - step, function_ymin));
-            else
-              chemin.push_back(makevecteur(i - step, function_ymax));
-	    chemin.push_back(makevecteur(i - step/2,plus_inf));
+            if(logx) {
+              if(count >= 2) {
+                if(oldj < 0)
+                  chemin.push_back(makevecteur(i_vals[count-2], function_ymin));
+                else
+                  chemin.push_back(makevecteur(i_vals[count-2], function_ymax));
+    	          chemin.push_back(makevecteur((i_vals[count-1] + i_vals[count-2])/2.,plus_inf));
+              }
+            } else {
+              if(oldj < 0)
+                chemin.push_back(makevecteur(i_no_offset - step, function_ymin));
+              else
+                chemin.push_back(makevecteur(i_no_offset - step, function_ymax));
+              chemin.push_back(makevecteur(i_no_offset - step/2,plus_inf));
+            }
             if(j < 0)
-              chemin.push_back(makevecteur(i, function_ymin));
+              chemin.push_back(makevecteur(i_no_offset, function_ymin));
             else
-              chemin.push_back(makevecteur(i, function_ymax));
+              chemin.push_back(makevecteur(i_no_offset, function_ymax));
 #else
             res.push_back(pnt_attrib(symb_curve(gen(makevecteur(vars+cst_i*f,vars,xmin,i,showeq),_PNT__VECT),gen(chemin,_GROUP__VECT)),attributs.empty()?color:attributs,contextptr));
 #endif
 	  }
 	  xmin=i;
 #ifdef SWIFT_CALCS_OPTIONS
-	  chemin.push_back(makevecteur(i,j));
+	  chemin.push_back(makevecteur(i_no_offset,j));
 #else
           chemin=vecteur(1,gen(i,j));
 #endif
@@ -1777,7 +1895,14 @@ namespace giac {
     read_option(v,xmin,xmax,ymin,ymax,zmin,zmax,attributs,nstep,jstep,kstep,unfactored,contextptr);
   }
 
-  gen funcplotfunc(const gen & args,bool densityplot,const context * contextptr){
+#ifdef SWIFT_CALCS_OPTIONS
+  gen funcplotfunc(const gen & args,bool densityplot,const context * contextptr) {
+    return funcplotfunc(args,densityplot,false,zero,contextptr);
+  }
+  gen funcplotfunc(const gen & args,bool densityplot,const bool logx, const gen & x_offset, const context * contextptr) {
+#else
+  gen funcplotfunc(const gen & args,bool densityplot,const context * contextptr) {
+#endif
     double xmin=gnuplot_xmin,xmax=gnuplot_xmax,ymin=gnuplot_ymin,ymax=gnuplot_ymax,zmin=gnuplot_zmin,zmax=gnuplot_zmax;
     bool showeq=false;
     if (densityplot)
@@ -1785,7 +1910,7 @@ namespace giac {
     int nstep=gnuplot_pixels_per_eval,jstep=0;
     gen attribut=default_color(contextptr);
 #ifdef SWIFT_CALCS_OPTIONS
-    vecteur vargs(_usimplify_mksa_remove(plotpreprocess_eval(args,false,contextptr),contextptr));
+    vecteur vargs(plotpreprocess_eval(args,false,contextptr));
 #else
     vecteur vargs(plotpreprocess(args,contextptr));
 #endif
@@ -1802,7 +1927,11 @@ namespace giac {
     }
     if (s<1)
       return gensizeerr(contextptr);
+#ifdef SWIFT_CALCS_OPTIONS
+    gen e1=mksa_value(vargs[1],contextptr);
+#else
     gen e1=vargs[1];
+#endif
     bool newsyntax;
     if (e1.type!=_VECT){
       newsyntax=readrange(e1,gnuplot_xmin,gnuplot_xmax,e1,xmin,xmax,contextptr) && (is_equal(vargs[1]) || s<4);
@@ -1865,7 +1994,11 @@ namespace giac {
 	if (s>6 && vargs[6].type==_INT_)
 	  jstep=vargs[6].val;
       }
+#ifdef SWIFT_CALCS_OPTIONS
+      return plotfunc(vargs.front(),e1,vecteur(1,attribut),logx,x_offset,densityplot,xmin,xmax,ymin,ymax,zmin,zmax,nstep,jstep,showeq,contextptr);
+#else
       return plotfunc(vargs.front(),e1,vecteur(1,attribut),densityplot,xmin,xmax,ymin,ymax,zmin,zmax,nstep,jstep,showeq,contextptr);
+#endif
     }
     // plotfunc(func,x=xmin..xmax[,zminmax,attribut])
     if (e1.type==_VECT && s>2){
@@ -1876,14 +2009,18 @@ namespace giac {
     }
     vecteur attributs(1,attribut);
     read_option(vargs,xmin,xmax,ymin,ymax,attributs,nstep,jstep,contextptr);
+#ifdef SWIFT_CALCS_OPTIONS
+    return plotfunc(vargs[0],e1,attributs,logx,x_offset,densityplot,xmin,xmax,ymin,ymax,zmin,zmax,nstep,jstep,showeq,contextptr);
+#else
     return plotfunc(vargs[0],e1,attributs,densityplot,xmin,xmax,ymin,ymax,zmin,zmax,nstep,jstep,showeq,contextptr);
+#endif
   }
   gen _plotfunc(const gen & args,const context * contextptr){
     if ( args.type==_STRNG && args.subtype==-1) return  args;
     int nd;
     if ( (nd=is_distribution(args)) || (args.type==_VECT && !args._VECTptr->empty() && (nd=is_distribution(args._VECTptr->front())) ) ){
       if (is_discrete_distribution(nd))
-	*logptr(contextptr) << "Correct commandname is histogram" << endl;
+        *logptr(contextptr) << "Correct commandname is histogram" << endl;
       return _plot(args,contextptr);
     }
     return funcplotfunc(args,false,contextptr);
@@ -1891,6 +2028,36 @@ namespace giac {
   static const char _plotfunc_s []="plotfunc";
   static define_unary_function_eval_quoted (__plotfunc,&giac::_plotfunc,_plotfunc_s);
   define_unary_function_ptr5( at_plotfunc ,alias_at_plotfunc,&__plotfunc,_QUOTE_ARGUMENTS,true);
+
+#ifdef SWIFT_CALCS_OPTIONS
+  gen _plotfunclog(const gen & args,const context * contextptr){
+    if ( args.type==_STRNG && args.subtype==-1) return  args;
+    vecteur args_to_send;
+    vecteur & args_in = *args._VECTptr;
+    args_to_send.reserve(int(args._VECTptr->size())-1);
+    for(int i = 0; i < (int(args_in.size())-1); i++) {
+      args_to_send.push_back(args_in[i]);
+    }
+    return funcplotfunc(gen(args_to_send,_SEQ__VECT),false,true,args._VECTptr->back(),contextptr);
+  }
+  static const char _plotfunclog_s []="plotfunclog";
+  static define_unary_function_eval_quoted (__plotfunclog,&giac::_plotfunclog,_plotfunclog_s);
+  define_unary_function_ptr5( at_plotfunclog ,alias_at_plotfunclog,&__plotfunclog,_QUOTE_ARGUMENTS,true);
+
+  gen _plotfuncoffset(const gen & args,const context * contextptr){
+    if ( args.type==_STRNG && args.subtype==-1) return  args;
+    vecteur args_to_send;
+    vecteur & args_in = *args._VECTptr;
+    args_to_send.reserve(int(args._VECTptr->size())-1);
+    for(int i = 0; i < (int(args_in.size())-1); i++) {
+      args_to_send.push_back(args_in[i]);
+    }
+    return funcplotfunc(gen(args_to_send,_SEQ__VECT),false,false,args._VECTptr->back(),contextptr);
+  }
+  static const char _plotfuncoffset_s []="plotfuncoffset";
+  static define_unary_function_eval_quoted (__plotfuncoffset,&giac::_plotfuncoffset,_plotfuncoffset_s);
+  define_unary_function_ptr5( at_plotfuncoffset ,alias_at_plotfuncoffset,&__plotfuncoffset,_QUOTE_ARGUMENTS,true);
+#endif
 
   gen _funcplot(const gen & args,const context * contextptr){
     if ( args.type==_STRNG && args.subtype==-1) return  args;
@@ -1938,7 +2105,39 @@ namespace giac {
       return undef;
     return f._VECTptr->front();
   }
-
+#ifdef SWIFT_CALCS_OPTIONS
+  bool genreadrange(const gen & g,double defaultxmin,double defaultxmax,gen & x, gen & xmin, gen & xmax,GIAC_CONTEXT){
+    xmin=gen(defaultxmin);
+    xmax=gen(defaultxmax);
+    if (g.type==_IDNT){
+      x=g;
+      return true;
+    }
+    if (is_equal(g)){
+      gen & f=g._SYMBptr->feuille;
+      if (f.type!=_VECT)
+        return false;
+      vecteur & v=*f._VECTptr;
+      if (v.size()!=2 || v[0].type!=_IDNT)
+        return false;
+      bool res = false;
+      gen h(v[1]);
+      if (h.is_symb_of_sommet(at_interval)) {
+        h=h._SYMBptr->feuille;
+        if (h.type!=_VECT || h._VECTptr->size()!=2)
+          res = false;
+        else {
+          xmin=h._VECTptr->front();
+          xmax=h._VECTptr->back();
+          res= true;
+        }
+      }
+      x=v[0];
+      return res;
+    }
+    return false;
+  }
+#endif
   bool readrange(const gen & g,double defaultxmin,double defaultxmax,gen & x, double & xmin, double & xmax,GIAC_CONTEXT){
     xmin=defaultxmin;
     xmax=defaultxmax;
@@ -6094,6 +6293,40 @@ namespace giac {
       res=false;
     return res;
   }
+#ifdef SWIFT_CALCS_OPTIONS
+
+  void genread_tmintmaxtstep(vecteur & vargs,gen & t,int vstart,gen &tmin,gen & tmax,gen &tstep,bool & tminmax_defined,bool & tstep_defined,GIAC_CONTEXT){
+    tstep=gen(gnuplot_tstep);
+    tminmax_defined=false;
+    tstep_defined=false;
+    gen tmp;
+    if (t.is_symb_of_sommet(at_equal)){
+      genreadrange(t,gnuplot_tmin,gnuplot_tmax,tmp,tmin,tmax,contextptr);
+      tminmax_defined=true;
+      t=t._SYMBptr->feuille._VECTptr->front();
+    }
+    int vs=int(vargs.size());
+    for (int i=vstart;i<vs;++i){
+      if (readvar(vargs[i])==t){
+        genreadrange(vargs[i],gnuplot_tmin,gnuplot_tmax,tmp,tmin,tmax,contextptr);
+        tminmax_defined=true;
+        vargs.erase(vargs.begin()+i);
+        --vs;
+        --i;
+      }
+      if (vargs[i].is_symb_of_sommet(at_equal) && vargs[i]._SYMBptr->feuille.type==_VECT && vargs[i]._SYMBptr->feuille._VECTptr->front().type==_INT_){
+        gen n=vargs[i]._SYMBptr->feuille._VECTptr->back();
+        if (vargs[i]._SYMBptr->feuille._VECTptr->front().val==_TSTEP){
+          tstep=n;
+          tstep_defined=true;
+          vargs.erase(vargs.begin()+i);
+          --vs;
+          --i;
+        }
+      }
+    }
+  }
+#endif
 
   void read_tmintmaxtstep(vecteur & vargs,gen & t,int vstart,double &tmin,double & tmax,double &tstep,bool & tminmax_defined,bool & tstep_defined,GIAC_CONTEXT){
     tstep=gnuplot_tstep;
@@ -6108,22 +6341,22 @@ namespace giac {
     int vs=int(vargs.size());
     for (int i=vstart;i<vs;++i){
       if (readvar(vargs[i])==t){
-	readrange(vargs[i],gnuplot_tmin,gnuplot_tmax,tmp,tmin,tmax,contextptr);
-	tminmax_defined=true;
-	vargs.erase(vargs.begin()+i);
-	--vs;
-	--i;
+      	readrange(vargs[i],gnuplot_tmin,gnuplot_tmax,tmp,tmin,tmax,contextptr);
+      	tminmax_defined=true;
+      	vargs.erase(vargs.begin()+i);
+      	--vs;
+      	--i;
       }
       if (vargs[i].is_symb_of_sommet(at_equal) && vargs[i]._SYMBptr->feuille.type==_VECT && vargs[i]._SYMBptr->feuille._VECTptr->front().type==_INT_){
-	gen n=vargs[i]._SYMBptr->feuille._VECTptr->back();
-	if (vargs[i]._SYMBptr->feuille._VECTptr->front().val==_TSTEP){
-	  n=evalf_double(n,1,contextptr);
-	  tstep=std::abs(n._DOUBLE_val);
-	  tstep_defined=true;
-	  vargs.erase(vargs.begin()+i);
-	  --vs;
-	  --i;
-	}
+      	gen n=vargs[i]._SYMBptr->feuille._VECTptr->back();
+      	if (vargs[i]._SYMBptr->feuille._VECTptr->front().val==_TSTEP){
+      	  n=evalf_double(n,1,contextptr);
+      	  tstep=std::abs(n._DOUBLE_val);
+      	  tstep_defined=true;
+      	  vargs.erase(vargs.begin()+i);
+      	  --vs;
+      	  --i;
+      	}
       }
     }
   }
@@ -7605,7 +7838,16 @@ namespace giac {
     // approx_mode(true,contextptr);
     gen locvar(vars);
     locvar.subtype=0;
+#ifdef SWIFT_CALCS_OPTIONS
+    bool has_offset_units = _usimplify_hits_temperature(f,contextptr);
+    gen xy,xy_,x_,y_;
+    if(has_offset_units)
+      xy=quotesubst(f,vars,locvar,contextptr);
+    else
+      xy=quotesubst(mksa_value(f,contextptr),vars,locvar,contextptr);
+#else
     gen xy=quotesubst(f,vars,locvar,contextptr),xy_,x_,y_;
+#endif
     bool joindre;
     vecteur localvar(1,vars),res;
     context * newcontextptr=(context *) contextptr;
@@ -7620,11 +7862,26 @@ namespace giac {
       local_sto_double(t,*vars._IDNTptr,newcontextptr);
       // vars._IDNTptr->localvalue->back()._DOUBLE_val =t;
       if (xy.type==_VECT && xy._VECTptr->size()==2){
-	x_=xy._VECTptr->front().evalf2double(eval_level(contextptr),newcontextptr);
-	y_=xy._VECTptr->back().evalf2double(eval_level(contextptr),newcontextptr);
+#ifdef SWIFT_CALCS_OPTIONS
+        if(has_offset_units)
+          x_ = evalf2double_nock(mksa_value(xy._VECTptr->front().evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
+        else
+#endif
+	  x_=xy._VECTptr->front().evalf2double(eval_level(contextptr),newcontextptr);
+#ifdef SWIFT_CALCS_OPTIONS
+        if(has_offset_units)
+          y_ = evalf2double_nock(mksa_value(xy._VECTptr->back().evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
+        else
+#endif
+	  y_=xy._VECTptr->back().evalf2double(eval_level(contextptr),newcontextptr);
       }
       else {
-	xy_=xy.evalf2double(eval_level(contextptr),newcontextptr);
+#ifdef SWIFT_CALCS_OPTIONS
+        if(has_offset_units)
+          xy_ = evalf2double_nock(mksa_value(xy.evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
+        else
+#endif
+	  xy_=xy.evalf2double(eval_level(contextptr),newcontextptr);
 	if (xy_.type==_VECT && xy_._VECTptr->size()==2){
 	  x_=xy_._VECTptr->front();
 	  y_=xy_._VECTptr->back();
@@ -7643,6 +7900,11 @@ namespace giac {
 	     (fabs(oldi-i)>(function_xmax-function_xmin)/5) ){
 	  local_sto_double_increment(-function_tstep/2,*vars._IDNTptr,newcontextptr);
 	  // vars._IDNTptr->localvalue->back()._DOUBLE_val -= function_tstep/2;
+#ifdef SWIFT_CALCS_OPTIONS
+          if(has_offset_units)
+            xy_ = evalf2double_nock(mksa_value(xy.evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
+          else
+#endif
 	  xy_=xy.evalf2double(eval_level(contextptr),newcontextptr);
 	  if (xy_.type==_VECT && xy_._VECTptr->size()==2){
 	    x_=xy_._VECTptr->front();
@@ -7725,7 +7987,7 @@ namespace giac {
     if (args.type!=_VECT)
       return paramplotparam(gen(makevecteur(args,t__IDNT_e),_SEQ__VECT),densityplot,contextptr);
 #ifdef SWIFT_CALCS_OPTIONS
-    vecteur vargs(_usimplify_mksa_remove(plotpreprocess_eval(args,false,contextptr),contextptr));
+    vecteur vargs(plotpreprocess_eval(args,false,contextptr));
 #else
     vecteur vargs(plotpreprocess(args,contextptr));
 #endif
@@ -7734,6 +7996,9 @@ namespace giac {
     if (vargs.size()<2)
       return symbolic(at_plotparam,args);
     gen f=vargs.front();
+#ifdef SWIFT_CALCS_OPTIONS
+    vargs = mksa_value(vargs,contextptr);
+#endif
     gen vars=vargs[1];
     /*
       if (f.type==_VECT && f._VECTptr->size()==2)
@@ -8023,11 +8288,7 @@ namespace giac {
   gen _plotpolar(const gen & args,const context * contextptr){
     if ( args.type==_STRNG && args.subtype==-1) return  args;
     // args= [rho(theta),theta] should add a theta interval
-#ifdef SWIFT_CALCS_OPTIONS
-    vecteur vargs(_usimplify_mksa_remove(plotpreprocess_eval(args,false,contextptr),contextptr));
-#else
     vecteur vargs(plotpreprocess(args,contextptr));
-#endif
     if (is_undef(vargs))
       return vargs;
     gen rho=vargs.front();
@@ -10154,7 +10415,8 @@ namespace giac {
     vecteur res1v,resv;
     if (tmin<0){
 #ifdef SWIFT_CALCS_OPTIONS
-      gen res1=odesolve(t0,tmin,f,y0,tstep,false,curve,ymin,ymax,maxstep,contextptr);
+      gen tstepv = gen(tstep);
+      gen res1=odesolve(t0,tmin,f,y0,tstepv,false,curve,ymin,ymax,maxstep,contextptr);
 #else
       gen res1=odesolve(t0,tmin,f,y0,tstep,curve,ymin,ymax,maxstep,contextptr);
 #endif
@@ -10165,7 +10427,8 @@ namespace giac {
     res1v.push_back(makevecteur(t0,y0));
     if (tmax>0){
 #ifdef SWIFT_CALCS_OPTIONS
-      gen res2=odesolve(t0,tmax,f,y0,tstep,false,curve,ymin,ymax,maxstep,contextptr);
+      gen tstepv = gen(tstep);
+      gen res2=odesolve(t0,tmax,f,y0,tstepv,false,curve,ymin,ymax,maxstep,contextptr);
 #else
       gen res2=odesolve(t0,tmax,f,y0,tstep,curve,ymin,ymax,maxstep,contextptr);
 #endif

@@ -4641,19 +4641,34 @@ namespace giac {
       return symb_interval(a._SYMBptr->feuille._VECTptr->front()+b,a._SYMBptr->feuille._VECTptr->back()+b);
     if (a.is_symb_of_sommet(at_unit)){
       if (is_zero(b))
-	return a;
+        return a;
+      if (is_zero(a))
+        return b;
       if (b.is_symb_of_sommet(at_unit) && lidnt_no_unit(a).empty() && lidnt_no_unit(b).empty()){
-	vecteur & va=*a._SYMBptr->feuille._VECTptr;
-	vecteur & vb=*b._SYMBptr->feuille._VECTptr;
+      	vecteur & va=*a._SYMBptr->feuille._VECTptr;
+      	vecteur & vb=*b._SYMBptr->feuille._VECTptr;
 #ifdef SWIFT_CALCS_OPTIONS
         if(chk_temperature_units(a,true,contextptr) && chk_temperature_units(b,true,contextptr)) // A and B is a temp unit.  May be non-multiplicative and have an offset, so we have to do some work here...
           return sym_add_temp(a,b,contextptr);
 #endif
-	if (va[1]==vb[1])
-	  return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),va[1])));
-	gen tmp=chk_not_unit_together(a,b,false,contextptr);
-	if (is_undef(tmp))
+      	if (va[1]==vb[1])
+      	  return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),va[1])));
+      	gen tmp=chk_not_unit_together(a,b,false,contextptr);
+      	if (is_undef(tmp)) {
+#ifdef SWIFT_CALCS_OPTIONS
+          int rads = is_rads_Hz(a,b, contextptr);
+          // Test for 1/s <-> rad/s
+          if(rads == 1) {
+            // 1/s + rad/s
+            return a + b/symbolic(at_unit,makenewvecteur(2 * cst_pi,_rad_unit));
+          }
+          if(rads == -1) {
+            // rad/s + 1/s
+            return a + b*symbolic(at_unit,makenewvecteur(2 * cst_pi,_rad_unit));
+          }
+#endif
           return tmp;
+        }
 #ifdef SWIFT_CALCS_OPTIONS
         return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],operator_times(_usimplify_base(symbolic(at_unit, makenewvecteur(plus_one, vb[1]/va[1])),contextptr),vb[0],contextptr),contextptr),va[1])));
 #else
@@ -4669,14 +4684,16 @@ namespace giac {
             return a + symbolic(at_unit, makenewvecteur(b, angle_radian(contextptr) ? _rad_unit : (angle_degree(contextptr) ? _deg_unit : _grad_unit))); // Angle units, assume default angle and force the addition
           return tmp;
         }
-	return g+b;
+	       return g+b;
       } 
     }
     if (b.is_symb_of_sommet(at_unit)){
       if (is_zero(a))
-	return b;
+	   return b;
+      if (is_zero(b))
+        return a;
       if (lidnt(a).empty() && lidnt_no_unit(b).empty()){ 
-	gen tmp=chk_not_unit_together(a,b,false,contextptr);
+	      gen tmp=chk_not_unit_together(a,b,false,contextptr);
         gen g=mksa_reduce(b,contextptr);
         if (is_undef(tmp)) {
           gen gu = g._SYMBptr->feuille._VECTptr->back();
@@ -4684,7 +4701,7 @@ namespace giac {
             return symbolic(at_unit, makenewvecteur(a, angle_radian(contextptr) ? _rad_unit : (angle_degree(contextptr) ? _deg_unit : _grad_unit))) + b; // Angle units, assume default angle and force the addition
           return tmp;
         }
-	return a+g;
+	      return a+g;
       } 
     }
     if (a.is_approx()){
@@ -7302,7 +7319,9 @@ namespace giac {
     return normal(fraction(a,b),context0); // ok
   }
 
+
   gen rdiv(const gen &a,const gen &b,GIAC_CONTEXT){
+
     // if (!( (++control_c_counter) & control_c_counter_mask))
 #ifdef TIMEOUT
     control_c();
@@ -7599,6 +7618,38 @@ namespace giac {
       if ( (a.type==_SYMB) || (a.type==_IDNT) || (a.type==_FUNC) || (b.type==_SYMB) || (b.type==_IDNT) || (b.type==_FUNC) ){
 	if (is_one(a)) return symb_inv(b);
 	if (is_minus_one(a)) return -symb_inv(b);
+#ifdef SWIFT_CALCS_OPTIONS
+        gen a2 = a;
+        if(a2.type==_IDNT) {
+          if(a2 == _degF_unit) { //degF unit
+            *logptr(contextptr) << gettext("Temperature Units Warning: Multiplication or division of degF with other units is non-physical.  Substituting deltaF.") << endl;
+            a2 = _deltaF_unit;
+          } else if(a2 == _degC_unit) { //degC unit
+            *logptr(contextptr) << gettext("Temperature Units Warning: Multiplication or division of degC with other units is non-physical.  Substituting deltaC.") << endl;
+            a2 = _deltaC_unit;
+          } else if(a2 == _K_unit) a2 = _deltaK_unit; // K/deltaK/deltaC
+          else if(a2 == _Rankine_unit) a2 = _deltaRankine_unit; //Rankine/deltaRankine/deltaF
+        }
+        gen b2 = b;
+        if(b2.type==_IDNT) {
+          if(b2 == _degF_unit) { //degF unit
+            *logptr(contextptr) << gettext("Temperature Units Warning: Multiplication or division of degF with other units is non-physical.  Substituting deltaF.") << endl;
+            b2 = _deltaF_unit;
+          } else if(b2 == _degC_unit) { //degC unit
+            *logptr(contextptr) << gettext("Temperature Units Warning: Multiplication or division of degC with other units is non-physical.  Substituting deltaC.") << endl;
+            b2 = _deltaC_unit;
+          } else if(b2 == _K_unit) b2 = _deltaK_unit; // K/deltaK/deltaC
+          else if(b2 == _Rankine_unit) b2 = _deltaRankine_unit; //Rankine/deltaRankine/deltaF
+        }
+        if (a2.is_symb_of_sommet(at_prod) && a2._SYMBptr->feuille.type==_VECT){
+          ref_vecteur * vptr = new_ref_vecteur(0);
+          vptr->v.reserve(a2._SYMBptr->feuille._VECTptr->size()+1);
+          vptr->v=*a2._SYMBptr->feuille._VECTptr;
+          vptr->v.push_back(symb_inv(b2));
+          return symbolic(at_prod,gen(vptr,_SEQ__VECT));
+        }
+        return operator_times(a2,symb_inv(b2),contextptr);
+#else
 	if (a.is_symb_of_sommet(at_prod) && a._SYMBptr->feuille.type==_VECT){
 	  ref_vecteur * vptr = new_ref_vecteur(0);
 	  vptr->v.reserve(a._SYMBptr->feuille._VECTptr->size()+1);
@@ -7607,6 +7658,7 @@ namespace giac {
 	  return symbolic(at_prod,gen(vptr,_SEQ__VECT));
 	}
 	return operator_times(a,symb_inv(b),contextptr);
+#endif
       }
       if (a.type==_STRNG || b.type==_STRNG)
 	return gentypeerr(gettext("rdiv"));
@@ -8314,17 +8366,17 @@ namespace giac {
           *logptr(contextptr) << gettext("Temperature Units Warning: Comparison of degC with relative temperatures is non-physical.  Substituting deltaC.") << endl;
           be = symbolic(at_unit, makenewvecteur(be._SYMBptr->feuille._VECTptr->front(),_deltaK_unit));       
         }
-        if(ae.is_symb_of_sommet(at_unit) && (ae._SYMBptr->feuille._VECTptr->back() == _degF_unit))
+        if(ae.is_symb_of_sommet(at_unit) && (ae._SYMBptr->feuille._VECTptr->back()==_degF_unit))
           ae = symbolic(at_unit, makenewvecteur(ae._SYMBptr->feuille._VECTptr->front() + 459.67,_deltaRankine_unit));
-        else if(ae.is_symb_of_sommet(at_unit) && (ae._SYMBptr->feuille._VECTptr->back() == _degC_unit))
+        else if(ae.is_symb_of_sommet(at_unit) && (ae._SYMBptr->feuille._VECTptr->back()==_degC_unit))
           ae = symbolic(at_unit, makenewvecteur(ae._SYMBptr->feuille._VECTptr->front() + 273.15,_deltaK_unit));
         else if(ae.is_symb_of_sommet(at_unit) && (ae._SYMBptr->feuille._VECTptr->back() == _K_unit))
           ae = symbolic(at_unit, makenewvecteur(ae._SYMBptr->feuille._VECTptr->front(),_deltaK_unit));
         else if(ae.is_symb_of_sommet(at_unit) && (ae._SYMBptr->feuille._VECTptr->back() == _Rankine_unit))
           ae = symbolic(at_unit, makenewvecteur(ae._SYMBptr->feuille._VECTptr->front(),_deltaRankine_unit));
-        if(be.is_symb_of_sommet(at_unit) && (be._SYMBptr->feuille._VECTptr->back() == _degF_unit))
+        if(be.is_symb_of_sommet(at_unit) && (be._SYMBptr->feuille._VECTptr->back()==_degF_unit))
           be = symbolic(at_unit, makenewvecteur(be._SYMBptr->feuille._VECTptr->front() + 459.67,_deltaRankine_unit));
-        else if(be.is_symb_of_sommet(at_unit) && (be._SYMBptr->feuille._VECTptr->back() == _degC_unit))
+        else if(be.is_symb_of_sommet(at_unit) && (be._SYMBptr->feuille._VECTptr->back()==_degC_unit))
           be = symbolic(at_unit, makenewvecteur(be._SYMBptr->feuille._VECTptr->front() + 273.15,_deltaK_unit));
         else if(be.is_symb_of_sommet(at_unit) && (be._SYMBptr->feuille._VECTptr->back() == _K_unit))
           be = symbolic(at_unit, makenewvecteur(be._SYMBptr->feuille._VECTptr->front(),_deltaK_unit));
@@ -8332,7 +8384,21 @@ namespace giac {
           be = symbolic(at_unit, makenewvecteur(be._SYMBptr->feuille._VECTptr->front(),_deltaRankine_unit));
 
         gen tmp = chk_not_unit_together(ae,be,true,contextptr);
-        if(is_undef(tmp) && !is_zero(ae) && !is_zero(be)) return tmp;
+        if(is_undef(tmp) && !is_zero(ae) && !is_zero(be)) {
+#ifdef SWIFT_CALCS_OPTIONS
+          int rads = is_rads_Hz(ae,be, contextptr);
+          // Test for 1/s <-> rad/s
+          if(rads == 1) {
+            // 1/s < rad/s
+            return superieur_strict(ae,be/symbolic(at_unit,makenewvecteur(2 * cst_pi,_rad_unit)),contextptr);
+          }
+          if(rads == -1) {
+            // rad/s > 1/s
+            return superieur_strict(ae,be*symbolic(at_unit,makenewvecteur(2 * cst_pi,_rad_unit)),contextptr);
+          }
+#endif
+          return tmp;
+        }
         if(is_greater(1e-6,abs(_simplify(mksa_value(ae - be, contextptr),contextptr),contextptr),contextptr)) return false; // 1e-6 thing is to deal with float rounding errors during unit conversions
         return superieur_strict(mksa_value(ae, contextptr),mksa_value(be,contextptr),contextptr); 
       }
@@ -8566,7 +8632,7 @@ namespace giac {
     case _USER:
       return a._USERptr->is_zero();
     case _SYMB:
-      if (a._SYMBptr->sommet==at_unit)
+      if (a._SYMBptr->sommet==at_unit) 
 #ifdef SWIFT_CALCS_OPTIONS
 	return is_zero(mksa_value(a, contextptr));
 #else

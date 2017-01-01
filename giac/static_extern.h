@@ -904,7 +904,7 @@ extern const unary_function_ptr * const  at_min;
 extern const unary_function_ptr * const  at_mkisom;
 extern const unary_function_ptr * const  at_mksa;
 #ifdef SWIFT_CALCS_OPTIONS
-  extern const unary_function_ptr * const  at_kelvin;
+  extern const unary_function_ptr * const  at_forceTemperature;
   extern const unary_function_ptr * const  at_mksa_base;
   extern const unary_function_ptr * const  at_mksa_base_first;
   extern const unary_function_ptr * const  at_mksa_remove;

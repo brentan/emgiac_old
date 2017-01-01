@@ -729,9 +729,9 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
   void angle_radian(bool b,GIAC_CONTEXT);
   bool angle_degree(GIAC_CONTEXT);
 
+  bool one_indexed();
+  void one_indexed(bool b);
   #ifdef SWIFT_CALCS_OPTIONS
-    bool one_indexed();
-    void one_indexed(bool b);
 
     bool remove_angle_mode();
     void remove_angle_mode(bool b);

@@ -121,6 +121,7 @@ namespace giac {
   gen gentoomanyargs(const std::string & s,GIAC_CONTEXT0);
   gen genmaxordererr(GIAC_CONTEXT0);
   gen genstabilityerr(GIAC_CONTEXT0);
+  gen evalf2double_nock(const gen & g0,int level,const context * contextptr);
 #ifdef EMCC
   void print_emscripten(const gen & e, const std::string pre_text);
   void print_emscripten(const std::string pre_text);

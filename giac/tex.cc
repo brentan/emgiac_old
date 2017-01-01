@@ -785,6 +785,10 @@ namespace giac {
           return "\\"+s;
         if ((s.size()== 4) && (s=="degF" || s=="degC"))
           return "\\"+s;
+        if ((s.size()== 7) && (s=="absdegF"))
+          return "\\degF";
+        if ((s.size()== 7) && (s=="absdegC"))
+          return "\\degC";
         if ((s.size()== 12) && (s=="deltaRankine"))
           return "\\"+s;
         return s;

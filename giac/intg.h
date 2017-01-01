@@ -117,7 +117,7 @@ namespace giac {
   // if return_curve is true stop as soon as y is outside ymin,ymax
   // f is eitheir a prog (t,y) -> f(t,y) or a comp [f(t,y) t y]
   #ifdef SWIFT_CALCS_OPTIONS
-  gen odesolve(const gen & t0orig,const gen & t1orig,const gen & f,const gen & y0orig,double tstep,bool tstep_passed,bool return_curve,double * ymin,double * ymax,int maxstep,GIAC_CONTEXT);
+  gen odesolve(const gen & t0orig,const gen & t1orig,const gen & f,const gen & y0orig,gen & tstep,bool tstep_passed,bool return_curve,double * ymin,double * ymax,int maxstep,GIAC_CONTEXT);
   #else
   gen odesolve(const gen & t0orig,const gen & t1orig,const gen & f,const gen & y0orig,double tstep,bool return_curve,double * ymin,double * ymax,int maxstep,GIAC_CONTEXT);
   #endif

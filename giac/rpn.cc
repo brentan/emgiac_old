@@ -1008,7 +1008,7 @@ namespace giac {
       if(a == _degF_unit) { //degF unit
         *logptr(contextptr) << gettext("Temperature Units Warning: Multiplication or division of degF with other units is non-physical.  Substituting deltaF") << endl;
         a = _deltaF_unit;
-      } else if(a == _degF_unit) { //degC unit
+      } else if(a == _degC_unit) { //degC unit
         *logptr(contextptr) << gettext("Temperature Units Warning: Multiplication or division of degC with other units is non-physical.  Substituting deltaC") << endl;
         a = _deltaC_unit;
       } else if(a == _K_unit) a = _deltaK_unit; // K/deltaK/deltaC

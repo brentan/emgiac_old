@@ -2943,7 +2943,7 @@ static define_unary_function_eval (__correlation,&_correlation,_correlation_s);
       return gensizeerr(contextptr);
     vecteur & v = *gv._VECTptr;
 #ifdef SWIFT_CALCS_OPTIONS
-    v = _usimplify_mksa_remove(v,contextptr);
+    v = mksa_value(v,contextptr);
 #endif
     gen n;
     gen sigmax,sigmay,sigmaxy,sigmax2,sigmay2,tmpx,tmpy;
@@ -3125,7 +3125,7 @@ static define_unary_function_eval (__logarithmic_regression,&_logarithmic_regres
     for (;it!=itend;++it) 
       x_units.push_back(mksa_base_first(*it,contextptr));
     gen y_units = mksa_base_first(v[0],contextptr);
-    v = _usimplify_mksa_remove(v,contextptr);
+    v = mksa_value(v,contextptr);
 #endif
 
     // Consistency check
@@ -3442,7 +3442,7 @@ static define_unary_function_eval (__power_regression_plot,&_power_regression_pl
     xmin=1e300,xmax=-xmin;
     vecteur v(genpoint2vecteur(g,contextptr));
 #ifdef SWIFT_CALCS_OPTIONS
-    v = _usimplify_mksa_remove(v,contextptr);
+    v = mksa_value(v,contextptr);
 #endif
     if (!ckmatrix(v) || v.empty() || v.front()._VECTptr->size()<2)
       return undef;
@@ -3571,7 +3571,7 @@ static define_unary_function_eval (__polynomial_regression_plot,&_polynomial_reg
       return gensizeerr(contextptr);
     vecteur & v = *g._VECTptr;
 #ifdef SWIFT_CALCS_OPTIONS
-    v=_usimplify_mksa_remove(v,contextptr);
+    v=mksa_value(v,contextptr);
 #endif
     int s=int(v.size());
     if (s<2 || s>3)

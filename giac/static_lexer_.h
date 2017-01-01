@@ -721,9 +721,6 @@
 *((size_t *) at_jacobi_symbol),
 *((size_t *) at_jordan),
 *((size_t *) at_jusque),
-#ifdef SWIFT_CALCS_OPTIONS
-  *((size_t *) at_kelvin),
-#endif
 *((size_t *) at_ker),
 *((size_t *) at_kernel),
 *((size_t *) at_keyboard),

@@ -819,9 +819,6 @@
 {"jacobi_symbol",13,9,0,*((ulonglong *) at_jacobi_symbol)},
 {"jordan",13,9,0,*((ulonglong *) at_jordan)},
 {"jusque",13,58,0,*((ulonglong *) at_jusque)| 1},
-#ifdef SWIFT_CALCS_OPTIONS
-  {"kelvin",13,9,0,*((ulonglong *) at_kelvin)},
-#endif
 {"ker",13,9,0,*((ulonglong *) at_ker)},
 {"kernel",13,9,0,*((ulonglong *) at_kernel)},
 {"keyboard",13,9,0,*((ulonglong *) at_keyboard)},

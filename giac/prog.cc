@@ -756,19 +756,7 @@ namespace giac {
       else
         res +="("+gen2tex(feuille0,contextptr)+")";
       res += " \\whitespace \\Longrightarrow \\whitespace ";
-
-      bool test;
-      string locals,inits;
-      gen proc_args=feuille._VECTptr->front();
-      vecteur vect,non_init_vars,initialisation_seq;
-
-      test=(feuille._VECTptr->back().type!=_VECT ||feuille._VECTptr->back().subtype );
-      if (!test)
-        vect=*feuille._VECTptr->back()._VECTptr;
-      if (test) 
-        return res+gen2tex(feuille._VECTptr->back(),contextptr);
-      res += gen2tex(vect, contextptr);
-      return res;
+      return res+gen2tex(feuille._VECTptr->back(),contextptr);
     #else
       string s("\\parbox{12cm}{\\tt ");
       s += translate_underscore(printasprogram(feuille,sommetstr,contextptr));
@@ -5721,7 +5709,7 @@ namespace giac {
       else if(vb[1] == _Rankine_unit) unit = _deltaRankine_unit * va[1];
       else if(va[1] == _K_unit) unit = _deltaK_unit * vb[1];
       else if(vb[1] == _K_unit) unit = _deltaK_unit * va[1];
-      else unit = va[1] * vb[1]; // Shoulnd't happen...
+      else unit = va[1] * vb[1];
     } else { // ELSE: other w/o temp * other w/o temp
       show_notice = false;
       unit = va[1] * vb[1];
@@ -5766,10 +5754,10 @@ namespace giac {
         if(vb[1] == _degC_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],-(-vb[0]*gen(9./5) + 32),contextptr),_deltaF_unit))); // F - C -> deltaF
         else if(vb[1] == _degF_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_deltaF_unit))); // F - F -> deltaF
         else if(vb[1] == _K_unit) {
-          *logptr(contextptr) << gettext("Temperature Units Warning: Difference of degF and K (absolute - absolute => relative).  Ensure you didnt mean degF - deltaC (absolute - relative => absolute)") << endl;
+          //*logptr(contextptr) << gettext("Temperature Units Warning: Difference of degF and K (absolute - absolute => relative).  Ensure you didnt mean degF - deltaC (absolute - relative => absolute)") << endl;
           return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0] + 459.67,vb[0]*gen(9./5),contextptr),_deltaF_unit))); // F - K -> deltaF 
         } else if(vb[1] == _Rankine_unit) {
-          *logptr(contextptr) << gettext("Temperature Units Warning: Difference of degF and Rankine (absolute - absolute => relative).  Ensure you didnt mean degF - deltaF (absolute - relative => absolute)") << endl;
+          //*logptr(contextptr) << gettext("Temperature Units Warning: Difference of degF and Rankine (absolute - absolute => relative).  Ensure you didnt mean degF - deltaF (absolute - relative => absolute)") << endl;
           return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0] + 459.67,vb[0],contextptr),_deltaF_unit))); // F - Rankine -> deltaF
         } else if((vb[1] == _deltaRankine_unit) || (vb[1] == _deltaF_unit)) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_degF_unit))); // F - deltaF/deltaRankine -> F
         else return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(9./5),contextptr),_degF_unit))); // F - deltaC/deltaK -> F
@@ -5794,10 +5782,10 @@ namespace giac {
         if(vb[1] == _degC_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_deltaC_unit))); // C - C -> deltaC
         else if(vb[1] == _degF_unit) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],-(-vb[0]-32)*gen(5./9),contextptr),_deltaC_unit))); // C - F -> deltaC
         else if(vb[1] == _K_unit) {
-          *logptr(contextptr) << gettext("Temperature Units Warning: Difference of degC and K (absolute - absolute => relative).  Ensure you didnt mean degC - deltaC (absolute - relative => absolute)") << endl;
+          //*logptr(contextptr) << gettext("Temperature Units Warning: Difference of degC and K (absolute - absolute => relative).  Ensure you didnt mean degC - deltaC (absolute - relative => absolute)") << endl;
           return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0] + 273.15,vb[0],contextptr),_deltaC_unit))); // C - K -> deltaC 
         } else if(vb[1] == _Rankine_unit) {
-          *logptr(contextptr) << gettext("Temperature Units Warning: Difference of degC and Rankine (absolute - absolute => relative).  Ensure you didnt mean degC - deltaF (absolute - relative => absolute)") << endl;
+          //*logptr(contextptr) << gettext("Temperature Units Warning: Difference of degC and Rankine (absolute - absolute => relative).  Ensure you didnt mean degC - deltaF (absolute - relative => absolute)") << endl;
           return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0] + 273.15,vb[0]*gen(5./9),contextptr),_deltaC_unit))); // C - Rankine -> deltaC MESSAGE
         } else if((vb[1] == _deltaRankine_unit) || (vb[1] == _deltaF_unit)) return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0]*gen(5./9),contextptr),_degC_unit))); // C - deltaF/deltaRankine -> C
         else return new_ref_symbolic(symbolic(at_unit,makenewvecteur(operator_plus(va[0],vb[0],contextptr),_degC_unit))); // C - deltaC/deltaK -> C
@@ -9822,17 +9810,15 @@ namespace giac {
     return output.unit;
   }
 
-
-  vecteur unit_convert(const gen & g, bool mksa, GIAC_CONTEXT){
-
+  vecteur unit_convert(const gen & g, bool mksa, bool reduce_mode, GIAC_CONTEXT){
     if (g.type==_IDNT)
       return unit_convert(*g._IDNTptr, mksa, contextptr);
     if (g.type!=_SYMB)
       return makevecteur(g);
     if (g.is_symb_of_sommet(at_unit)){
       vecteur & v=*g._SYMBptr->feuille._VECTptr;
-      vecteur res0=unit_convert(v[1], mksa, contextptr);
-      vecteur res1=unit_convert(v[0], mksa, contextptr);
+      vecteur res0=unit_convert(v[1], mksa, reduce_mode, contextptr);
+      vecteur res1=unit_convert(v[0], mksa, reduce_mode, contextptr);
       vecteur res=addvecteur(res0,res1);
       int s=int(res.size());
       for (int i=1;i<s;++i) {
@@ -9844,34 +9830,34 @@ namespace giac {
       return res;
     }
     if (g._SYMBptr->sommet==at_inv){
-      vecteur res(unit_convert(g._SYMBptr->feuille, mksa, contextptr));
+      vecteur res(unit_convert(g._SYMBptr->feuille, mksa, reduce_mode, contextptr));
       res[0]=inv(res[0],contextptr);
       int s=int(res.size());
       for (int i=1;i<s;++i)
-	      res[i]=-res[i];
+	res[i]=-res[i];
       return res;
     }
     if (g._SYMBptr->sommet==at_pow){
       gen & f=g._SYMBptr->feuille;
       if (f.type!=_VECT||f._VECTptr->size()!=2)
 	return vecteur(1,gensizeerr(contextptr));
-      vecteur res(unit_convert(f._VECTptr->front(), mksa, contextptr));
-      gen e=f._VECTptr->back();
-      res[0]=pow(res[0],e,contextptr);
+      vecteur res(unit_convert(f._VECTptr->front(), mksa, reduce_mode, contextptr));
+      gen exp=f._VECTptr->back();
+      res[0]=pow(res[0],exp,contextptr);
       int s=int(res.size());
       for (int i=1;i<s;++i)
-	res[i]=operator_times(e,res[i],contextptr);
+	res[i]=operator_times(exp,res[i],contextptr);
       return res;
     }
     if (g._SYMBptr->sommet==at_prod){
       gen & f=g._SYMBptr->feuille;
       if (f.type!=_VECT)
-	return unit_convert(f, mksa, contextptr);
+	return unit_convert(f, mksa, reduce_mode, contextptr);
       vecteur & v=*f._VECTptr;
       vecteur res(makevecteur(plus_one));
       const_iterateur it=v.begin(),itend=v.end();
       for (;it!=itend;++it){
-	vecteur tmp(unit_convert(*it,mksa,contextptr));
+	vecteur tmp(unit_convert(*it,mksa,reduce_mode, contextptr));
 	res[0]=operator_times(res[0],tmp[0],contextptr);
 	iterateur it=res.begin()+1,itend=res.end(),jt=tmp.begin()+1,jtend=tmp.end();
 	for (;it!=itend && jt!=jtend;++it,++jt)
@@ -9885,10 +9871,10 @@ namespace giac {
       if (g._SYMBptr->sommet==at_plus) {
         gen & f=g._SYMBptr->feuille;
         if (f.type!=_VECT)
-          return unit_convert(f, mksa, contextptr);
+          return unit_convert(f, mksa, reduce_mode, contextptr);
         vecteur res(makevecteur(zero));
         for (unsigned i=0;i<f._VECTptr->size();++i){
-          vecteur tmp(unit_convert((*f._VECTptr)[i], mksa, contextptr));
+          vecteur tmp(unit_convert((*f._VECTptr)[i], mksa, reduce_mode, contextptr));
           int s=int(tmp.size());
           for (int j=s;j<12;++j)
             tmp.push_back(zero);
@@ -9906,20 +9892,20 @@ namespace giac {
         return res;
       }
       if (g._SYMBptr->sommet==at_neg) {
-        vecteur res(unit_convert(g._SYMBptr->feuille, mksa, contextptr));
+        vecteur res(unit_convert(g._SYMBptr->feuille, mksa, reduce_mode, contextptr));
         res[0]= operator_times(minus_one, res[0], contextptr);
         return res;
       }
       if(g._SYMBptr->sommet==at_division) {
         gen & f=g._SYMBptr->feuille;
         if (f.type!=_VECT)
-          return unit_convert(f, mksa, contextptr);
+          return unit_convert(f, mksa, reduce_mode, contextptr);
         vecteur & v=*f._VECTptr;
-        vecteur num(unit_convert((*f._VECTptr)[0], mksa, contextptr));
+        vecteur num(unit_convert((*f._VECTptr)[0], mksa, reduce_mode, contextptr));
         int s=int(num.size());
         for (int j=s;j<12;++j)
           num.push_back(zero);
-        vecteur den(unit_convert((*f._VECTptr)[1], mksa, contextptr));
+        vecteur den(unit_convert((*f._VECTptr)[1], mksa, reduce_mode, contextptr));
         s=int(den.size());
         for (int j=s;j<12;++j)
           den.push_back(zero);
@@ -9931,6 +9917,9 @@ namespace giac {
       }
     #endif
     return makevecteur(g);
+  }
+  vecteur unit_convert(const gen & g, bool mksa, GIAC_CONTEXT){
+    return unit_convert(g,mksa,false,contextptr);
   }
   vecteur mksa_convert(const gen & g, GIAC_CONTEXT){
     return unit_convert(g, true, contextptr);
@@ -10009,10 +9998,10 @@ namespace giac {
         break;
       case 5:
 #ifdef SWIFT_CALCS_OPTIONS
-        if(g == _degF_unit) { // set degF as default.  Set to deltaF 
+        if(g==_degF_unit) { // set degF as default.  Set to deltaF 
           _default_unit_.K = 5./9;
           _default_unit_.K_base = _deltaF_unit;
-        } else if(g == _degC_unit) { // set degC as default.  Set to deltaC
+        } else if(g==_degC_unit) { // set degC as default.  Set to deltaC
           _default_unit_.K = 1.0;
           _default_unit_.K_base = _deltaC_unit;
         } else if(g == _deltaK_unit) { 
@@ -10124,27 +10113,20 @@ namespace giac {
     define_unary_function_ptr5( at_mksa_base_first ,alias_at_mksa_base_first,&__mksa_base_first,0,true);
     
     // Function returns the value of the unit in mksa space, with unit removed.  1_h -> 3600, 1_in -> 0.0254
-    gen mksa_value(const gen & g,GIAC_CONTEXT){
-      if (g.type==_VECT) 
-        return apply(g,mksa_value,contextptr);
-      vecteur v(mksa_convert(g,contextptr));
-      // Check for temperature units, which are special
-      if(g.is_symb_of_sommet(at_unit)) {
-        vecteur & vg = *g._SYMBptr->feuille._VECTptr;
-        int type = determine_unit_type(vg[1]);
-        // We are doing a pure temperature conversion, so we need to see if we have to handle it in any special way
-        // (note: multiplicative conversions are auto handled to deltaC/deltaF/K/Rankine.  Its only absolute ones we need to deal with)
-        if(type == 5) {
-          // want to convert from degF (assume deltaF) to mksa, which is K
-          v = mksa_convert(symbolic(at_unit, makenewvecteur(vg[0]+459.67, _Rankine_unit)),contextptr);
-          //*logptr(contextptr) << gettext("Temperature Units Warning: Use of absolute Fahrenheit units (degF) is ambiguous for this calculation.  Calculation is assuming all degF values are intended to be deltaF, and the answer may not be as intended.  Change all unit inputs to multiplicative temperature units (K, Rankine, deltaF, deltaC) to remove ambiguity and ensure answer is as intended.") << endl;
-        } else if(type == 4) {
-          // want to convert from degC (assume deltaC) to mksa, which is K
-          v = mksa_convert(symbolic(at_unit, makenewvecteur(vg[0]+273.15, _K_unit)),contextptr);
-          //*logptr(contextptr) << gettext("Temperature Units Warning: Use of absolute Fahrenheit units (degF) is ambiguous for this calculation.  Calculation is assuming all degF values are intended to be deltaF, and the answer may not be as intended.  Change all unit inputs to multiplicative temperature units (K, Rankine, deltaF, deltaC) to remove ambiguity and ensure answer is as intended.") << endl;
-        }
+    gen mksa_value(const gen & g,GIAC_CONTEXT) {
+      return _usimplify_base_function(g, false, true, true, true, contextptr);
+    }
+    vecteur mksa_value(const vecteur & v,GIAC_CONTEXT) {
+      const_iterateur it=v.begin(),itend=v.end();
+      vecteur vout;
+      vout.reserve(itend-it);
+      for (;it!=itend;++it){
+        gen tmp=mksa_value(*it,contextptr);
+        if (is_undef(tmp))
+          return gen2vecteur(tmp);
+        vout.push_back(tmp);
       }
-      return v[0];
+      return vout;
     }
     static const char _mksa_remove_s []="mksa_remove";
     static define_unary_function_eval (__mksa_remove,&mksa_value,_mksa_remove_s);
@@ -10163,12 +10145,10 @@ namespace giac {
         // (note: multiplicative conversions are auto handled to deltaC/deltaF/K/Rankine.  Its only absolute ones we need to deal with)
         if(type == 5) {
           // want to convert from degF (assume deltaF) to mksa, which is K
-          v = mksa_convert(symbolic(at_unit, makenewvecteur(vg[0], _Rankine_unit)),contextptr);
-          return (v[0]);
+          return vg[0]*gen(5./9);
         } else if(type == 4) {
           // want to convert from degC (assume deltaC) to mksa, which is K
-          v = mksa_convert(symbolic(at_unit, makenewvecteur(vg[0], _K_unit)),contextptr);
-          return (v[0]);
+          return vg[0];
         }
       }
       return mksa_value(g,contextptr);
@@ -10187,7 +10167,7 @@ namespace giac {
         // We are doing a pure temperature conversion, so we need to see if we have to handle it in any special way
         // (note: multiplicative conversions are auto handled to deltaC/deltaF/K/Rankine.  Its only absolute ones we need to deal with)
         if(type == 5) return gen(459.67); //degF
-        if(type == 4) return gen(273.15); //degF
+        if(type == 4) return gen(273.15); //degC
       }
       return zero;
     }
@@ -10204,7 +10184,7 @@ namespace giac {
       if(g.is_symb_of_sommet(at_unit)) {
         vecteur & vg = *g._SYMBptr->feuille._VECTptr;
         int type = determine_unit_type(vg[1]);
-        if((type == 2) || (type == 4) || (type == 5)) {
+        if((type == 2) || (type >= 4)) {
         // We are doing a pure temperature conversion, so we need to see if we have to handle it in any special way
         // (note: multiplicative conversions are auto handled to deltaC/deltaF/K/Rankine.  Its only absolute ones we need to deal with)
           if(default_unit(5, contextptr) == _deltaC_unit) {
@@ -10246,7 +10226,7 @@ namespace giac {
       if(g.is_symb_of_sommet(at_unit)) {
         vecteur & vg = *g._SYMBptr->feuille._VECTptr;
         int type = determine_unit_type(vg[1]);
-        if((type == 2) || (type == 4) || (type == 5)) {
+        if((type == 2) || (type >= 4)) {
           // We are doing a pure temperature conversion, so we need to see if we have to handle it in any special way
           // (note: multiplicative conversions are auto handled to deltaC/deltaF/K/Rankine.  Its only absolute ones we need to deal with)
           if(default_unit(5, contextptr) == _deltaC_unit) {
@@ -10261,11 +10241,11 @@ namespace giac {
           }
           if(default_unit(5, contextptr) == _K_unit) {
             // want to convert from to K...check if input is in degF or degC:
-            if((type == 4) || (type == 5)) return gen(273.15);
+            if(type >= 4) return gen(273.15);
           }
           if(default_unit(5, contextptr) == _Rankine_unit) {
             // want to convert from to Rankine...check if input is in degF or degC:
-            if((type == 4) || (type == 5)) return gen(459.67);
+            if(type >= 4) return gen(459.67);
           }
         }
       }
@@ -10276,47 +10256,80 @@ namespace giac {
     define_unary_function_ptr5( at_default_units_offset ,alias_at_default_units_offset,&__default_units_offset,0,true);
 
     // Function returns the value of the unit in default unit space, with unit removed.  1_h -> 3600, 1_in -> 0.0254 (assuming mksa is default)
-    gen default_unit_remove_base(const gen & g,GIAC_CONTEXT){
-      if (g.type==_VECT) 
-        return apply(g,default_unit_remove_base,contextptr);
-      vecteur v(unit_convert(g,false,contextptr));
-      if (is_undef(v)) return v;
-      // Check for temperature units, which are special
-      if(g.is_symb_of_sommet(at_unit)) {
-        vecteur & vg = *g._SYMBptr->feuille._VECTptr;
-        int type = determine_unit_type(vg[1]);
-        if((type == 2) || (type == 4) || (type == 5)) {
-          // We are doing a pure temperature conversion, so we need to see if we have to handle it in any special way
-          // (note: multiplicative conversions are auto handled to deltaC/deltaF/K/Rankine.  Its only absolute ones we need to deal with)
-          if(default_unit(5, contextptr) == _deltaC_unit) {
-            // want to convert to deltaC/degC...check if input is in K, Rankine, or degF:
-            if(vg[1] == _K_unit) return vg[0] - 273.15;
-            if(vg[1] == _Rankine_unit) return vg[0]*gen(5./9) - 273.15;
-            if(type == 5) return (vg[0]-32)*gen(5./9);
-            if(type == 4) return v[0];
-          }
-          if(default_unit(5, contextptr) == _deltaF_unit) {
-            // want to convert to deltaF/degF...check if input is in K, Rankine, or degC:
-            if(vg[1] == _K_unit) return vg[0]*gen(9./5) - 459.67;
-            if(vg[1] == _Rankine_unit) return vg[0] - 459.67;
-            if(type == 5) return v[0];
-            if(type == 4) return vg[0]*gen(9./5)+32;
-          }
-          if(type == 5) {
-            // want to convert from degF to default, which is either K or Rankine (degC/degF already handled)
-            v = unit_convert(symbolic(at_unit, makenewvecteur(vg[0] + 459.67, _Rankine_unit)),false,contextptr);
-          } else if(type == 4) {
-            // want to convert from degC to default, which is either K or Rankine (degC/degF already handled)
-            v = unit_convert(symbolic(at_unit, makenewvecteur(vg[0] + 273.15, _K_unit)),false,contextptr);
-          }
-        }
+    gen default_unit_remove_base(const gen & g,GIAC_CONTEXT) {
+      return _usimplify_base_function(g, false, true, false, true, contextptr);
+    }
+    vecteur default_unit_remove_base(const vecteur & v,GIAC_CONTEXT) {
+      const_iterateur it=v.begin(),itend=v.end();
+      vecteur vout;
+      vout.reserve(itend-it);
+      for (;it!=itend;++it){
+        gen tmp=default_unit_remove_base(*it,contextptr);
+        if (is_undef(tmp))
+          return gen2vecteur(tmp);
+        vout.push_back(tmp);
       }
-      gen res1=v[0];
-      return res1;
+      return vout;
     }
     static const char _unit_remove_s []="unit_remove";
     static define_unary_function_eval (__unit_remove,&default_unit_remove_base,_unit_remove_s);
     define_unary_function_ptr5( at_unit_remove ,alias_at_unit_remove,&__unit_remove,0,true);
+
+    vecteur remove_units(const vecteur & v) {
+      const_iterateur it=v.begin(),itend=v.end();
+      vecteur vout;
+      vout.reserve(itend-it);
+      for (;it!=itend;++it){
+        gen tmp=remove_units(*it);
+        vout.push_back(tmp);
+      }
+      return vout;
+    }
+    gen remove_units(const gen & g_in) {
+      if(g_in.type == _VECT) return gen(remove_units(*g_in._VECTptr),g_in.subtype);
+      gen g = _usimplify_base(g_in,context0);
+      if((g.type == _SYMB) && g.is_symb_of_sommet(at_unit)) return g._SYMBptr->feuille._VECTptr->front();
+      return g;
+    }
+    vecteur get_units(const vecteur & v) {
+      const_iterateur it=v.begin(),itend=v.end();
+      vecteur vout;
+      vout.reserve(itend-it);
+      for (;it!=itend;++it){
+        gen tmp=get_units(*it);
+        vout.push_back(tmp);
+      }
+      return vout;
+    }
+    gen get_units_internal(const gen & g) {
+      if((g.type == _SYMB) && g.is_symb_of_sommet(at_unit)) return g._SYMBptr->feuille._VECTptr->back();
+      return plus_one;
+    }
+    gen get_units(const gen & g) {
+      if(g.type == _VECT) return gen(get_units(*g._VECTptr),g.subtype);
+      if(is_undef(g)) return g;
+      return get_units_internal(_usimplify_base(g,context0));
+    }
+    vecteur apply_units(const vecteur & v, const vecteur & u) {
+      const_iterateur it=v.begin(),itend=v.end(), ut=u.begin(),utend=u.end();
+      vecteur vout;
+      vout.reserve(itend-it);
+      for (;it!=itend;++it,++ut){
+        gen tmp=apply_units(*it,*ut);
+        vout.push_back(tmp);
+      }
+      return vout;
+    }
+    gen apply_units(const gen & g, const gen & u) {
+      if(g.type == _VECT) {
+        if(u.type != _VECT) 
+          return gentypeerr("Expecting vector for units to apply");
+        if(int(g._VECTptr->size()) != int(u._VECTptr->size())) return gentypeerr("unit and coefficient vectors must be same size");
+        return gen(apply_units(*g._VECTptr, *u._VECTptr),g.subtype);
+      }
+      if(!is_one(u)) return symbolic(at_unit, makenewvecteur(g,u));
+      return g;
+    }
 
   #endif
 
@@ -10398,7 +10411,7 @@ namespace giac {
     if(g.is_symb_of_sommet(at_unit)) {
       vecteur & vg = *g._SYMBptr->feuille._VECTptr;
       int type = determine_unit_type(vg[1]);
-      if((type == 2) || (type == 4) || (type == 5)) {
+      if((type == 2) || (type >= 4)) {
         // We are doing a pure temperature conversion, so we need to see if we have to handle it in any special way
         // (note: multiplicative conversions are auto handled to deltaC/deltaF/K/Rankine.  Its only absolute ones we need to deal with)
         if(default_unit(5, contextptr) == _deltaC_unit) {
@@ -10577,14 +10590,28 @@ namespace giac {
   static define_unary_function_eval (__mksa,&mksa_reduce,_mksa_s);
   define_unary_function_ptr5( at_mksa ,alias_at_mksa,&__mksa,0,true);
 
-  gen _kelvin(const gen & g,GIAC_CONTEXT) {
-    if (g.type==_VECT) return apply(g,_kelvin,contextptr);
+  gen _absT(const gen & g,GIAC_CONTEXT) {
+    if (g.type==_VECT) return apply(g,_absT,contextptr);
     if(chk_temperature_units(g,contextptr)) return mksa_reduce(g,contextptr);
     return g;
   }
-  static const char _kelvin_s []="kelvin";
-  static define_unary_function_eval (__kelvin,&_kelvin,_kelvin_s);
-  define_unary_function_ptr5( at_kelvin ,alias_at_kelvin,&__kelvin,0,true);
+  static const char _absT_s []="absT";
+  static define_unary_function_eval (__absT,&_absT,_absT_s);
+  define_unary_function_ptr5( at_absT ,alias_at_absT,&__absT,0,true);
+
+  gen _relT(const gen & g,GIAC_CONTEXT) {
+    if (g.type==_VECT) return apply(g,_relT,contextptr);
+    if(chk_temperature_units(g,contextptr)) {
+      if(g._SYMBptr->feuille._VECTptr->back() == _degC_unit) return new_ref_symbolic(symbolic(at_unit, makenewvecteur(g._SYMBptr->feuille._VECTptr->front(),_deltaC_unit)));
+      if(g._SYMBptr->feuille._VECTptr->back() == _degF_unit) return new_ref_symbolic(symbolic(at_unit, makenewvecteur(g._SYMBptr->feuille._VECTptr->front(),_deltaF_unit)));
+      if(g._SYMBptr->feuille._VECTptr->back() == _K_unit) return new_ref_symbolic(symbolic(at_unit, makenewvecteur(g._SYMBptr->feuille._VECTptr->front(),_deltaK_unit)));
+      if(g._SYMBptr->feuille._VECTptr->back() == _Rankine_unit) return new_ref_symbolic(symbolic(at_unit, makenewvecteur(g._SYMBptr->feuille._VECTptr->front(),_deltaRankine_unit)));
+    }
+    return g;
+  }
+  static const char _relT_s []="relT";
+  static define_unary_function_eval (__relT,&_relT,_relT_s);
+  define_unary_function_ptr5( at_relT ,alias_at_relT,&__relT,0,true);
   
   gen _ufactor(const gen & g,GIAC_CONTEXT){
     if ( g.type==_STRNG &&  g.subtype==-1) return  g;
@@ -10598,19 +10625,19 @@ namespace giac {
         int a_type = determine_unit_type(va[1]);
         int b_type = determine_unit_type(vb[1]);
         // Case 1: degF -> degC
-        if((a_type == 5) && (b_type == 4))
+        if((a_type==5) && (b_type==4))
           return new_ref_symbolic(symbolic(at_unit,makenewvecteur((va[0]-32)*gen(5./9),vb[1])));
         // Case 2: degC -> degF
-        if((a_type == 4) && (b_type == 5))
+        if((a_type==4) && (b_type==5))
           return new_ref_symbolic(symbolic(at_unit,makenewvecteur(va[0]*gen(9./5)+32,vb[1])));
         // Case 3: degF -> other temp
-        if((a_type == 5) && (b_type == 2)) // Convert to Rankine and then let conversion continue
+        if((a_type==5) && (b_type == 2)) // Convert to Rankine and then let conversion continue
           return _ufactor(makesequence(symbolic(at_unit,makenewvecteur(va[0]+459.67,_Rankine_unit)),v.back()),contextptr);
         // Case 4: degC -> other temp
-        if((a_type == 4) && (b_type == 2)) // Convert to Kelvin and then let conversion continue
+        if((a_type==4) && (b_type == 2)) // Convert to Kelvin and then let conversion continue
           return _ufactor(makesequence(symbolic(at_unit,makenewvecteur(va[0]+273.15,_K_unit)),v.back()),contextptr);
         // Case 5: K/Rankine -> degF
-        if(((va[1] == _K_unit) || (va[1] == _Rankine_unit)) && (b_type == 5)) { // Convert to Rankine and then move to F 
+        if(((va[1] == _K_unit) || (va[1] == _Rankine_unit)) && (b_type==5)) { // Convert to Rankine and then move to F 
           gen a1 = _usimplify_base(_ufactor(makesequence(v.front(),symbolic(at_unit,makenewvecteur(plus_one,_Rankine_unit))),contextptr),contextptr);
           if(a1.is_symb_of_sommet(at_unit) && (a1._SYMBptr->feuille._VECTptr->back() == _Rankine_unit)) {
             vecteur & a1v = *a1._SYMBptr->feuille._VECTptr;
@@ -10618,7 +10645,7 @@ namespace giac {
           }
         }
         // Case 6: K/Rankine -> degC
-        if(((va[1] == _K_unit) || (va[1] == _Rankine_unit)) && (b_type == 4)) { // Convert to Kelvin and then move to C
+        if(((va[1] == _K_unit) || (va[1] == _Rankine_unit)) && (b_type==4)) { // Convert to Kelvin and then move to C
           gen a2 = _usimplify_base(_ufactor(makesequence(v.front(),symbolic(at_unit,makenewvecteur(plus_one,_K_unit))),contextptr),contextptr);
           if(a2.is_symb_of_sommet(at_unit) && (a2._SYMBptr->feuille._VECTptr->back() == _K_unit)) {
             vecteur & a2v = *a2._SYMBptr->feuille._VECTptr;
@@ -10626,11 +10653,21 @@ namespace giac {
           }
         }
         // Case 7: other unit -> degF, switch to deltaF
-        if(b_type == 5) 
+        if(b_type==5) 
           return _ufactor(makesequence(v.front(),symbolic(at_unit,makenewvecteur(plus_one,_deltaF_unit))),contextptr);
         // Case 8: other unit -> degC, switch to deltaC
-        if(b_type == 4) 
+        if(b_type==4) 
           return _ufactor(makesequence(v.front(),symbolic(at_unit,makenewvecteur(plus_one,_deltaC_unit))),contextptr);
+      }
+      int rads = is_rads_Hz(v.front(), v.back(), contextptr);
+      // Test for 1/s <-> rad/s
+      if(rads == 1) {
+        // 1/s -> rad/s
+        return _ufactor(makesequence(v.front()*symbolic(at_unit,makenewvecteur(2 * cst_pi,_rad_unit)),v.back()),contextptr);
+      }
+      if(rads == -1) {
+        // rad/s -> 1/s
+        return _ufactor(makesequence(v.front()/symbolic(at_unit,makenewvecteur(2 * cst_pi,_rad_unit)),v.back()),contextptr);
       }
 #endif
       return operator_times(v.back(), default_units(operator_times(v.front(),plus_one/v.back(),contextptr),contextptr), contextptr);
@@ -10642,41 +10679,37 @@ namespace giac {
   define_unary_function_ptr5( at_ufactor ,alias_at_ufactor,&__ufactor,0,true);
 
 #ifdef SWIFT_CALCS_OPTIONS
+    int is_rads_Hz(const gen & a, const gen & b, GIAC_CONTEXT) {
+      // Check if we are comparing 1/s with rad/s type units
+      vecteur fr = mksa_convert(a, contextptr);
+      vecteur bc = mksa_convert(b, contextptr);
+      // Test for 1/s <-> rad/s
+      if(((int(fr.size())==5 && fr[1]==0.0f && fr[2]==0.0f && fr[3]==-1.0f && fr[4]==0.0f) || (int(fr.size())==12 && fr[1]==0.0f && fr[2]==0.0f && fr[3]==-1.0f && fr[4]==0.0f && fr[5]==0.0f && fr[6]==0.0f && fr[7]==0.0f && fr[8]==0.0f && fr[9]==0.0f && fr[10]==0.0f && fr[11]==0.0f)) && (int(bc.size())==12 && bc[1]==0.0f && bc[2]==0.0f && bc[3]==-1.0f && bc[4]==0.0f && bc[5]==0.0f && bc[6]==0.0f && bc[7]==0.0f && bc[8]==0.0f && bc[9]==1.0f && bc[10]==0.0f && bc[11]==0.0f)) {
+        // a:1/s and b:rad/s
+        return 1;
+      }
+      if(((int(bc.size())==5 && bc[1]==0.0f && bc[2]==0.0f && bc[3]==-1.0f && bc[4]==0.0f) || (int(bc.size())==12 && bc[1]==0.0f && bc[2]==0.0f && bc[3]==-1.0f && bc[4]==0.0f && bc[5]==0.0f && bc[6]==0.0f && bc[7]==0.0f && bc[8]==0.0f && bc[9]==0.0f && bc[10]==0.0f && bc[11]==0.0f)) && (int(fr.size())==12 && fr[1]==0.0f && fr[2]==0.0f && fr[3]==-1.0f && fr[4]==0.0f && fr[5]==0.0f && fr[6]==0.0f && fr[7]==0.0f && fr[8]==0.0f && fr[9]==1.0f && fr[10]==0.0f && fr[11]==0.0f)) {
+        // a:rad/s and b:1/s
+        return -1;
+      }
+      return 0;
+    }
     // Will simply look to see if passed unit is really of dimension 0 (_m/_in, etc), useful for cos() etc where we need to remove units if possible (angle mode will strip _rad, _deg, and _grad and convert to current default angle)
     gen _usimplify_angle(const gen & g,GIAC_CONTEXT) {
-      gen out = _usimplify_base_function(eval(g,1,contextptr), true, false, contextptr);
+      gen out = _usimplify_base_function(eval(g,1,contextptr), true, false, true, true, contextptr);
       return out;
     }
     gen _usimplify_base(const gen & g,GIAC_CONTEXT) {
-      return _usimplify_base_function(g, false, false, contextptr);
+      return _usimplify_base_function(g, false, false, true, true, contextptr);
     }
-    gen _usimplify_mksa_remove(const gen & g,GIAC_CONTEXT) {
-      return _usimplify_base_function(g, false, true, contextptr);
-    }
-    vecteur _usimplify_mksa_remove(const vecteur & v,GIAC_CONTEXT) {
-      const_iterateur it=v.begin(),itend=v.end();
-      vecteur vout;
-      vout.reserve(itend-it);
-      for (;it!=itend;++it){
-        gen tmp=_usimplify_mksa_remove(*it,contextptr);
-        if (is_undef(tmp))
-          return gen2vecteur(tmp);
-        vout.push_back(tmp);
-      }
-      return vout;
-    }
-    static const char _usimplify_mksa_remove_s []="usimplify_mksa_remove";
-    static define_unary_function_eval (__usimplify_mksa_remove,&_usimplify_mksa_remove,_usimplify_mksa_remove_s);
-    define_unary_function_ptr5( at_usimplify_mksa_remove ,alias_at_usimplify_mksa_remove,&__usimplify_mksa_remove,0,true);
-
-    gen _usimplify_base_function(const gen & g, const bool angle_mode, const bool mksa_remove, GIAC_CONTEXT) {
+    gen _usimplify_base_function(const gen & g, const bool angle_mode, const bool unit_remove, const bool mksa, const bool do_recursive, GIAC_CONTEXT) {
       if ( g.type==_STRNG &&  g.subtype==-1) return g;
       if (g.type==_VECT) {
         const_iterateur it=g._VECTptr->begin(),itend=g._VECTptr->end();
         vecteur v;
         v.reserve(itend-it);
         for (;it!=itend;++it){
-          gen tmp=_usimplify_base_function(*it,angle_mode, mksa_remove, contextptr);
+          gen tmp=_usimplify_base_function(*it,angle_mode, unit_remove, mksa, true, contextptr);
           if (is_undef(tmp))
             return gen2vecteur(tmp);
           v.push_back(tmp);
@@ -10690,22 +10723,101 @@ namespace giac {
           return g;
         gen & f=g._SYMBptr->feuille;
         if (g._SYMBptr->sommet==at_program) {
-          vecteur & v=*f._VECTptr;
-          return symbolic(at_program,gen(makevecteur(v[0],_usimplify_base_function(evalf(v[1],1,contextptr),angle_mode, mksa_remove, contextptr),_usimplify_base_function(evalf(v[2],1,contextptr),angle_mode, mksa_remove, contextptr)),_SEQ__VECT));
+          if(unit_remove) {
+            vecteur & v=*f._VECTptr;
+            return symbolic(at_program,makesequence(v[0],_usimplify_base_function(evalf(v[1],1,contextptr),angle_mode, unit_remove, mksa, true, contextptr),_usimplify_base_function(evalf(v[2],1,contextptr),angle_mode, unit_remove, mksa, true, contextptr)));
+          } else return g; // For normal usimplify_base, don't enter into a function!
         }
+        if (g._SYMBptr->sommet==at_prod){
+          gen & f=g._SYMBptr->feuille;
+          if (f.type!=_VECT)
+            return _usimplify_base_function(f, angle_mode, unit_remove, mksa, true, contextptr);
+          vecteur & v=*f._VECTptr;
+          gen out = plus_one;
+          const_iterateur it=v.begin(),itend=v.end();
+          for (;it!=itend;++it){
+            out = operator_times(out, _usimplify_base_function(*it, angle_mode, unit_remove, mksa, true, contextptr), contextptr);
+          }
+          if(out.is_symb_of_sommet(at_unit)) return symbolic(at_unit, makevecteur(out._SYMBptr->feuille._VECTptr->front(), expand(out._SYMBptr->feuille._VECTptr->back(),contextptr)));
+          return out;
+        }
+        if (g._SYMBptr->sommet==at_inv)
+          return inv(_usimplify_base_function(g._SYMBptr->feuille, angle_mode, unit_remove, mksa, true, contextptr),contextptr);
+        if (g._SYMBptr->sommet==at_pow) {
+          gen & f=g._SYMBptr->feuille;
+          if (f.type!=_VECT||f._VECTptr->size()!=2)
+            return vecteur(1,gensizeerr(contextptr));
+          return pow(_usimplify_base_function(f._VECTptr->front(), angle_mode, unit_remove, mksa, true, contextptr), f._VECTptr->back(), contextptr);
+        }
+        if (g._SYMBptr->sommet==at_plus) {
+          gen & f=g._SYMBptr->feuille;
+          if (f.type!=_VECT)
+            return _usimplify_base_function(f, angle_mode, unit_remove, mksa, true, contextptr);
+          gen out = zero;
+          for (unsigned i=0;i<f._VECTptr->size();++i){
+            out = operator_plus(out, _usimplify_base_function((*f._VECTptr)[i], angle_mode, unit_remove, mksa, true, contextptr), contextptr);
+          }
+          return out;
+        }
+        if (g._SYMBptr->sommet==at_neg) 
+          return operator_times(minus_one, _usimplify_base_function(g._SYMBptr->feuille, angle_mode, unit_remove, mksa, true, contextptr), contextptr);
         if (f.type==_VECT) {
           vecteur & v=*f._VECTptr;
           vecteur out;
           const_iterateur it=v.begin(),itend=v.end();
           out.reserve(itend - it);
-          for (;it!=itend;++it){
-            out.push_back(_usimplify_base_function(*it, angle_mode, mksa_remove, contextptr));
-          }
+          for (;it!=itend;++it)
+            out.push_back(_usimplify_base_function(*it, angle_mode, unit_remove, mksa, true, contextptr));
           return symbolic(g._SYMBptr->sommet, out);
-        } else
-          return symbolic(g._SYMBptr->sommet, _usimplify_base_function(g._SYMBptr->feuille, angle_mode, mksa_remove, contextptr));
+        } else 
+          return symbolic(g._SYMBptr->sommet, _usimplify_base_function(g._SYMBptr->feuille, angle_mode, unit_remove, mksa, true, contextptr));
       }
-      vecteur v = unit_convert(g, true, contextptr);
+
+      // Check for temperature units, which are special
+      if(unit_remove && mksa) {
+        int type = determine_unit_type(g._SYMBptr->feuille._VECTptr->back());
+        // We are doing a pure temperature conversion, so we need to see if we have to handle it in any special way
+        // (note: multiplicative conversions are auto handled to deltaC/deltaF/K/Rankine.  Its only absolute ones we need to deal with)
+        if(type==5) {
+          // want to convert from degF to mksa, which is K
+          return gen(5./9) * _usimplify_base_function(g._SYMBptr->feuille._VECTptr->front() + 459.67, angle_mode, unit_remove, mksa, true, contextptr);
+        } else if(type==4) {
+          // want to convert from degC to mksa, which is K
+          return _usimplify_base_function(g._SYMBptr->feuille._VECTptr->front() + 273.15, angle_mode, unit_remove, mksa, true, contextptr);
+        }
+      } else if(unit_remove) {
+        int type = determine_unit_type(g._SYMBptr->feuille._VECTptr->back());
+        if((type == 2) || (type >= 4)) {
+          // We are doing a pure temperature conversion, so we need to see if we have to handle it in any special way
+          // (note: multiplicative conversions are auto handled to deltaC/deltaF/K/Rankine.  Its only absolute ones we need to deal with)
+          if(default_unit(5, contextptr) == _deltaC_unit) {
+            // want to convert to deltaC/degC...check if input is in K, Rankine, or degF:
+            if(g._SYMBptr->feuille._VECTptr->back() == _K_unit) return _usimplify_base_function(g._SYMBptr->feuille._VECTptr->front() - 273.15, angle_mode, unit_remove, mksa, true, contextptr);
+            if(g._SYMBptr->feuille._VECTptr->back() == _Rankine_unit) return _usimplify_base_function(g._SYMBptr->feuille._VECTptr->front()*gen(5./9) - 273.15, angle_mode, unit_remove, mksa, true, contextptr);
+            if(type==5) return _usimplify_base_function((g._SYMBptr->feuille._VECTptr->front()-32)*gen(5./9), angle_mode, unit_remove, mksa, true, contextptr);
+            if(type==4) return _usimplify_base_function(g._SYMBptr->feuille._VECTptr->front(), angle_mode, unit_remove, mksa, true, contextptr);
+          }
+          if(default_unit(5, contextptr) == _deltaF_unit) {
+            // want to convert to deltaF/degF...check if input is in K, Rankine, or degC:
+            if(g._SYMBptr->feuille._VECTptr->back() == _K_unit) return _usimplify_base_function(g._SYMBptr->feuille._VECTptr->front()*gen(9./5) - 459.67, angle_mode, unit_remove, mksa, true, contextptr);
+            if(g._SYMBptr->feuille._VECTptr->back() == _Rankine_unit) return _usimplify_base_function(g._SYMBptr->feuille._VECTptr->front() - 459.67, angle_mode, unit_remove, mksa, true, contextptr);
+            if(type==5) return _usimplify_base_function(g._SYMBptr->feuille._VECTptr->front(), angle_mode, unit_remove, mksa, true, contextptr);
+            if(type==4) return _usimplify_base_function(g._SYMBptr->feuille._VECTptr->front()*gen(9./5)+32, angle_mode, unit_remove, mksa, true, contextptr);
+          }
+          if(default_unit(5, contextptr) == _K_unit) {
+            // want to convert to Kelvin...check if input is in degF or degC:
+            if(type==5) return _usimplify_base_function((g._SYMBptr->feuille._VECTptr->front() + 459.67)*gen(5./9), angle_mode, unit_remove, mksa, true, contextptr);
+            if(type==4) return _usimplify_base_function(g._SYMBptr->feuille._VECTptr->front() + 273.15, angle_mode, unit_remove, mksa, true, contextptr);
+          }
+          if(default_unit(5, contextptr) == _Rankine_unit) {
+            // want to convert to Kelvin...check if input is in degF or degC:
+            if(type==5) return _usimplify_base_function(g._SYMBptr->feuille._VECTptr->front() + 459.67, angle_mode, unit_remove, mksa, true, contextptr);
+            if(type==4) return _usimplify_base_function((g._SYMBptr->feuille._VECTptr->front() + 273.15)*gen(9./5), angle_mode, unit_remove, mksa, true, contextptr);
+          }
+        }
+      }
+
+      vecteur v = unit_convert(g._SYMBptr->feuille._VECTptr->back(), mksa, contextptr);
       if (is_undef(v)) return v;
       int ss=int(v.size());
       bool all_zero = true;
@@ -10719,14 +10831,47 @@ namespace giac {
           if(i != 9) is_angle = false;
         }
       }
-      if(angle_mode && is_angle) return v[0];
-      if(all_zero) return v[0];
-      if(mksa_remove) return mksa_value(g,contextptr);
+      if(all_zero || unit_remove || (angle_mode && is_angle)) return v[0] * _usimplify_base_function(g._SYMBptr->feuille._VECTptr->front(), angle_mode, unit_remove, mksa, true, contextptr);
+      if(do_recursive) return _usimplify_base_function(g._SYMBptr->feuille._VECTptr->front() * symbolic(at_unit, makenewvecteur(plus_one,g._SYMBptr->feuille._VECTptr->back())),angle_mode, unit_remove, mksa, false, contextptr); // Deal with odd structures like (1_(1/m))_in
       return g;
     }
     static const char _usimplify_base_s []="usimplify_base";
     static define_unary_function_eval (__usimplify_base,&_usimplify_base,_usimplify_base_s);
     define_unary_function_ptr5( at_usimplify_base ,alias_at_usimplify_base,&__usimplify_base,0,true);
+
+    bool _usimplify_hits_temperature(const gen & g, GIAC_CONTEXT) {
+      if ( g.type==_STRNG &&  g.subtype==-1) return false;
+      if (g.type==_VECT) {
+        const_iterateur it=g._VECTptr->begin(),itend=g._VECTptr->end();
+        bool v = false;
+        for (;it!=itend;++it)
+          v = v || _usimplify_hits_temperature(*it, contextptr);
+        return v;
+      }
+      if (!g.is_symb_of_sommet(at_unit)) {
+        if (g.type!=_SYMB)
+          return false;
+        if (is_inf(g)) 
+          return false;
+        gen & f=g._SYMBptr->feuille;
+        if (g._SYMBptr->sommet==at_program) {
+          vecteur & v=*f._VECTptr;
+          return _usimplify_hits_temperature(evalf(v[1],1,contextptr),contextptr) || _usimplify_hits_temperature(evalf(v[2],1,contextptr), contextptr);
+        }
+        if (f.type==_VECT) {
+          vecteur & v=*f._VECTptr;
+          bool out = false;
+          const_iterateur it=v.begin(),itend=v.end();
+          for (;it!=itend;++it)
+            out = out || _usimplify_hits_temperature(*it, contextptr);
+          return out;
+        } else
+          return _usimplify_hits_temperature(g._SYMBptr->feuille, contextptr);
+      }
+      if(g._SYMBptr->feuille._VECTptr->back() == _degC_unit) return true;
+      if(g._SYMBptr->feuille._VECTptr->back() == _degF_unit) return true;
+      return false;
+    }
 
     vecteur combine_units_routine(const gen & g, const gen pow, GIAC_CONTEXT) {
       vecteur v_out;

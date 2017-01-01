@@ -310,6 +310,7 @@ namespace giac {
     extern const unary_function_ptr * const  at_set_units;
     gen one_index(const gen & args,GIAC_CONTEXT);
     extern const unary_function_ptr * const  at_one_index;
+    int is_rads_Hz(const gen & a, const gen & b, GIAC_CONTEXT);
   #endif
  
   gen _epsilon(const gen & args,GIAC_CONTEXT);
@@ -644,11 +645,11 @@ namespace giac {
     gen mksa_coefficient(const gen & g,GIAC_CONTEXT);
     gen mksa_offset(const gen & g,GIAC_CONTEXT);
     gen mksa_base_first(const gen & g, GIAC_CONTEXT);
-    gen mksa_value(const gen & g,GIAC_CONTEXT);
     gen mksa_to_var(const gen & g,GIAC_CONTEXT);
     gen default_units(const gen & g,GIAC_CONTEXT);
     gen default_units_function(const gen & g,bool force_at_unit,GIAC_CONTEXT);
     gen default_unit_remove_base(const gen & g,GIAC_CONTEXT);
+    vecteur default_unit_remove_base(const vecteur & v,GIAC_CONTEXT);
   #endif
   gen chk_not_unit(const gen & g);
   gen chk_not_unit_together(const gen & a, const gen & b, const bool compare,GIAC_CONTEXT);
@@ -670,9 +671,16 @@ namespace giac {
   #ifdef SWIFT_CALCS_OPTIONS
   gen _usimplify_base(const gen & g,GIAC_CONTEXT);
   gen _usimplify_angle(const gen & g,GIAC_CONTEXT);
-  gen _usimplify_mksa_remove(const gen & g,GIAC_CONTEXT);
-  vecteur _usimplify_mksa_remove(const vecteur & g,GIAC_CONTEXT);
-  gen _usimplify_base_function(const gen & g,const bool angle_mode, const bool mksa_remove, GIAC_CONTEXT);
+  gen mksa_value(const gen & g,GIAC_CONTEXT);
+  vecteur mksa_value(const vecteur & g,GIAC_CONTEXT);
+  gen _usimplify_base_function(const gen & g,const bool angle_mode, const bool unit_remove, const bool mksa, const bool do_recursive, GIAC_CONTEXT);
+  bool _usimplify_hits_temperature(const gen & g, GIAC_CONTEXT);
+  gen remove_units(const gen & g);
+  gen get_units(const gen & g);
+  gen apply_units(const gen & g, const gen & u);
+  vecteur remove_units(const vecteur & v);
+  vecteur get_units(const vecteur & v);
+  vecteur apply_units(const vecteur & v, const vecteur & u);
   #endif
 
   extern const mksa_unit __m_unit;

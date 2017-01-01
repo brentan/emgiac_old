@@ -122,6 +122,9 @@ namespace giac {
   gen get_point(const gen & g,int n,GIAC_CONTEXT);
   gen readvar(const gen & g);
   void read_tmintmaxtstep(vecteur & vargs,gen & t,int vstart,double &tmin,double & tmax,double &tstep,bool & tminmax_defined,bool & tstep_defined,GIAC_CONTEXT);
+#ifdef SWIFT_CALCS_OPTIONS
+  void genread_tmintmaxtstep(vecteur & vargs,gen & t,int vstart,gen &tmin,gen & tmax,gen &tstep,bool & tminmax_defined,bool & tstep_defined,GIAC_CONTEXT);
+#endif
   int read_attributs(const vecteur & v,vecteur & attributs,GIAC_CONTEXT);
   void read_option(const vecteur & v,double xmin,double xmax,double ymin,double ymax,double zmin,double zmax,vecteur & attributs, int & nstep,int & jstep,int & kstep,GIAC_CONTEXT);
   gen curve_surface_apply(const gen & elem,const gen & b,gen (* func) (const gen &, const gen &,const context *),GIAC_CONTEXT);
@@ -184,6 +187,9 @@ namespace giac {
   vecteur gen2vecteur(const gen & arg);
   bool chk_double_interval(const gen & g,double & inf,double & sup,GIAC_CONTEXT);
   bool readrange(const gen & g,double defaultxmin,double defaultxmax,gen & x, double & xmin, double & xmax,GIAC_CONTEXT);
+#ifdef SWIFT_CALCS_OPTIONS
+  bool genreadrange(const gen & g,double defaultxmin,double defaultxmax,gen & x, gen & xmin, gen & xmax,GIAC_CONTEXT);
+#endif
   void ck_parameter_x(GIAC_CONTEXT);
   void ck_parameter_y(GIAC_CONTEXT);
   void ck_parameter_z(GIAC_CONTEXT);
@@ -255,6 +261,9 @@ namespace giac {
   bool on(const gen & e_orig,const gen & f,gen & t,GIAC_CONTEXT);
 
   gen plotfunc(const gen & f,const gen & vars,const vecteur & attributs,bool clrplot,double function_xmin,double function_xmax,double function_ymin,double function_ymax,double function_zmin, double function_zmax,int nstep,int jstep,bool showeq,GIAC_CONTEXT);
+#ifdef SWIFT_CALCS_OPTIONS
+  gen plotfunc(const gen & f,const gen & vars,const vecteur & attributs,const bool logx,const gen & x_offset, bool clrplot,double function_xmin,double function_xmax,double function_ymin,double function_ymax,double function_zmin, double function_zmax,int nstep,int jstep,bool showeq,GIAC_CONTEXT);
+#endif
   // return a vector of values with simple decimal representation
   // between xmin/xmax or including xmin/xmax (if bounds is true)
   vecteur ticks(double xmin,double xmax,bool bounds);
@@ -270,6 +279,10 @@ namespace giac {
   gen _perimetre(const gen & args,GIAC_CONTEXT);
   gen funcplotfunc(const gen & args,bool densityplot,const context * contextptr);
   gen _plotfunc(const gen &,GIAC_CONTEXT);
+#ifdef SWIFT_CALCS_OPTIONS
+  gen _plotfunclog(const gen &,GIAC_CONTEXT);
+  gen funcplotfunc(const gen & args,bool densityplot,const bool logx, const gen & x_offset, const context * contextptr);
+#endif
   gen _funcplot(const gen & args,const context * contextptr);
   gen _plotdensity(const gen & args,const context * contextptr);
   extern const unary_function_ptr * const  at_plotfunc;
