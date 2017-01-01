@@ -5520,8 +5520,17 @@ namespace giac {
       butcher_k[i]=vecteur(dim);
 #ifdef SWIFT_CALCS_OPTIONS
     vecteur firsteval,lasteval;
+    vecteur ytu;
+    ytu.reserve(dim+1);
+    for (int i=0;i<=dim;++i) {
+      if(is_zero(yt[i]))
+        ytu.push_back(gen(0.00000656434)); // random non-zero to test units
+      else
+        ytu.push_back(yt[i]);
+    }
+
     // Unit consistency check: functions should be of units y_unit/t_unit
-    firsteval = get_units(subst(odesolve_f,ytvar,apply_units(yt,dim,y_unit,t_unit),false,contextptr));
+    firsteval = get_units(subst(odesolve_f,ytvar,apply_units(ytu,dim,y_unit,t_unit),false,contextptr));
     for (int i=0;i<dim;++i) {
       if(is_undef(firsteval[i])) {
         std::string out = "Mismatched units in expression ";

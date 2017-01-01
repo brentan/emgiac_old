@@ -599,10 +599,7 @@ namespace giac {
   }
   gen atan(const gen & e_in,GIAC_CONTEXT){
     #ifdef SWIFT_CALCS_OPTIONS
-print_emscripten("====");
-e_in.print_emscripten("ATAN: ");
       gen e0 = _usimplify_base(e_in, contextptr);
-e0.print_emscripten("OUT: ");
     #else
       gen e0 = e_in;
     #endif

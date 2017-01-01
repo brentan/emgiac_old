@@ -3336,7 +3336,7 @@ namespace giac {
     vecteur I1(lidnt(v[1])); 
     vecteur I0(true_lidnt(v0)); // should remove embedded fsolve/sum/int
     I0=lidnt(makevecteur(evalf(I0,1,contextptr),I1));
-    if (_sort(I0,contextptr)!=_sort(I1,contextptr))
+    if (_sort(I0,contextptr)!=_sort(I1,contextptr)) 
       return symbolic(at_fsolve,gen(v,_SEQ__VECT));
     int evalf_after=interv?3:1;
     if (s>=2 && v0.type==_VECT && v[1].type==_VECT && !v[1]._VECTptr->empty()){
@@ -4101,14 +4101,14 @@ namespace giac {
     return newton_rand(j,real,xmin,xmax,contextptr);
   }
 #ifdef SWIFT_CALCS_OPTIONS
-  gen apply_final_units(const gen & a,const gen & u,const gen & o) {
+  gen apply_final_units(const gen & a,const gen & m,const gen & u,const gen & o) {
     if(a.type==_VECT) {
       gen a2 = a;
       for(int i = 0; i < int(a._VECTptr->size()); i++)
-        (*a2._VECTptr)[i] = (*a._VECTptr)[i] + (*o._VECTptr)[i];
+        (*a2._VECTptr)[i] = ((*a._VECTptr)[i] + (*o._VECTptr)[i])  * _usimplify_base(symbolic(at_unit, makevecteur(plus_one, (*m._VECTptr)[i]/(*u._VECTptr)[i])),context0);
       return apply_units(a2, u);
     } else {
-      return apply_units(a+o, u);
+      return apply_units((a+o) * _usimplify_base(symbolic(at_unit, makevecteur(plus_one, m/u)),context0), u);
     }
   }
 #endif
@@ -4126,15 +4126,28 @@ namespace giac {
     gen fa;
 #ifdef SWIFT_CALCS_OPTIONS
     // Test for bad guess w/r/t units provided:
-    fa =evalf(eval(subst(f,x,guess,false,contextptr),eval_level(contextptr),contextptr),1,contextptr); 
+    gen guessu;    
+    gen a_unit = get_units(guess);
+    if(guess.type == _VECT) {
+      vecteur gu;
+      gu.reserve(int(guess._VECTptr->size()));
+      for(int i=0; i<int(guess._VECTptr->size());i++) {
+        if(is_zero((*guess._VECTptr)[i]))
+          gu.push_back((0.00000656434)*symbolic(at_unit, makevecteur(plus_one, (*a_unit._VECTptr)[i])));
+        else
+          gu.push_back((*guess._VECTptr)[i]);
+      }
+      guessu = gen(gu);
+    } else if(is_zero(guess)) guessu = gen(0.00000656434)*symbolic(at_unit, makevecteur(plus_one, a_unit)); // random non-zero to test units)
+    else guessu = guess;
+    fa =evalf(eval(subst(f,x,guessu,false,contextptr),eval_level(contextptr),contextptr),1,contextptr); 
     gen f_unit = get_units(fa);
     fa = remove_units(fa);
     if(fa.type == _VECT) {
       const_iterateur it=fa._VECTptr->begin(),itend=fa._VECTptr->end();
       for (;it!=itend;++it)
-        if(is_undef(*it)) return gensizeerr("Bad Guess: Ensure guess has correct units and does not produce an undefined result.");
-    } else if(is_undef(fa)) return gensizeerr("Bad Guess: Ensure guess has correct units and does not produce an undefined result.");
-    gen a_unit = get_units(guess);
+        if(is_undef(*it)) return gensizeerr("Bad Guess - Ensure guess has correct units and does not produce an undefined result. ");
+    } else if(is_undef(fa)) return gensizeerr("Bad Guess - Ensure guess has correct units and does not produce an undefined result. ");
     guess = remove_units(guess);
     gen a_unit_orig = a_unit;
     gen offset_a = zero;
@@ -4166,6 +4179,8 @@ namespace giac {
         offset_a = gen(-273.15);
       }
     }
+    guess = mksa_value(apply_units(guess, a_unit),contextptr); // convert guess to mksa
+    gen mksa_a_unit = get_units(mksa_reduce_base(a_unit, contextptr));
 #endif
     if (guess.is_symb_of_sommet(at_interval))
       guess=(guess._SYMBptr->feuille[0]+guess._SYMBptr->feuille[1])/2;
@@ -4190,8 +4205,7 @@ namespace giac {
       try {
 #endif
 #ifdef SWIFT_CALCS_OPTIONS
-        fa=remove_units(evalf(eval(subst(f,x,apply_units(a,a_unit),false,contextptr),eval_level(contextptr),contextptr),1,contextptr));
-//return plus_one;
+        fa=mksa_value(evalf(eval(subst(f,x,apply_units(a,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),1,contextptr),contextptr);
 #else
 	fa=evalf(eval(subst(f,x,a,false,contextptr),eval_level(contextptr),contextptr),1,contextptr); 
 #endif
@@ -4207,13 +4221,7 @@ namespace giac {
 	    return gensizeerr(gettext("Stopped by user interruption.")); 
 	  }
 #ifdef SWIFT_CALCS_OPTIONS
-          d=eval(subst(invdf,x,apply_units(a,a_unit),false,contextptr),eval_level(contextptr),contextptr);
-          if(f_unit.type == _VECT) {
-            for(int jj=0;jj<int(f_unit._VECTptr->size());jj++)  //inv_after = true
-              (*d._VECTptr)[jj] = _ufactor(makesequence((*d._VECTptr)[jj], symbolic(at_unit, makevecteur(plus_one, (*f_unit._VECTptr)[jj] / (*a_unit._VECTptr)[jj]))),contextptr);
-          } else 
-            d = _ufactor(makesequence(d, symbolic(at_unit, makevecteur(plus_one, a_unit / f_unit))),contextptr); //inv_after = false;
-          d = remove_units(d);
+          d=mksa_value(eval(subst(invdf,x,apply_units(a,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),contextptr);
 #else
           d=eval(subst(invdf,x,a,false,contextptr),eval_level(contextptr),contextptr);
 #endif
@@ -4226,7 +4234,7 @@ namespace giac {
 	  if (is_undef(d) || (d.type==_VECT &&d._VECTptr->empty())){
 	    a=newton_rand(j,real,rand_xmin,rand_xmax,f,contextptr);
 #ifdef SWIFT_CALCS_OPTIONS
-            fa=remove_units(evalf(eval(subst(f,x,apply_units(a,a_unit),false,contextptr),eval_level(contextptr),contextptr),1,contextptr));
+            fa=mksa_value(evalf(eval(subst(f,x,apply_units(a,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),1,contextptr),contextptr);
 #else
             fa=evalf(eval(subst(f,x,a,false,contextptr),eval_level(contextptr),contextptr),1,contextptr); 
 #endif
@@ -4237,7 +4245,7 @@ namespace giac {
 	  if (k==0 && is_zero(d,contextptr) && is_greater(abs(fa,contextptr),std::sqrt(eps2),contextptr)){
 	    a=newton_rand(j,real,rand_xmin,rand_xmax,f,contextptr);
 #ifdef SWIFT_CALCS_OPTIONS
-            fa=remove_units(evalf(eval(subst(f,x,apply_units(a,a_unit),false,contextptr),eval_level(contextptr),contextptr),1,contextptr));
+            fa=mksa_value(evalf(eval(subst(f,x,apply_units(a,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),1,contextptr),contextptr);
 #else
             fa=evalf(eval(subst(f,x,a,false,contextptr),eval_level(contextptr),contextptr),1,contextptr); 
 #endif
@@ -4255,7 +4263,7 @@ namespace giac {
 		break;
 	      }
 #ifdef SWIFT_CALCS_OPTIONS
-              fa=remove_units(evalf(eval(subst(f,x,apply_units(a,a_unit),false,contextptr),eval_level(contextptr),contextptr),1,contextptr));
+              fa=mksa_value(evalf(eval(subst(f,x,apply_units(a,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),1,contextptr),contextptr);
 #else
               fa=evalf(eval(subst(f,x,a,false,contextptr),eval_level(contextptr),contextptr),1,contextptr); 
 #endif
@@ -4266,7 +4274,7 @@ namespace giac {
 	    if(real && !is_zero(im(b,contextptr),contextptr)){
 	      a=newton_rand(j,real,rand_xmin,rand_xmax,contextptr);
 #ifdef SWIFT_CALCS_OPTIONS
-              fa=remove_units(evalf(eval(subst(f,x,apply_units(a,a_unit),false,contextptr),eval_level(contextptr),contextptr),1,contextptr));
+              fa=mksa_value(evalf(eval(subst(f,x,apply_units(a,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),1,contextptr),contextptr);
 #else
               fa=evalf(eval(subst(f,x,a,false,contextptr),eval_level(contextptr),contextptr),1,contextptr); 
 #endif
@@ -4284,7 +4292,7 @@ namespace giac {
 	    break;
 	  }
 #ifdef SWIFT_CALCS_OPTIONS
-          fb=remove_units(evalf(eval(subst(f,x,apply_units(b,a_unit),false,contextptr),eval_level(contextptr),contextptr),1,contextptr));
+          fb=mksa_value(evalf(eval(subst(f,x,apply_units(b,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),1,contextptr),contextptr);
 #else
           fb=evalf(eval(subst(f,x,b,false,contextptr),eval_level(contextptr),contextptr),1,contextptr); 
 #endif
@@ -4306,7 +4314,7 @@ namespace giac {
 	if (k==niter){
 	  if (out)
 #ifdef SWIFT_CALCS_OPTIONS
-            return apply_final_units(a,a_unit_orig,offset_a);
+            return apply_final_units(a,mksa_a_unit,a_unit_orig,offset_a);
 #else
 	    return a;
 #endif
@@ -4322,14 +4330,14 @@ namespace giac {
 	    return gensizeerr(gettext("Stopped by user interruption.")); 
 	  }
 #ifdef SWIFT_CALCS_OPTIONS
-          fa=remove_units(evalf(eval(subst(f,x,apply_units(a,a_unit),false,contextptr),eval_level(contextptr),contextptr),1,contextptr));
-          d=eval(subst(invdf,x,apply_units(a,a_unit),false,contextptr),eval_level(contextptr),contextptr);
-          if(f_unit.type == _VECT) {
+          fa=mksa_value(evalf(eval(subst(f,x,apply_units(a,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),1,contextptr),contextptr);
+          d=mksa_value(eval(subst(invdf,x,apply_units(a,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),contextptr);
+          /*if(f_unit.type == _VECT) {
             for(int jj=0;jj<int(f_unit._VECTptr->size());jj++)  //inv_after = true
               (*d._VECTptr)[jj] = _ufactor(makesequence((*d._VECTptr)[jj], symbolic(at_unit, makevecteur(plus_one, (*f_unit._VECTptr)[jj] / (*a_unit._VECTptr)[jj]))),contextptr);
           } else 
             d = _ufactor(makesequence(d, symbolic(at_unit, makevecteur(plus_one, a_unit / f_unit))),contextptr); //inv_after = false;
-          d = remove_units(d);
+          d = remove_units_nosimp(d);*/
           if (inv_after)
             d=linsolve(evalf(d,1,contextptr),-fa,contextptr);
           else
@@ -4355,7 +4363,7 @@ namespace giac {
     if (j>5)
       return undef;
 #ifdef SWIFT_CALCS_OPTIONS
-    return apply_final_units(a,a_unit_orig,offset_a);
+    return apply_final_units(a,mksa_a_unit,a_unit_orig,offset_a);
 #else
     return a;
 #endif

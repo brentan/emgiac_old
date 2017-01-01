@@ -10291,6 +10291,21 @@ namespace giac {
       if((g.type == _SYMB) && g.is_symb_of_sommet(at_unit)) return g._SYMBptr->feuille._VECTptr->front();
       return g;
     }
+    vecteur remove_units_nosimp(const vecteur & v) {
+      const_iterateur it=v.begin(),itend=v.end();
+      vecteur vout;
+      vout.reserve(itend-it);
+      for (;it!=itend;++it){
+        gen tmp=remove_units_nosimp(*it);
+        vout.push_back(tmp);
+      }
+      return vout;
+    }
+    gen remove_units_nosimp(const gen & g) {
+      if(g.type == _VECT) return gen(remove_units_nosimp(*g._VECTptr),g.subtype);
+      if((g.type == _SYMB) && g.is_symb_of_sommet(at_unit)) return g._SYMBptr->feuille._VECTptr->front();
+      return g;
+    }
     vecteur get_units(const vecteur & v) {
       const_iterateur it=v.begin(),itend=v.end();
       vecteur vout;
@@ -10322,8 +10337,10 @@ namespace giac {
     }
     gen apply_units(const gen & g, const gen & u) {
       if(g.type == _VECT) {
-        if(u.type != _VECT) 
+        if(u.type != _VECT) {
+          if(int(g._VECTptr->size())==1) return apply_units(g,gen(makevecteur(u)));
           return gentypeerr("Expecting vector for units to apply");
+        }
         if(int(g._VECTptr->size()) != int(u._VECTptr->size())) return gentypeerr("unit and coefficient vectors must be same size");
         return gen(apply_units(*g._VECTptr, *u._VECTptr),g.subtype);
       }

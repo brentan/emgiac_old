@@ -676,9 +676,11 @@ namespace giac {
   gen _usimplify_base_function(const gen & g,const bool angle_mode, const bool unit_remove, const bool mksa, const bool do_recursive, GIAC_CONTEXT);
   bool _usimplify_hits_temperature(const gen & g, GIAC_CONTEXT);
   gen remove_units(const gen & g);
+  gen remove_units_nosimp(const gen & g);
   gen get_units(const gen & g);
   gen apply_units(const gen & g, const gen & u);
   vecteur remove_units(const vecteur & v);
+  vecteur remove_units_nosimp(const vecteur & v);
   vecteur get_units(const vecteur & v);
   vecteur apply_units(const vecteur & v, const vecteur & u);
   #endif
