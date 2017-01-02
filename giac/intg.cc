@@ -5222,11 +5222,11 @@ namespace giac {
   gen apply_units(const gen & g, const gen & u, const gen & o) {
     return apply_units(g+o,u);
   }
-  gen odesolve(const gen & t0orig,const gen & t1orig,const gen & f,const gen & y0orig,gen & tstep,bool tstep_passed,bool return_curve,double * ymin,double * ymax,int maxstep,GIAC_CONTEXT){ 
+  gen odesolve(const gen & t0orig,const gen & t1orig,const gen & f,const gen & y0orig,gen & tstep_in,bool tstep_passed,bool return_curve,double * ymin,double * ymax,int maxstep,GIAC_CONTEXT){ 
 #else
   gen odesolve(const gen & t0orig,const gen & t1orig,const gen & f,const gen & y0orig,const gen & tstep_in,bool return_curve,double * ymin,double * ymax,int maxstep,GIAC_CONTEXT){ 
   double tstep;
-  if(tstep_in!=_DOUBLE_) tstep = tstep_in._DOUBLE_val;
+  if(tstep_in.type == _DOUBLE_) tstep = tstep_in._DOUBLE_val;
   else tstep = 0;
 #endif
 #ifdef SWIFT_CALCS_OPTIONS
@@ -5242,13 +5242,14 @@ namespace giac {
     t1_e = _usimplify_base(t1_e/symbolic(at_unit,makevecteur(plus_one,t_unit)),contextptr); // Convert end time to same units as start time and drop the unit
     t1_e = evalf_double(t1_e,1,contextptr);
     if(t1_e.type!=_DOUBLE_ && t1_e.type!=_CPLX) return gensizeerr("Start and end points must have matching units.");
-    if(is_zero(tstep)) {
-      tstep = (t1_e - t0_e) / 30; // By definition this is same units as t1_e,t0_e!
+    if(is_zero(tstep_in)) {
+      tstep_in = (t1_e - t0_e)/30; // By definition this is same units as t1_e,t0_e!
     } else {
-      tstep = _usimplify_base(tstep/symbolic(at_unit,makevecteur(plus_one,t_unit)),contextptr); // Convert time step to same units as start time and drop the unit
-      tstep = evalf_double(tstep,1,contextptr);
-      if(tstep.type!=_DOUBLE_ && tstep.type!=_CPLX) return gensizeerr("Start and end points must have matching units.");
+      tstep_in = _usimplify_base(tstep_in/symbolic(at_unit,makevecteur(plus_one,t_unit)),contextptr); // Convert time step to same units as start time and drop the unit
+      tstep_in = evalf_double(tstep_in,1,contextptr);
+      if(tstep_in.type!=_DOUBLE_ && tstep_in.type!=_CPLX) return gensizeerr("Start and end points must have matching units.");
     }
+    double tstep = tstep_in._DOUBLE_val;
 #else
     gen t0_e=evalf_double(t0orig.evalf(1,contextptr),1,contextptr);
     gen t1_e=evalf_double(t1orig.evalf(1,contextptr),1,contextptr);
@@ -5445,7 +5446,7 @@ namespace giac {
        else h=hoptimal
      */
 #ifdef SWIFT_CALCS_OPTIONS
-    gen tstep_initial = tstep;
+    double tstep_initial = tstep;
 #endif
     gen tolerance=epsilon(contextptr)>1e-12?epsilon(contextptr):1e-12;
     vecteur yt(dim+1),ytvar(yv);
@@ -5549,17 +5550,15 @@ namespace giac {
     }
     firsteval=remove_units(subst(odesolve_f,ytvar,apply_units(yt,dim,y_unit,t_unit),false,contextptr));
     gen direction=t1_e-t0_e;
-    gen temps_total=abs(direction,contextptr),temps=zero;
+    double temps_total=(abs(direction,contextptr) - tolerance)._DOUBLE_val,temps=0;
     direction=direction/temps_total;
-    temps_total = temps_total - tolerance;
-    for (int nstep=0;do_while && nstep<maxstep && is_greater(temps_total,temps,contextptr);++nstep) {
 #else
     vecteur firsteval=subst(odesolve_f,ytvar,yt,false,contextptr),lasteval;
     gen direction=t1_e-t0_e;
     double temps_total=abs(direction,contextptr)._DOUBLE_val,temps=0;
     direction=direction/temps_total;
-    for (int nstep=0;do_while && nstep<maxstep && temps<temps_total;++nstep) {
 #endif
+    for (int nstep=0;do_while && nstep<maxstep && temps<temps_total;++nstep) {
       gen dt=tstep*direction;
       // compute next step
       vecteur & bk0=*butcher_k[0]._VECTptr;
@@ -5622,11 +5621,7 @@ namespace giac {
 	CERR << nstep << ":" << t_e << ",y5=" << y_final5 << ",y4=" << y_final4 << " " << tstep << " hopt=" << hopt << " err=" << err << endl;
       if (is_strictly_greater(err,tolerance,contextptr)){
 	// reject step
-#ifdef SWIFT_CALCS_OPTIONS
-	tstep=hopt;
-#else
         tstep=hopt._DOUBLE_val;
-#endif
       }
       else { // accept
 	swap(firsteval,lasteval);
@@ -5636,9 +5631,9 @@ namespace giac {
 	yt[dim]=t_e;
 	temps = temps + tstep;
 #ifdef SWIFT_CALCS_OPTIONS
-        tstep=abs(t1_e-t_e,contextptr);
-        if (!is_inf(hopt) && is_greater(tstep,hopt,contextptr))
-          tstep=hopt;
+        tstep=abs(t1_e-t_e,contextptr)._DOUBLE_val;
+        if (!is_inf(hopt) && tstep>hopt._DOUBLE_val)
+          tstep=hopt._DOUBLE_val;
         if(return_curve && tstep_passed && ((nstep+1) >= maxstep) && (maxstep < 50000) && (tot_size < 1000)) maxstep += 1;
         if(return_curve && tstep_passed && !is_greater(tstep_initial-tolerance, abs(t_e - last_t_e,contextptr),contextptr)) {
           resv.push_back(mergevecteur(makevecteur(apply_units(t_e,t_unit_orig,offset_t)),apply_units(y_final5,y_unit_orig,offset_y)));
@@ -5647,7 +5642,7 @@ namespace giac {
         } else if (return_curve && !tstep_passed)
           resv.push_back(mergevecteur(makevecteur(apply_units(t_e,t_unit_orig,offset_t)),apply_units(y_final5,y_unit_orig,offset_y)));
         if(tstep_passed && is_greater(t_e + tstep, last_t_e + tstep_initial,contextptr)) 
-          tstep = abs(last_t_e + tstep_initial - t_e,contextptr);
+          tstep = abs(last_t_e + tstep_initial - t_e,contextptr)._DOUBLE_val;
 #else
         tstep=abs(t1_e-t_e,contextptr)._DOUBLE_val;
         if (hopt._DOUBLE_val<tstep)
