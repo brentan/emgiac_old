@@ -5056,9 +5056,107 @@ static define_unary_function_eval (__simplex_reduce,&_simplex_reduce,_simplex_re
     }
     return pol;
   }
+#ifdef SWIFT_CALCS_OPTIONS
+  gen _spline_external(const gen & g,GIAC_CONTEXT){
+    gen out = _spline(g, contextptr);
+    if(is_undef(out)) return out;
+    //Should have a nice vector of polynomials now:
+    vecteur w(*g._VECTptr);
+    vecteur o(*out._VECTptr);
+    vecteur x(*(w[0])._VECTptr);
+    //Start creating the program: Basically a huge nested set of if/else statements
+    gen prog;
+    if((w.size() >= 5) && is_one(w[4]))
+      prog = o[0];
+    else
+      prog = undef;
+    for(int i = 0; i < int(x.size()-1); i++)
+      prog = symb_ifte(symbolic(at_evalf,symb_and(symb_superieur_egal(gen(w[2]),x[i]),symb_superieur_strict(x[i+1],gen(w[2])))), o[i], prog);
+    if((w.size() >= 5) && is_one(w[4]))
+      prog = symb_ifte(symbolic(at_evalf,symb_superieur_egal(gen(w[2]),x[int(x.size()-1)])), o[int(x.size()-2)], prog);
+    return symbolic(at_program,gen(makevecteur(w[2],0,gen(symbolic(at_bloc,gen(symbolic(at_return,prog))))),_SEQ__VECT));
+  }
+
   static const char _spline_s []="spline";
-static define_unary_function_eval (__spline,&_spline,_spline_s);
+  static define_unary_function_eval (__spline,&_spline_external,_spline_s);
   define_unary_function_ptr5( at_spline ,alias_at_spline,&__spline,0,true);
+
+  bool test_numeric(const gen & a){
+    switch (a.type){
+    case _DOUBLE_: case _INT_: case _ZINT: case _REAL:
+      return true;
+    case _CPLX:
+      return test_numeric(*a._CPLXptr) && test_numeric(*(a._CPLXptr+1));
+    case _VECT:
+      return test_numeric(*a._VECTptr);
+    case _FRAC:
+      return test_numeric(a._FRACptr->num) && test_numeric(a._FRACptr->den);
+    case _SYMB:
+      if (a.is_symb_of_sommet(at_prod) || a.is_symb_of_sommet(at_inv) || a.is_symb_of_sommet(at_neg) || a.is_symb_of_sommet(at_plus))
+  return test_numeric(a._SYMBptr->feuille);
+    default:
+      return false;
+    }
+  }
+  // Find nearest value in a vecteur, with mode:
+  // 0: closest above or below
+  // 1: closest but greater
+  // 2: closest but less than
+  gen find_nearest_value(const gen & g, const vecteur & v, const int mode) {
+    gen out = undef;
+    gen diff = zero;
+    const_iterateur jt=v.begin(),jtend=v.end();
+    for (;jt!=jtend;++jt){
+      gen val = *jt;
+      if(val.type == _VECT) {
+        val = find_nearest_value(g, *val._VECTptr, mode);
+        if(is_undef(val)) return val;
+      }
+      if(!test_numeric(mksa_value(val,context0))) continue;
+      if(is_greater(diff,abs(g-val),context0) || is_zero(diff)) {
+        // Match
+        if((mode == 0) || (mode==1 && is_greater(val,g,context0)) || (mode==2 && is_greater(g,val,context0))) {
+          out = val;
+          diff = abs(g-val);
+          if(is_zero(diff)) return out;
+        }
+      }
+    }
+    return out;
+  }
+
+  gen closest(const gen & g, const int mode, GIAC_CONTEXT){
+    if(g.type != _VECT) return g;
+    if(g._VECTptr->size() < 2) return gensizeerr();
+    if(g._VECTptr->front().type != _VECT) return g._VECTptr->front();
+    return find_nearest_value(g._VECTptr->back(), *g._VECTptr->front()._VECTptr, mode);
+  }
+  gen _closest(const gen & g, GIAC_CONTEXT){
+    return closest(g, 0, contextptr);
+  }
+  static const char _closest_s []="closest";
+  static define_unary_function_eval (__closest,&_closest,_closest_s);
+  define_unary_function_ptr5( at_closest ,alias_at_closest,&__closest,0,true);
+
+  gen _closest_greater(const gen & g, GIAC_CONTEXT){
+    return closest(g, 1, contextptr);
+  }
+  static const char _closest_greater_s []="closest_greater";
+  static define_unary_function_eval (__closest_greater,&_closest_greater,_closest_greater_s);
+  define_unary_function_ptr5( at_closest_greater ,alias_at_closest_greater,&__closest_greater,0,true);
+
+  gen _closest_lesser(const gen & g, GIAC_CONTEXT){
+    return closest(g, 2, contextptr);
+  }
+  static const char _closest_lesser_s []="closest_lesser";
+  static define_unary_function_eval (__closest_lesser,&_closest_lesser,_closest_lesser_s);
+  define_unary_function_ptr5( at_closest_lesser ,alias_at_closest_lesser,&__closest_lesser,0,true);
+
+#else
+  static const char _spline_s []="spline";
+  static define_unary_function_eval (__spline,&_spline,_spline_s);
+  define_unary_function_ptr5( at_spline ,alias_at_spline,&__spline,0,true);
+#endif
 
   gen giac_bitand(const gen & a,const gen & b){
     register unsigned t=(a.type<< _DECALAGE) | b.type;

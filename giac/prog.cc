@@ -10742,7 +10742,7 @@ namespace giac {
         if (g._SYMBptr->sommet==at_program) {
           if(unit_remove) {
             vecteur & v=*f._VECTptr;
-            return symbolic(at_program,makesequence(v[0],_usimplify_base_function(evalf(v[1],1,contextptr),angle_mode, unit_remove, mksa, true, contextptr),_usimplify_base_function(evalf(v[2],1,contextptr),angle_mode, unit_remove, mksa, true, contextptr)));
+            return symbolic(at_program,makesequence(v[0],_usimplify_base_function(v[1],angle_mode, unit_remove, mksa, true, contextptr),_usimplify_base_function(v[2],angle_mode, unit_remove, mksa, true, contextptr)));
           } else return g; // For normal usimplify_base, don't enter into a function!
         }
         if (g._SYMBptr->sommet==at_prod){
