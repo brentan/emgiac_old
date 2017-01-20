@@ -44,7 +44,11 @@ namespace giac {
   gen checkanglemode(GIAC_CONTEXT){
     if (!angle_radian(contextptr)) 
       //grad
+#ifdef SWIFT_CALCS_OPTIONS
+      *logptr(contextptr) << gettext("Function assumes radian mode to perform trigonometric substitutions, however worksheet is in degrees mode.  Please double check result for accuracy, or change worksheet to radian mode.") << endl;
+#else
       return gensizeerr(gettext("This function works only in radian mode"));
+#endif
     return 0;
   }
 
