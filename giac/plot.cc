@@ -1227,9 +1227,9 @@ namespace giac {
   }
 
   gen plotfunc(const gen & f,const gen & vars,const vecteur & attributs,bool densityplot,double function_xmin,double function_xmax,double function_ymin,double function_ymax,double function_zmin, double function_zmax,int nstep,int jstep,bool showeq,const context * contextptr){
-    return plotfunc(f,vars,attributs,false,zero,densityplot,function_xmin,function_xmax,function_ymin,function_ymax,function_zmin,function_zmax,nstep,jstep,showeq,contextptr);
+    return plotfunc(f,vars,attributs,false,zero,plus_one,densityplot,function_xmin,function_xmax,function_ymin,function_ymax,function_zmin,function_zmax,nstep,jstep,showeq,contextptr);
   }
-  gen plotfunc(const gen & f,const gen & vars,const vecteur & attributs,const bool logx, const gen & x_offset, bool densityplot,double function_xmin,double function_xmax,double function_ymin,double function_ymax,double function_zmin, double function_zmax,int nstep,int jstep,bool showeq,const context * contextptr){
+  gen plotfunc(const gen & f,const gen & vars,const vecteur & attributs,const bool logx, const gen & x_offset, const gen & x_unit, bool densityplot,double function_xmin,double function_xmax,double function_ymin,double function_ymax,double function_zmin, double function_zmax,int nstep,int jstep,bool showeq,const context * contextptr){
 #else
   gen plotfunc(const gen & f,const gen & vars,const vecteur & attributs,bool densityplot,double function_xmin,double function_xmax,double function_ymin,double function_ymax,double function_zmin, double function_zmax,int nstep,int jstep,bool showeq,const context * contextptr){
 #endif
@@ -1257,7 +1257,7 @@ namespace giac {
 	if (attributs.size()>1 && attributs[1].type==_VECT && attributs[1]._VECTptr->size()>i)
 	  cur_attributs.push_back((*attributs[1]._VECTptr)[i]);
 #ifdef SWIFT_CALCS_OPTIONS
-        gen tmp=plotfunc(vf[i],vars,cur_attributs,logx, x_offset, false,function_xmin,function_xmax,function_ymin,function_ymax,function_zmin,function_zmax,nstep,jstep,showeq,contextptr);
+        gen tmp=plotfunc(vf[i],vars,cur_attributs,logx, x_offset, x_unit, false,function_xmin,function_xmax,function_ymin,function_ymax,function_zmin,function_zmax,nstep,jstep,showeq,contextptr);
 #else
 	gen tmp=plotfunc(vf[i],vars,cur_attributs,false,function_xmin,function_xmax,function_ymin,function_ymax,function_zmin,function_zmax,nstep,jstep,showeq,contextptr);
 #endif
@@ -1275,10 +1275,12 @@ namespace giac {
 #ifdef SWIFT_CALCS_OPTIONS
       remove_angle_mode(true);
       gen y,yy;
-      y=quotesubst(f,vars,locvar,contextptr);
+      y=quotesubst(f,vars,locvar * x_unit,contextptr);
 #else
       gen y=quotesubst(f,vars,locvar,contextptr),yy;
 #endif
+y.print_emscripten("Y: ");
+f.print_emscripten("F: ");
       // gen y=f.evalf2double(),yy;
       double j,entrej,oldj=0,xmin=function_xmin,xmax=function_xmax+step/2;
 #ifdef SWIFT_CALCS_OPTIONS
@@ -1317,6 +1319,7 @@ namespace giac {
 	// vars._IDNTptr->localvalue->back()._DOUBLE_val =i;
 #ifdef SWIFT_CALCS_OPTIONS
         yy = evalf2double_nock(mksa_value(y.evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
+yy.print_emscripten("YY: ");
 #else
 	yy=y.evalf2double(eval_level(contextptr),newcontextptr);
 #endif
@@ -1376,6 +1379,7 @@ namespace giac {
 	    // vars._IDNTptr->localvalue->back()._DOUBLE_val -= step/2;
 #ifdef SWIFT_CALCS_OPTIONS
             yy = evalf2double_nock(mksa_value(y.evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
+yy.print_emscripten("YY2: ");
 #else
 	    yy=y.evalf2double(eval_level(contextptr),newcontextptr);
 #endif
@@ -1923,6 +1927,14 @@ namespace giac {
       return gensizeerr(contextptr);
 #ifdef SWIFT_CALCS_OPTIONS
     gen e1=mksa_value(vargs[1],contextptr);
+    gen & x_unit_finder=vargs[1]._SYMBptr->feuille;
+    vecteur & x_unit_finderv=*x_unit_finder._VECTptr;
+    gen x_unit_finder_h(x_unit_finderv[1]);
+    x_unit_finder_h=x_unit_finder_h._SYMBptr->feuille;
+    gen x_unit = mksa_reduce_base(x_unit_finder_h._VECTptr->front(),contextptr);
+    if(is_one(x_unit)) {
+      x_unit = mksa_reduce_base(x_unit_finder_h._VECTptr->back(),contextptr);
+    }
 #else
     gen e1=vargs[1];
 #endif
@@ -1989,7 +2001,7 @@ namespace giac {
 	  jstep=vargs[6].val;
       }
 #ifdef SWIFT_CALCS_OPTIONS
-      return plotfunc(vargs.front(),e1,vecteur(1,attribut),logx,x_offset,densityplot,xmin,xmax,ymin,ymax,zmin,zmax,nstep,jstep,showeq,contextptr);
+      return plotfunc(vargs.front(),e1,vecteur(1,attribut),logx,x_offset,x_unit,densityplot,xmin,xmax,ymin,ymax,zmin,zmax,nstep,jstep,showeq,contextptr);
 #else
       return plotfunc(vargs.front(),e1,vecteur(1,attribut),densityplot,xmin,xmax,ymin,ymax,zmin,zmax,nstep,jstep,showeq,contextptr);
 #endif
@@ -2004,7 +2016,7 @@ namespace giac {
     vecteur attributs(1,attribut);
     read_option(vargs,xmin,xmax,ymin,ymax,attributs,nstep,jstep,contextptr);
 #ifdef SWIFT_CALCS_OPTIONS
-    return plotfunc(vargs[0],e1,attributs,logx,x_offset,densityplot,xmin,xmax,ymin,ymax,zmin,zmax,nstep,jstep,showeq,contextptr);
+    return plotfunc(vargs[0],e1,attributs,logx,x_offset,x_unit,densityplot,xmin,xmax,ymin,ymax,zmin,zmax,nstep,jstep,showeq,contextptr);
 #else
     return plotfunc(vargs[0],e1,attributs,densityplot,xmin,xmax,ymin,ymax,zmin,zmax,nstep,jstep,showeq,contextptr);
 #endif

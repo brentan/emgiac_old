@@ -262,7 +262,7 @@ namespace giac {
 
   gen plotfunc(const gen & f,const gen & vars,const vecteur & attributs,bool clrplot,double function_xmin,double function_xmax,double function_ymin,double function_ymax,double function_zmin, double function_zmax,int nstep,int jstep,bool showeq,GIAC_CONTEXT);
 #ifdef SWIFT_CALCS_OPTIONS
-  gen plotfunc(const gen & f,const gen & vars,const vecteur & attributs,const bool logx,const gen & x_offset, bool clrplot,double function_xmin,double function_xmax,double function_ymin,double function_ymax,double function_zmin, double function_zmax,int nstep,int jstep,bool showeq,GIAC_CONTEXT);
+  gen plotfunc(const gen & f,const gen & vars,const vecteur & attributs,const bool logx,const gen & x_offset, const gen & x_unit, bool clrplot,double function_xmin,double function_xmax,double function_ymin,double function_ymax,double function_zmin, double function_zmax,int nstep,int jstep,bool showeq,GIAC_CONTEXT);
 #endif
   // return a vector of values with simple decimal representation
   // between xmin/xmax or including xmin/xmax (if bounds is true)
