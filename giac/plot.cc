@@ -1274,12 +1274,8 @@ namespace giac {
       locvar.subtype=0;
 #ifdef SWIFT_CALCS_OPTIONS
       remove_angle_mode(true);
-      bool has_offset_units = _usimplify_hits_temperature(f,contextptr);
       gen y,yy;
-      if(has_offset_units)
-        y=quotesubst(f,vars,locvar,contextptr);
-      else
-        y=quotesubst(mksa_value(f,contextptr),vars,locvar,contextptr);
+      y=quotesubst(f,vars,locvar,contextptr);
 #else
       gen y=quotesubst(f,vars,locvar,contextptr),yy;
 #endif
@@ -1320,11 +1316,10 @@ namespace giac {
 	local_sto_double(i,*vars._IDNTptr,newcontextptr);
 	// vars._IDNTptr->localvalue->back()._DOUBLE_val =i;
 #ifdef SWIFT_CALCS_OPTIONS
-        if(has_offset_units)
-          yy = evalf2double_nock(mksa_value(y.evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
-        else
-#endif
+        yy = evalf2double_nock(mksa_value(y.evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
+#else
 	yy=y.evalf2double(eval_level(contextptr),newcontextptr);
+#endif
 	if (yy.type!=_DOUBLE_){
 #ifdef SWIFT_CALCS_OPTIONS
           // rounding errors can lead to 'complex' numbers with 1e-15 for imaginary portion.  If so, drop it
@@ -1380,11 +1375,10 @@ namespace giac {
 #endif
 	    // vars._IDNTptr->localvalue->back()._DOUBLE_val -= step/2;
 #ifdef SWIFT_CALCS_OPTIONS
-            if(has_offset_units)
-              yy = evalf2double_nock(mksa_value(y.evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
-            else
-#endif
+            yy = evalf2double_nock(mksa_value(y.evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
+#else
 	    yy=y.evalf2double(eval_level(contextptr),newcontextptr);
+#endif
 
 	    if (yy.type!=_DOUBLE_)
 	      joindre=false;
