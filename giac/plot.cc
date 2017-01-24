@@ -1279,8 +1279,6 @@ namespace giac {
 #else
       gen y=quotesubst(f,vars,locvar,contextptr),yy;
 #endif
-y.print_emscripten("Y: ");
-f.print_emscripten("F: ");
       // gen y=f.evalf2double(),yy;
       double j,entrej,oldj=0,xmin=function_xmin,xmax=function_xmax+step/2;
 #ifdef SWIFT_CALCS_OPTIONS
@@ -1319,7 +1317,6 @@ f.print_emscripten("F: ");
 	// vars._IDNTptr->localvalue->back()._DOUBLE_val =i;
 #ifdef SWIFT_CALCS_OPTIONS
         yy = evalf2double_nock(mksa_value(y.evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
-yy.print_emscripten("YY: ");
 #else
 	yy=y.evalf2double(eval_level(contextptr),newcontextptr);
 #endif
@@ -1379,7 +1376,6 @@ yy.print_emscripten("YY: ");
 	    // vars._IDNTptr->localvalue->back()._DOUBLE_val -= step/2;
 #ifdef SWIFT_CALCS_OPTIONS
             yy = evalf2double_nock(mksa_value(y.evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
-yy.print_emscripten("YY2: ");
 #else
 	    yy=y.evalf2double(eval_level(contextptr),newcontextptr);
 #endif
