@@ -1196,6 +1196,19 @@ namespace giac {
     else
       i.localvalue->back() += value;
   }
+  static void local_sto(const gen & value,const identificateur & i,GIAC_CONTEXT){
+    if (contextptr)
+      (*contextptr->tabptr)[i.id_name]=value;
+    else 
+      i.localvalue->back()=value;
+  }
+
+  static void local_sto_increment(const gen & value,const identificateur & i,GIAC_CONTEXT){
+    if (contextptr)
+      (*contextptr->tabptr)[i.id_name] += value;
+    else
+      i.localvalue->back() += value;
+  }
 
   double max_nstep=2e4;
 #ifdef SWIFT_CALCS_OPTIONS
@@ -1275,7 +1288,7 @@ namespace giac {
 #ifdef SWIFT_CALCS_OPTIONS
       remove_angle_mode(true);
       gen y,yy;
-      y=quotesubst(f,vars,locvar * x_unit,contextptr);
+      y=quotesubst(f,vars,locvar,contextptr);
 #else
       gen y=quotesubst(f,vars,locvar,contextptr),yy;
 #endif
@@ -1313,11 +1326,12 @@ namespace giac {
         i = ii;
 #endif
 	// yy=evalf_double(subst(f,vars,i,false,contextptr),1,contextptr);
-	local_sto_double(i,*vars._IDNTptr,newcontextptr);
 	// vars._IDNTptr->localvalue->back()._DOUBLE_val =i;
 #ifdef SWIFT_CALCS_OPTIONS
+        local_sto(i * x_unit,*vars._IDNTptr,newcontextptr);
         yy = evalf2double_nock(mksa_value(y.evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
 #else
+        local_sto_double(i,*vars._IDNTptr,newcontextptr);
 	yy=y.evalf2double(eval_level(contextptr),newcontextptr);
 #endif
 	if (yy.type!=_DOUBLE_){
@@ -1360,14 +1374,14 @@ namespace giac {
 #ifdef SWIFT_CALCS_OPTIONS
             if(logx) {
               if(count == 1) {
-                local_sto_double(i - (i_vals[count] - i_vals[count-1])/2.,*vars._IDNTptr,newcontextptr);
+                local_sto((i - (i_vals[count] - i_vals[count-1])/2.)*x_unit,*vars._IDNTptr,newcontextptr);
                 i_no_offset = i_no_offset - (i_vals[count] - i_vals[count-1])/2.;
               } else {
-                local_sto_double(i - (i_vals[count-1] - i_vals[count-2])/2.,*vars._IDNTptr,newcontextptr);
+                local_sto((i - (i_vals[count-1] - i_vals[count-2])/2.)*x_unit,*vars._IDNTptr,newcontextptr);
                 i_no_offset = i_no_offset - (i_vals[count-1] - i_vals[count-2])/2.;
               }
             } else {
-              local_sto_double_increment(-step/2,*vars._IDNTptr,newcontextptr);
+              local_sto_increment(-x_unit * step/2,*vars._IDNTptr,newcontextptr);
               i_no_offset = i_no_offset - step/2.;
             }
 #else
@@ -1392,14 +1406,14 @@ namespace giac {
 #ifdef SWIFT_CALCS_OPTIONS
             if(logx) {
               if(count >= nstep) {
-                local_sto_double(i + (i_vals[count-1] - i_vals[count-2])/2.,*vars._IDNTptr,newcontextptr);
+                local_sto((i + (i_vals[count-1] - i_vals[count-2])/2.)*x_unit,*vars._IDNTptr,newcontextptr);
                 i_no_offset = i_no_offset + (i_vals[count-1] - i_vals[count-2])/2.;
               } else {
-                local_sto_double(i + (i_vals[count] - i_vals[count-1])/2.,*vars._IDNTptr,newcontextptr);
+                local_sto((i + (i_vals[count] - i_vals[count-1])/2.)*x_unit,*vars._IDNTptr,newcontextptr);
                 i_no_offset = i_no_offset + (i_vals[count] - i_vals[count-1])/2.;
               }
             } else {
-              local_sto_double_increment(step/2,*vars._IDNTptr,newcontextptr);
+              local_sto_increment(x_unit * step/2,*vars._IDNTptr,newcontextptr);
               i_no_offset = i_no_offset + step/2.;
             }
 #else
