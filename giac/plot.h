@@ -262,7 +262,7 @@ namespace giac {
 
   gen plotfunc(const gen & f,const gen & vars,const vecteur & attributs,bool clrplot,double function_xmin,double function_xmax,double function_ymin,double function_ymax,double function_zmin, double function_zmax,int nstep,int jstep,bool showeq,GIAC_CONTEXT);
 #ifdef SWIFT_CALCS_OPTIONS
-  gen plotfunc(const gen & f,const gen & vars,const vecteur & attributs,const bool logx,const gen & x_offset, const gen & x_unit, bool clrplot,double function_xmin,double function_xmax,double function_ymin,double function_ymax,double function_zmin, double function_zmax,int nstep,int jstep,bool showeq,GIAC_CONTEXT);
+  gen plotfunc(const gen & f,const gen & vars,const vecteur & attributs,const bool logx,const bool logy,const gen & x_offset, const gen & x_unit, bool clrplot,double function_xmin,double function_xmax,double function_ymin,double function_ymax,double function_zmin, double function_zmax,int nstep,int jstep,bool showeq,GIAC_CONTEXT);
 #endif
   // return a vector of values with simple decimal representation
   // between xmin/xmax or including xmin/xmax (if bounds is true)
@@ -281,7 +281,7 @@ namespace giac {
   gen _plotfunc(const gen &,GIAC_CONTEXT);
 #ifdef SWIFT_CALCS_OPTIONS
   gen _plotfunclog(const gen &,GIAC_CONTEXT);
-  gen funcplotfunc(const gen & args,bool densityplot,const bool logx, const gen & x_offset, const context * contextptr);
+  gen funcplotfunc(const gen & args,bool densityplot,const bool logx, const bool logy, const gen & x_offset, const context * contextptr);
 #endif
   gen _funcplot(const gen & args,const context * contextptr);
   gen _plotdensity(const gen & args,const context * contextptr);
@@ -501,6 +501,10 @@ namespace giac {
   extern const unary_function_ptr * const  at_plotparam;
   extern const unary_function_ptr * const  at_paramplot;
   gen paramplotparam(const gen & args,bool clrplot,const context * contextptr);
+  #ifdef SWIFT_CALCS_OPTIONS
+    gen plotparam(const gen & f,const gen & vars,const vecteur & attributs,bool densityplot,const bool logx, const bool logy, const gen t_unit, const gen t_unit_orig, double function_xmin,double function_xmax,double function_ymin,double function_ymax,double function_tmin, double function_tmax,double function_tstep,const gen & equation,const gen & parameq,const context * contextptr);
+    gen paramplotparam(const gen & args,bool densityplot,const bool logx, const bool logy, const context * contextptr);
+  #endif
   gen _plot(const gen & g,const context * contextptr);
 
   gen _plotpolar(const gen & args,GIAC_CONTEXT);

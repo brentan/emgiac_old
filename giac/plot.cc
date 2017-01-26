@@ -52,6 +52,7 @@ using namespace std;
 #ifndef RTOS_THREADX
 #ifndef BESTA_OS
 #include <fcntl.h>
+#include <limits.h>
 #endif
 #endif
 #endif // __VISUALC__
@@ -1239,10 +1240,50 @@ namespace giac {
     return retval;
   }
 
-  gen plotfunc(const gen & f,const gen & vars,const vecteur & attributs,bool densityplot,double function_xmin,double function_xmax,double function_ymin,double function_ymax,double function_zmin, double function_zmax,int nstep,int jstep,bool showeq,const context * contextptr){
-    return plotfunc(f,vars,attributs,false,zero,plus_one,densityplot,function_xmin,function_xmax,function_ymin,function_ymax,function_zmin,function_zmax,nstep,jstep,showeq,contextptr);
+  template<typename T = double>
+  class Linspace {
+  private:
+    T curValue, step;
+
+  public:
+    Linspace(T first, T last, int num) : curValue(first) {
+      step = (last - first)/(num-1);
+    }
+
+    T operator()() {
+      T retval = curValue;
+      curValue += step;
+      return retval;
+    }
+  };
+  std::vector<double> genLinspace(double start, double stop, int num = 50) {
+    std::vector<double> retval;
+    retval.reserve(num);
+    std::generate_n(std::back_inserter(retval), num, Linspace<>(start,stop,num));
+    return retval;
   }
-  gen plotfunc(const gen & f,const gen & vars,const vecteur & attributs,const bool logx, const gen & x_offset, const gen & x_unit, bool densityplot,double function_xmin,double function_xmax,double function_ymin,double function_ymax,double function_zmin, double function_zmax,int nstep,int jstep,bool showeq,const context * contextptr){
+  
+  void insert_to_array(double *x_vals, double *y_vals, int *indeces, bool *defined, const int insert, const int length) {
+    double x_to_insert = x_vals[length-1];
+    double y_to_insert = y_vals[length-1];
+    int i_to_insert = indeces[length-1];
+    bool d_to_insert = defined[length-1];
+    for(int count = (length-1); count > (insert+1); count--) {
+      x_vals[count] = x_vals[count - 1];
+      y_vals[count] = y_vals[count - 1];
+      indeces[count] = indeces[count - 1];
+      defined[count] = defined[count - 1];
+    }
+    x_vals[insert+1] = x_to_insert;
+    y_vals[insert+1] = y_to_insert;
+    indeces[insert+1] = i_to_insert;
+    defined[insert+1] = d_to_insert;
+  }
+
+  gen plotfunc(const gen & f,const gen & vars,const vecteur & attributs,bool densityplot,double function_xmin,double function_xmax,double function_ymin,double function_ymax,double function_zmin, double function_zmax,int nstep,int jstep,bool showeq,const context * contextptr){
+    return plotfunc(f,vars,attributs,false,false,zero,plus_one,densityplot,function_xmin,function_xmax,function_ymin,function_ymax,function_zmin,function_zmax,nstep,jstep,showeq,contextptr);
+  }
+  gen plotfunc(const gen & f,const gen & vars,const vecteur & attributs,const bool logx, const bool logy, const gen & x_offset, const gen & x_unit, bool densityplot,double function_xmin,double function_xmax,double function_ymin,double function_ymax,double function_zmin, double function_zmax,int nstep,int jstep,bool showeq,const context * contextptr){
 #else
   gen plotfunc(const gen & f,const gen & vars,const vecteur & attributs,bool densityplot,double function_xmin,double function_xmax,double function_ymin,double function_ymax,double function_zmin, double function_zmax,int nstep,int jstep,bool showeq,const context * contextptr){
 #endif
@@ -1270,7 +1311,7 @@ namespace giac {
 	if (attributs.size()>1 && attributs[1].type==_VECT && attributs[1]._VECTptr->size()>i)
 	  cur_attributs.push_back((*attributs[1]._VECTptr)[i]);
 #ifdef SWIFT_CALCS_OPTIONS
-        gen tmp=plotfunc(vf[i],vars,cur_attributs,logx, x_offset, x_unit, false,function_xmin,function_xmax,function_ymin,function_ymax,function_zmin,function_zmax,nstep,jstep,showeq,contextptr);
+        gen tmp=plotfunc(vf[i],vars,cur_attributs,logx, logy, x_offset, x_unit, false,function_xmin,function_xmax,function_ymin,function_ymax,function_zmin,function_zmax,nstep,jstep,showeq,contextptr);
 #else
 	gen tmp=plotfunc(vf[i],vars,cur_attributs,false,function_xmin,function_xmax,function_ymin,function_ymax,function_zmin,function_zmax,nstep,jstep,showeq,contextptr);
 #endif
@@ -1296,7 +1337,6 @@ namespace giac {
       double j,entrej,oldj=0,xmin=function_xmin,xmax=function_xmax+step/2;
 #ifdef SWIFT_CALCS_OPTIONS
       std::vector<double> i_vals;
-      int count = 0;
       double i, ii, i_no_offset;
       double x_offset_d = x_offset.evalf2double(eval_level(contextptr),contextptr)._DOUBLE_val;
       if(logx) {
@@ -1305,7 +1345,8 @@ namespace giac {
           return gensizeerr(gettext("Log plot error: x limits must be positive, provided x_min is ")+print_DOUBLE_(function_xmin,12)+".");
           }
         i_vals = genLogspace(xmin, function_xmax, nstep+1);
-      } 
+      } else
+        i_vals = genLinspace(xmin, function_xmax, nstep+1);
 #else
       double i, ii;
 #endif
@@ -1315,48 +1356,269 @@ namespace giac {
       context * newcontextptr= (context *) contextptr;
       int protect=giac::bind(vecteur(1,xmin),localvar,newcontextptr);
       vecteur chemin;
-      for (;ii<xmax;ii+= step){
+
 #ifdef SWIFT_CALCS_OPTIONS
-        // All the offset backflips due to float calc errors wiping out small values with an offset
-        if(logx) i_no_offset = i_vals[count];
-        else i_no_offset = ii;
+      // Indeces will be my ordered points, and will point to the index in res where the point lives (res wont be in order)
+      int indeces[nstep+1];
+      double x_vals[nstep+1];
+      double y_vals[nstep+1];
+      bool defined[nstep+1];
+      double y_max = -1*std::numeric_limits<double>::max();
+      double y_min = std::numeric_limits<double>::max();
+      double bound_code = 1791.583; // Hack...this specific value means the ymin is NOT defined by user
+      bool y_min_provided = std::abs(bound_code - function_zmin) > 1e-10;
+      bool y_max_provided = std::abs(bound_code - function_zmax) > 1e-10;
+      // Seed the indeces:
+      int counter = 0;
+      int count = 0;
+      bool all_undefined = true;
+      while(true) {
+        i_no_offset = i_vals[count];
         i = i_no_offset + x_offset_d;
-        count++;
-#else
-        i = ii;
-#endif
-	// yy=evalf_double(subst(f,vars,i,false,contextptr),1,contextptr);
-	// vars._IDNTptr->localvalue->back()._DOUBLE_val =i;
-#ifdef SWIFT_CALCS_OPTIONS
+        x_vals[counter] = i_no_offset;
+        defined[counter] = true;
         local_sto(i * x_unit,*vars._IDNTptr,newcontextptr);
         yy = evalf2double_nock(mksa_value(y.evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
-#else
-        local_sto_double(i,*vars._IDNTptr,newcontextptr);
-	yy=y.evalf2double(eval_level(contextptr),newcontextptr);
-#endif
-	if (yy.type!=_DOUBLE_){
-#ifdef SWIFT_CALCS_OPTIONS
+        if (yy.type!=_DOUBLE_){
           // rounding errors can lead to 'complex' numbers with 1e-15 for imaginary portion.  If so, drop it
           if((yy.type == _CPLX) && is_greater(abs(re(yy,contextptr),contextptr),abs(im(yy,contextptr)*1e10,contextptr),contextptr)) {
-            yy = re(yy, contextptr);
+            y_vals[counter] = re(yy, contextptr)._DOUBLE_val;
+            all_undefined = false;
+            if(y_vals[counter] > y_max) y_max = y_vals[counter];
+            if(y_vals[counter] < y_min) y_min = y_vals[counter];
+          }
+          else 
+            defined[counter] = false;
+        } else {
+          y_vals[counter] = yy._DOUBLE_val;
+          all_undefined = false;
+          if(y_vals[counter] > y_max) y_max = y_vals[counter];
+          if(y_vals[counter] < y_min) y_min = y_vals[counter];
+        }
+        indeces[counter++] = count;
+        if(count == nstep) break;
+        count += (int)(nstep/20. * (std_rand()*0.5/RAND_MAX+0.75)); // slight randomness here to help get through periodic functions where aliasing could throw everything off
+        if(count > nstep) count = nstep;
+      }
+      if(!all_undefined) {
+        // Start the adaptive sampling tests to fill in areas of high curvature:
+        int current_index = 1;
+        double max_curvature = 0.1736; // sin 10 degrees
+        while(true) {
+          if((current_index+2) > counter) break; // DONE!
+          int ip, i0, in;
+          ip = indeces[current_index-1];
+          i0 = indeces[current_index];
+          in = indeces[current_index+1];
+          // Is first or second y value undefined?  If so, add value between first and second point
+          if(!defined[current_index-1] || !defined[current_index]) {
+            if((i0-ip) == 1) { // Already at max resolution...move along!
+              current_index++;
+              continue;
+            }
+            int newi = (i0 + ip)/2;
+            x_vals[counter] = i_vals[newi];
+            defined[counter] = true;
+            local_sto((i_vals[newi] + x_offset_d) * x_unit,*vars._IDNTptr,newcontextptr);
+            yy = evalf2double_nock(mksa_value(y.evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
+            if (yy.type!=_DOUBLE_){
+              if((yy.type == _CPLX) && is_greater(abs(re(yy,contextptr),contextptr),abs(im(yy,contextptr)*1e10,contextptr),contextptr)) {
+                y_vals[counter] = re(yy, contextptr)._DOUBLE_val;
+                if(y_vals[counter] > y_max) y_max = y_vals[counter];
+                if(y_vals[counter] < y_min) y_min = y_vals[counter];
+              }
+              else 
+                defined[counter] = false;
+            } else {
+              y_vals[counter] = yy._DOUBLE_val;
+              if(y_vals[counter] > y_max) y_max = y_vals[counter];
+              if(y_vals[counter] < y_min) y_min = y_vals[counter];
+            }
+            indeces[counter++] = newi;
+            insert_to_array(x_vals, y_vals, indeces, defined, current_index-1, counter);
+            continue;
+          }
+          // Is third y value undefined?  If so, add value between second and third point
+          if(!defined[current_index+1]) {
+            if((in-i0) == 1) { // Already at max resolution...move along!
+              current_index++;
+              continue;
+            }
+            int newi = (in + i0)/2;
+            x_vals[counter] = i_vals[newi];
+            defined[counter] = true;
+            local_sto((i_vals[newi] + x_offset_d) * x_unit,*vars._IDNTptr,newcontextptr);
+            yy = evalf2double_nock(mksa_value(y.evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
+            if (yy.type!=_DOUBLE_){
+              if((yy.type == _CPLX) && is_greater(abs(re(yy,contextptr),contextptr),abs(im(yy,contextptr)*1e10,contextptr),contextptr)) {
+                y_vals[counter] = re(yy, contextptr)._DOUBLE_val;
+                if(y_vals[counter] > y_max) y_max = y_vals[counter];
+                if(y_vals[counter] < y_min) y_min = y_vals[counter];
+              }
+              else 
+                defined[counter] = false;
+            } else {
+              y_vals[counter] = yy._DOUBLE_val;
+              if(y_vals[counter] > y_max) y_max = y_vals[counter];
+              if(y_vals[counter] < y_min) y_min = y_vals[counter];
+            }
+            indeces[counter++] = newi;
+            insert_to_array(x_vals, y_vals, indeces, defined, current_index, counter);
+            continue;
+          }
+          // Woohoo! All values defined.  Now lets see if the curvature is acceptable;
+          double xp, x0, xn;
+          xp = x_vals[current_index-1];
+          x0 = x_vals[current_index];
+          xn = x_vals[current_index+1];
+          if(logx) {
+            xp = std::log10(xp);
+            x0 = std::log10(x0);
+            xn = std::log10(xn);
+          }
+          double yp, y0, yn, y_res;
+          yp = y_vals[current_index-1];
+          y0 = y_vals[current_index];
+          yn = y_vals[current_index+1];
+          double y_min_to_use, y_max_to_use;
+          if(!y_min_provided) {
+            y_min_to_use = y_min;
           } else {
-#endif
+            y_min_to_use = function_zmin - (y_max - function_zmin)*.25;
+            if((yp < y_min_to_use) && (y0 < y_min_to_use) && (yn < y_min_to_use)) {
+              //Outside visible window
+              current_index++;
+              continue;
+            }
+            y_min_to_use = function_zmin;
+          }
+          if(!y_max_provided) {
+            y_max_to_use = y_max;
+          } else {
+            y_max_to_use = function_zmax + (function_zmax - y_min_to_use)*.25;
+            if((yp > y_max_to_use) && (y0 > y_max_to_use) && (yn > y_max_to_use)) {
+              //Outside visible window
+              current_index++;
+              continue;
+            }
+            y_max_to_use = function_zmax;
+          } 
+          if(logy) {
+            yp = std::log10(yp);
+            y0 = std::log10(y0);
+            yn = std::log10(yn);
+            y_res = (std::log10(y_max_to_use) - std::log10(y_min_to_use)) / 300;
+          } else
+            y_res = (y_max_to_use - y_min_to_use) / 300;
+          if((y_res > 0) && (std::abs(y0-yp) < y_res) && (std::abs(y0-yn) < y_res) && (std::abs(yn-yp) < y_res)) {
+            // Changes are within window resolution, so no need to try and refine things
+            current_index++;
+            continue;
+          }
+          // Compute curvature:
+          double local_y_max = yp;
+          if(y0 > local_y_max){ local_y_max = y0; }
+          if(yn > local_y_max){ local_y_max = yn; }
+          double local_y_min = yp;
+          if(y0 < local_y_min){ local_y_min = y0; }
+          if(yn < local_y_min){ local_y_min = yn; }
+          double dx0 = (x0-xp)/(xn-xp);
+          double dx1 = (xn-x0)/(xn-xp);
+          double dy0 = (y0-yp)/(local_y_max-local_y_min);
+          double dy1 = (yn-y0)/(local_y_max-local_y_min);
+          double il0 = 1./std::sqrt(dx0*dx0 + dy0*dy0);
+          double il1 = 1./std::sqrt(dx1*dx1 + dy1*dy1);
+          double sinq = (dx0*dy1 - dy0*dx1) * il0 * il1;
+          if(fabs(sinq) > max_curvature) {
+            // Need to insert more points around where I am.  Insert a new point before me:
+            if(((i0-ip) == 1) && ((in-i0) == 1)) {
+              // Reached maximum resolution
+              current_index++;
+              continue;
+            } 
+            int index_change = 0;
+            if((i0-ip) > 1) { 
+              int newi = (i0 + ip)/2;
+              x_vals[counter] = i_vals[newi];
+              defined[counter] = true;
+              local_sto((i_vals[newi] + x_offset_d) * x_unit,*vars._IDNTptr,newcontextptr);
+              yy = evalf2double_nock(mksa_value(y.evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
+              if (yy.type!=_DOUBLE_){
+                if((yy.type == _CPLX) && is_greater(abs(re(yy,contextptr),contextptr),abs(im(yy,contextptr)*1e10,contextptr),contextptr)) {
+                  y_vals[counter] = re(yy, contextptr)._DOUBLE_val;
+                  if(y_vals[counter] > y_max) y_max = y_vals[counter];
+                  if(y_vals[counter] < y_min) y_min = y_vals[counter];
+                }
+                else 
+                  defined[counter] = false;
+              } else {
+                y_vals[counter] = yy._DOUBLE_val;
+                if(y_vals[counter] > y_max) y_max = y_vals[counter];
+                if(y_vals[counter] < y_min) y_min = y_vals[counter];
+              }
+              indeces[counter++] = newi;
+              insert_to_array(x_vals, y_vals, indeces, defined, current_index-1, counter);
+              index_change = 1;
+            }
+            if((in-i0) > 1) { 
+              int newi = (in + i0)/2;
+              x_vals[counter] = i_vals[newi];
+              defined[counter] = true;
+              local_sto((i_vals[newi] + x_offset_d) * x_unit,*vars._IDNTptr,newcontextptr);
+              yy = evalf2double_nock(mksa_value(y.evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
+              if (yy.type!=_DOUBLE_){
+                if((yy.type == _CPLX) && is_greater(abs(re(yy,contextptr),contextptr),abs(im(yy,contextptr)*1e10,contextptr),contextptr)) {
+                  y_vals[counter] = re(yy, contextptr)._DOUBLE_val;
+                  if(y_vals[counter] > y_max) y_max = y_vals[counter];
+                  if(y_vals[counter] < y_min) y_min = y_vals[counter];
+                }
+                else 
+                  defined[counter] = false;
+              } else {
+                y_vals[counter] = yy._DOUBLE_val;
+                if(y_vals[counter] > y_max) y_max = y_vals[counter];
+                if(y_vals[counter] < y_min) y_min = y_vals[counter];
+              }
+              indeces[counter++] = newi;
+              insert_to_array(x_vals, y_vals, indeces, defined, current_index+index_change, counter);
+            }
+          } else
+            current_index++;
+        }
+      }
+      // Should have a nice array of numbers now.  Go ahead and build output array:
+      for(int count = 0; count < counter; count++) {
+        if(defined[count])
+          res.push_back(makevecteur(x_vals[count],y_vals[count]));
+        else
+          res.push_back(makevecteur(x_vals[count],plus_inf));
+        if((count > 0) && ((count+2)<counter)) {
+          if(defined[count-1] && defined[count] && defined[count+1] && defined[count+2]) {
+            // Test for asymptote
+            //TODO: CHANGE TO > or < yMax/5 yMin/5 instead of 0
+            if((y_vals[count] > (y_max/5)) && (y_vals[count] > y_vals[count-1]) && (y_vals[count+1] < (y_min/5)) && (y_vals[count+2] > y_vals[count+1]))
+              res.push_back(makevecteur((x_vals[count]+x_vals[count+1])/2,plus_inf));
+            if((y_vals[count] < (y_min/5)) && (y_vals[count] < y_vals[count-1]) && (y_vals[count+1] > (y_max/5)) && (y_vals[count+2] < y_vals[count+1]))
+              res.push_back(makevecteur((x_vals[count]+x_vals[count+1])/2,plus_inf));
+          }
+        }
+      }
+
+#else
+
+      for (;ii<xmax;ii+= step){
+        i = ii;
+        local_sto_double(i,*vars._IDNTptr,newcontextptr);
+	yy=y.evalf2double(eval_level(contextptr),newcontextptr);
+	if (yy.type!=_DOUBLE_){
 	  if (debug_infolevel)
 	    CERR << y << " not real at " << i << " " << yy << endl;
           if (!chemin.empty()) {
-#ifdef SWIFT_CALCS_OPTIONS // Swift Calcs options to output 2d array of x y pairs, instead of points etc as we do our own plotting
-	    chemin.push_back(makevecteur(i_no_offset,plus_inf));
-            res = mergevecteur(res, chemin);
-#else
             res.push_back(pnt_attrib(symb_curve(gen(makevecteur(vars+cst_i*f,vars,xmin,i,showeq),_PNT__VECT),gen(chemin,_GROUP__VECT)),attributs.empty()?color:attributs,contextptr));
-#endif
           }
 	  xmin=i;
 	  chemin.clear();
 	  continue;
-#ifdef SWIFT_CALCS_OPTIONS
-          }
-#endif
 	}
 	j=yy._DOUBLE_val;
 	if (j>function_ymax)
@@ -1364,35 +1626,11 @@ namespace giac {
 	if (j<function_ymin)
 	  function_ymin=j;
 	if (i!=xmin){
-#ifdef SWIFT_CALCS_OPTIONS
-	  if ((fabs(oldj-j)>(function_ymax-function_ymin)/5) || ((oldj * j) < 0)) { // try middle-pnt
-#else
     if (fabs(oldj-j)>(function_ymax-function_ymin)/5) { // try middle-pnt
-#endif
       if (debug_infolevel)
 	      CERR << y << " checking step at " << i << " " << yy << endl;
-#ifdef SWIFT_CALCS_OPTIONS
-            if(logx) {
-              if(count == 1) {
-                local_sto((i - (i_vals[count] - i_vals[count-1])/2.)*x_unit,*vars._IDNTptr,newcontextptr);
-                i_no_offset = i_no_offset - (i_vals[count] - i_vals[count-1])/2.;
-              } else {
-                local_sto((i - (i_vals[count-1] - i_vals[count-2])/2.)*x_unit,*vars._IDNTptr,newcontextptr);
-                i_no_offset = i_no_offset - (i_vals[count-1] - i_vals[count-2])/2.;
-              }
-            } else {
-              local_sto_increment(-x_unit * step/2,*vars._IDNTptr,newcontextptr);
-              i_no_offset = i_no_offset - step/2.;
-            }
-#else
 	    local_sto_double_increment(-step/2,*vars._IDNTptr,newcontextptr);
-#endif
-	    // vars._IDNTptr->localvalue->back()._DOUBLE_val -= step/2;
-#ifdef SWIFT_CALCS_OPTIONS
-            yy = evalf2double_nock(mksa_value(y.evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
-#else
 	    yy=y.evalf2double(eval_level(contextptr),newcontextptr);
-#endif
 
 	    if (yy.type!=_DOUBLE_)
 	      joindre=false;
@@ -1403,23 +1641,7 @@ namespace giac {
 	      else
 		joindre=(j<=entrej) && (entrej<=oldj);
 	    }
-#ifdef SWIFT_CALCS_OPTIONS
-            if(logx) {
-              if(count >= nstep) {
-                local_sto((i + (i_vals[count-1] - i_vals[count-2])/2.)*x_unit,*vars._IDNTptr,newcontextptr);
-                i_no_offset = i_no_offset + (i_vals[count-1] - i_vals[count-2])/2.;
-              } else {
-                local_sto((i + (i_vals[count] - i_vals[count-1])/2.)*x_unit,*vars._IDNTptr,newcontextptr);
-                i_no_offset = i_no_offset + (i_vals[count] - i_vals[count-1])/2.;
-              }
-            } else {
-              local_sto_increment(x_unit * step/2,*vars._IDNTptr,newcontextptr);
-              i_no_offset = i_no_offset + step/2.;
-            }
-#else
 	    local_sto_double_increment(step/2,*vars._IDNTptr,newcontextptr);
-#endif
-	    // vars._IDNTptr->localvalue->back()._DOUBLE_val += step/2;
 	  }
 	  else
 	    joindre=true;
@@ -1427,59 +1649,26 @@ namespace giac {
 	else
 	  joindre=false;
 	if (joindre) {
-#ifdef SWIFT_CALCS_OPTIONS
-	  chemin.push_back(makevecteur(i_no_offset,j));
-#else
           chemin.push_back(gen(i,j));
-#endif
         } else {
 	  if (!chemin.empty()){
 	    if (debug_infolevel){
 	      CERR << y << " step at " << i << " " << yy << endl;
 	      CERR << "curve " << chemin.size() << " " << chemin.front() << " .. " << chemin.back() << endl;
 	    }
-#ifdef SWIFT_CALCS_OPTIONS
-            if(logx) {
-              if(count >= 2) {
-                if(oldj < 0)
-                  chemin.push_back(makevecteur(i_vals[count-2], function_ymin));
-                else
-                  chemin.push_back(makevecteur(i_vals[count-2], function_ymax));
-    	          chemin.push_back(makevecteur((i_vals[count-1] + i_vals[count-2])/2.,plus_inf));
-              }
-            } else {
-              if(oldj < 0)
-                chemin.push_back(makevecteur(i_no_offset - step, function_ymin));
-              else
-                chemin.push_back(makevecteur(i_no_offset - step, function_ymax));
-              chemin.push_back(makevecteur(i_no_offset - step/2,plus_inf));
-            }
-            if(j < 0)
-              chemin.push_back(makevecteur(i_no_offset, function_ymin));
-            else
-              chemin.push_back(makevecteur(i_no_offset, function_ymax));
-#else
             res.push_back(pnt_attrib(symb_curve(gen(makevecteur(vars+cst_i*f,vars,xmin,i,showeq),_PNT__VECT),gen(chemin,_GROUP__VECT)),attributs.empty()?color:attributs,contextptr));
-#endif
 	  }
 	  xmin=i;
-#ifdef SWIFT_CALCS_OPTIONS
-	  chemin.push_back(makevecteur(i_no_offset,j));
-#else
           chemin=vecteur(1,gen(i,j));
-#endif
 	}
 	oldj=j;
       }
       if (!chemin.empty()){
 	if (debug_infolevel)
 	  CERR << "curve " << chemin.size() << " " << chemin.front() << " .. " << chemin.back() << endl;
-#ifdef SWIFT_CALCS_OPTIONS
-	res = mergevecteur(res, chemin);
-#else
         res.push_back(pnt_attrib(symb_curve(gen(makevecteur(vars+cst_i*f,vars,xmin,i-step,showeq),_PNT__VECT),gen(chemin,_GROUP__VECT)),attributs.empty()?color:attributs,contextptr));
-#endif
       }
+#endif
       leave(protect,localvar,newcontextptr);
 #ifndef WIN32
       //      if (child_id)
@@ -1905,9 +2094,9 @@ namespace giac {
 
 #ifdef SWIFT_CALCS_OPTIONS
   gen funcplotfunc(const gen & args,bool densityplot,const context * contextptr) {
-    return funcplotfunc(args,densityplot,false,zero,contextptr);
+    return funcplotfunc(args,densityplot,false,false,zero,contextptr);
   }
-  gen funcplotfunc(const gen & args,bool densityplot,const bool logx, const gen & x_offset, const context * contextptr) {
+  gen funcplotfunc(const gen & args,bool densityplot,const bool logx, const bool logy, const gen & x_offset, const context * contextptr) {
 #else
   gen funcplotfunc(const gen & args,bool densityplot,const context * contextptr) {
 #endif
@@ -2011,22 +2200,29 @@ namespace giac {
 	  jstep=vargs[6].val;
       }
 #ifdef SWIFT_CALCS_OPTIONS
-      return plotfunc(vargs.front(),e1,vecteur(1,attribut),logx,x_offset,x_unit,densityplot,xmin,xmax,ymin,ymax,zmin,zmax,nstep,jstep,showeq,contextptr);
+      return plotfunc(vargs.front(),e1,vecteur(1,attribut),logx,logy,x_offset,x_unit,densityplot,xmin,xmax,ymin,ymax,zmin,zmax,nstep,jstep,showeq,contextptr);
 #else
       return plotfunc(vargs.front(),e1,vecteur(1,attribut),densityplot,xmin,xmax,ymin,ymax,zmin,zmax,nstep,jstep,showeq,contextptr);
 #endif
     }
     // plotfunc(func,x=xmin..xmax[,zminmax,attribut])
+#ifdef SWIFT_CALCS_OPTIONS
+      double z1,z2;
+      if (readrange(mksa_value(evalf(vargs[2],0,contextptr),contextptr),gnuplot_zmin,gnuplot_zmax,vargs[2],z1,z2,contextptr)){
+        zmin=z1; zmax=z2;
+      }
+#else
     if (e1.type==_VECT && s>2){
       double z1,z2;
       if (readrange(vargs[2],gnuplot_zmin,gnuplot_zmax,vargs[2],z1,z2,contextptr)){
 	zmin=z1; zmax=z2;
       }
     }
+#endif
     vecteur attributs(1,attribut);
     read_option(vargs,xmin,xmax,ymin,ymax,attributs,nstep,jstep,contextptr);
 #ifdef SWIFT_CALCS_OPTIONS
-    return plotfunc(vargs[0],e1,attributs,logx,x_offset,x_unit,densityplot,xmin,xmax,ymin,ymax,zmin,zmax,nstep,jstep,showeq,contextptr);
+    return plotfunc(vargs[0],e1,attributs,logx,logy,x_offset,x_unit,densityplot,xmin,xmax,ymin,ymax,zmin,zmax,nstep,jstep,showeq,contextptr);
 #else
     return plotfunc(vargs[0],e1,attributs,densityplot,xmin,xmax,ymin,ymax,zmin,zmax,nstep,jstep,showeq,contextptr);
 #endif
@@ -2046,7 +2242,7 @@ namespace giac {
   define_unary_function_ptr5( at_plotfunc ,alias_at_plotfunc,&__plotfunc,_QUOTE_ARGUMENTS,true);
 
 #ifdef SWIFT_CALCS_OPTIONS
-  gen _plotfunclog(const gen & args,const context * contextptr){
+  gen _plotfuncopts(const gen & args, const bool logx, const bool logy,const context * contextptr){
     if ( args.type==_STRNG && args.subtype==-1) return  args;
     vecteur args_to_send;
     vecteur & args_in = *args._VECTptr;
@@ -2054,21 +2250,32 @@ namespace giac {
     for(int i = 0; i < (int(args_in.size())-1); i++) {
       args_to_send.push_back(args_in[i]);
     }
-    return funcplotfunc(gen(args_to_send,_SEQ__VECT),false,true,args._VECTptr->back(),contextptr);
+    return funcplotfunc(gen(args_to_send,_SEQ__VECT),false,logx,logy,args_in[int(args_in.size())-1],contextptr);
+  }
+
+  gen _plotfuncylog(const gen & args,const context * contextptr){
+    return _plotfuncopts(args, false, true, contextptr);
+  }
+  static const char _plotfuncylog_s []="plotfuncylog";
+  static define_unary_function_eval_quoted (__plotfuncylog,&giac::_plotfuncylog,_plotfuncylog_s);
+  define_unary_function_ptr5( at_plotfuncylog ,alias_at_plotfuncylog,&__plotfuncylog,_QUOTE_ARGUMENTS,true);
+
+  gen _plotfuncloglog(const gen & args,const context * contextptr){
+    return _plotfuncopts(args, true, true, contextptr);
+  }
+  static const char _plotfuncloglog_s []="plotfuncloglog";
+  static define_unary_function_eval_quoted (__plotfuncloglog,&giac::_plotfuncloglog,_plotfuncloglog_s);
+  define_unary_function_ptr5( at_plotfuncloglog ,alias_at_plotfuncloglog,&__plotfuncloglog,_QUOTE_ARGUMENTS,true);
+
+  gen _plotfunclog(const gen & args,const context * contextptr){
+    return _plotfuncopts(args, true, false, contextptr);
   }
   static const char _plotfunclog_s []="plotfunclog";
   static define_unary_function_eval_quoted (__plotfunclog,&giac::_plotfunclog,_plotfunclog_s);
   define_unary_function_ptr5( at_plotfunclog ,alias_at_plotfunclog,&__plotfunclog,_QUOTE_ARGUMENTS,true);
 
   gen _plotfuncoffset(const gen & args,const context * contextptr){
-    if ( args.type==_STRNG && args.subtype==-1) return  args;
-    vecteur args_to_send;
-    vecteur & args_in = *args._VECTptr;
-    args_to_send.reserve(int(args._VECTptr->size())-1);
-    for(int i = 0; i < (int(args_in.size())-1); i++) {
-      args_to_send.push_back(args_in[i]);
-    }
-    return funcplotfunc(gen(args_to_send,_SEQ__VECT),false,false,args._VECTptr->back(),contextptr);
+    return _plotfuncopts(args, false, false, contextptr);
   }
   static const char _plotfuncoffset_s []="plotfuncoffset";
   static define_unary_function_eval_quoted (__plotfuncoffset,&giac::_plotfuncoffset,_plotfuncoffset_s);
@@ -7839,8 +8046,14 @@ namespace giac {
   static define_unary_function_eval2 (__curve,&giac::_curve,_curve_s,&printascurve);
   define_unary_function_ptr5( at_curve ,alias_at_curve,&__curve,0,true);
 
-
+#ifdef SWIFT_CALCS_OPTIONS
   gen plotparam(const gen & f,const gen & vars,const vecteur & attributs,bool densityplot,double function_xmin,double function_xmax,double function_ymin,double function_ymax,double function_tmin, double function_tmax,double function_tstep,const gen & equation,const gen & parameq,const context * contextptr){
+    return plotparam(f, vars, attributs, densityplot, false, false, plus_one, plus_one, function_xmin, function_xmax, function_ymin, function_ymax, function_tmin,  function_tmax, function_tstep, equation, parameq,contextptr);
+  }  
+  gen plotparam(const gen & f,const gen & vars,const vecteur & attributs,bool densityplot,const bool logx, const bool logy, const gen t_unit, const gen t_unit_orig,double function_xmin,double function_xmax,double function_ymin,double function_ymax,double function_tmin, double function_tmax,double function_tstep,const gen & equation,const gen & parameq,const context * contextptr){
+#else
+  gen plotparam(const gen & f,const gen & vars,const vecteur & attributs,bool densityplot,double function_xmin,double function_xmax,double function_ymin,double function_ymax,double function_tmin, double function_tmax,double function_tstep,const gen & equation,const gen & parameq,const context * contextptr){
+#endif
     if (function_tstep<=0 || (function_tmax-function_tmin)/function_tstep>max_nstep)
       return gensizeerr(gettext("Plotparam: unable to discretize: tmin, tmax, tstep=")+print_DOUBLE_(function_tmin,12)+","+print_DOUBLE_(function_tmax,12)+","+print_DOUBLE_(function_tstep,12)+gettext("\nTry a larger value for tstep"));
     gen fC(f);
@@ -7854,16 +8067,7 @@ namespace giac {
     // approx_mode(true,contextptr);
     gen locvar(vars);
     locvar.subtype=0;
-#ifdef SWIFT_CALCS_OPTIONS
-    bool has_offset_units = _usimplify_hits_temperature(f,contextptr);
-    gen xy,xy_,x_,y_;
-    if(has_offset_units)
-      xy=quotesubst(f,vars,locvar,contextptr);
-    else
-      xy=quotesubst(mksa_value(f,contextptr),vars,locvar,contextptr);
-#else
     gen xy=quotesubst(f,vars,locvar,contextptr),xy_,x_,y_;
-#endif
     bool joindre;
     vecteur localvar(1,vars),res;
     context * newcontextptr=(context *) contextptr;
@@ -7871,32 +8075,423 @@ namespace giac {
     vecteur chemin;
     double i,j,oldi=0,oldj=0,entrei,entrej;
     double t=function_tmin;
+    
+#ifdef SWIFT_CALCS_OPTIONS
+    double bound_code = 1791.583; // Hack...this specific value means the xmin is NOT defined by user
+    bool x_min_provided = std::abs(bound_code - function_xmin) > 1e-10;
+    bool x_max_provided = std::abs(bound_code - function_xmax) > 1e-10;
+    bool y_min_provided = std::abs(bound_code - function_ymin) > 1e-10;
+    bool y_max_provided = std::abs(bound_code - function_ymax) > 1e-10;
+    std::vector<double> t_vals;
+    t_vals = genLinspace(function_tmin, function_tmax, (int)function_tstep+1);
+
+    // Indeces will be my ordered points, and will point to the index in res where the point lives (res wont be in order)
+    int indeces[(int)function_tstep+1];
+    double x_vals[(int)function_tstep+1];
+    double y_vals[(int)function_tstep+1];
+    bool defined[(int)function_tstep+1];
+    double y_max = -1*std::numeric_limits<double>::max();
+    double y_min = std::numeric_limits<double>::max();
+    double x_max = -1*std::numeric_limits<double>::max();
+    double x_min = std::numeric_limits<double>::max();
+    bool all_undefined = true;
+    // Seed the indeces:
+    int counter = 0;
+    int count = 0;
+    while(true) {
+      defined[counter] = true;
+      local_sto(t_vals[count] * t_unit,*vars._IDNTptr,newcontextptr);
+      if (xy.type==_VECT && xy._VECTptr->size()==2){
+        x_ = evalf2double_nock(mksa_value(xy._VECTptr->front().evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
+        y_ = evalf2double_nock(mksa_value(xy._VECTptr->back().evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
+      } else {
+        xy_ = evalf2double_nock(mksa_value(xy.evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
+        if (xy_.type==_VECT && xy_._VECTptr->size()==2){
+          x_=xy_._VECTptr->front();
+          y_=xy_._VECTptr->back();
+        }
+        else {
+          x_=re(xy_,newcontextptr);
+          y_=im(xy_,newcontextptr).evalf_double(eval_level(contextptr),newcontextptr);
+        }
+      }
+      if ((x_.type!=_DOUBLE_) || has_inf_or_undef(x_)) {
+        // rounding errors can lead to 'complex' numbers with 1e-15 for imaginary portion.  If so, drop it
+        if((x_.type == _CPLX) && is_greater(abs(re(x_,contextptr),contextptr),abs(im(x_,contextptr)*1e10,contextptr),contextptr)) {
+          x_vals[counter] = re(x_, contextptr)._DOUBLE_val;
+          if(x_vals[counter] > x_max) x_max = x_vals[counter];
+          if(x_vals[counter] < x_min) x_min = x_vals[counter];
+        } else
+          defined[counter] = false;
+      } else {
+        x_vals[counter] = x_._DOUBLE_val;
+        if(x_vals[counter] > x_max) x_max = x_vals[counter];
+        if(x_vals[counter] < x_min) x_min = x_vals[counter];
+      }
+      if (y_.type!=_DOUBLE_) {
+        // rounding errors can lead to 'complex' numbers with 1e-15 for imaginary portion.  If so, drop it
+        if((y_.type == _CPLX) && is_greater(abs(re(y_,contextptr),contextptr),abs(im(y_,contextptr)*1e10,contextptr),contextptr)) {
+          y_vals[counter] = re(y_, contextptr)._DOUBLE_val;
+          if(y_vals[counter] > y_max) y_max = y_vals[counter];
+          if(y_vals[counter] < y_min) y_min = y_vals[counter];
+        } else
+          defined[counter] = false;
+      } else {
+        y_vals[counter] = y_._DOUBLE_val;
+        if(y_vals[counter] > y_max) y_max = y_vals[counter];
+        if(y_vals[counter] < y_min) y_min = y_vals[counter];
+      }
+      if(defined[counter]) all_undefined = false; 
+      indeces[counter++] = count;
+      if(count == (int)function_tstep) break;
+      count += (int)(function_tstep/20. * (std_rand()*0.5/RAND_MAX+0.75)); // slight randomness here to help get through periodic functions where aliasing could throw everything off
+      if(count > (int)function_tstep) count = (int)function_tstep;
+    }
+    if(!all_undefined) {
+      // Start the adaptive sampling tests to fill in areas of high curvature:
+      int current_index = 1;
+      double max_curvature = 0.1736; // sin 10 degrees
+      while(true) {
+        if((current_index+2) > counter) break; // DONE!
+        int ip, i0, in;
+        ip = indeces[current_index-1];
+        i0 = indeces[current_index];
+        in = indeces[current_index+1];
+        // Is first or second y value undefined?  If so, add value between first and second point
+        if(!defined[current_index-1] || !defined[current_index]) {
+          if((i0-ip) == 1) { // Already at max resolution...move along!
+            current_index++;
+            continue;
+          }
+          int newi = (i0 + ip)/2;
+          defined[counter] = true;
+          local_sto(t_vals[newi] * t_unit,*vars._IDNTptr,newcontextptr);
+          if (xy.type==_VECT && xy._VECTptr->size()==2){
+            x_ = evalf2double_nock(mksa_value(xy._VECTptr->front().evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
+            y_ = evalf2double_nock(mksa_value(xy._VECTptr->back().evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
+          } else {
+            xy_ = evalf2double_nock(mksa_value(xy.evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
+            if (xy_.type==_VECT && xy_._VECTptr->size()==2){
+              x_=xy_._VECTptr->front();
+              y_=xy_._VECTptr->back();
+            }
+            else {
+              x_=re(xy_,newcontextptr);
+              y_=im(xy_,newcontextptr).evalf_double(eval_level(contextptr),newcontextptr);
+            }
+          }
+          if ((x_.type!=_DOUBLE_) || has_inf_or_undef(x_)) {
+            // rounding errors can lead to 'complex' numbers with 1e-15 for imaginary portion.  If so, drop it
+            if((x_.type == _CPLX) && is_greater(abs(re(x_,contextptr),contextptr),abs(im(x_,contextptr)*1e10,contextptr),contextptr)) {
+              x_vals[counter] = re(x_, contextptr)._DOUBLE_val;
+              if(x_vals[counter] > x_max) x_max = x_vals[counter];
+              if(x_vals[counter] < x_min) x_min = x_vals[counter];
+            } else
+              defined[counter] = false;
+          } else {
+            x_vals[counter] = x_._DOUBLE_val;
+            if(x_vals[counter] > x_max) x_max = x_vals[counter];
+            if(x_vals[counter] < x_min) x_min = x_vals[counter];
+          }
+          if (y_.type!=_DOUBLE_) {
+            // rounding errors can lead to 'complex' numbers with 1e-15 for imaginary portion.  If so, drop it
+            if((y_.type == _CPLX) && is_greater(abs(re(y_,contextptr),contextptr),abs(im(y_,contextptr)*1e10,contextptr),contextptr)) {
+              y_vals[counter] = re(y_, contextptr)._DOUBLE_val;
+              if(y_vals[counter] > y_max) y_max = y_vals[counter];
+              if(y_vals[counter] < y_min) y_min = y_vals[counter];
+            } else
+              defined[counter] = false;
+          } else {
+            y_vals[counter] = y_._DOUBLE_val;
+            if(y_vals[counter] > y_max) y_max = y_vals[counter];
+            if(y_vals[counter] < y_min) y_min = y_vals[counter];
+          }
+          indeces[counter++] = newi;
+          insert_to_array(x_vals, y_vals, indeces, defined, current_index-1, counter);
+          continue;
+        }
+        // Is third y value undefined?  If so, add value between second and third point
+        if(!defined[current_index+1]) {
+          if((in-i0) == 1) { // Already at max resolution...move along!
+            current_index++;
+            continue;
+          }
+          int newi = (in + i0)/2;
+          defined[counter] = true;
+          local_sto(t_vals[newi] * t_unit,*vars._IDNTptr,newcontextptr);
+          if (xy.type==_VECT && xy._VECTptr->size()==2){
+            x_ = evalf2double_nock(mksa_value(xy._VECTptr->front().evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
+            y_ = evalf2double_nock(mksa_value(xy._VECTptr->back().evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
+          } else {
+            xy_ = evalf2double_nock(mksa_value(xy.evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
+            if (xy_.type==_VECT && xy_._VECTptr->size()==2){
+              x_=xy_._VECTptr->front();
+              y_=xy_._VECTptr->back();
+            }
+            else {
+              x_=re(xy_,newcontextptr);
+              y_=im(xy_,newcontextptr).evalf_double(eval_level(contextptr),newcontextptr);
+            }
+          }
+          if ((x_.type!=_DOUBLE_) || has_inf_or_undef(x_)) {
+            // rounding errors can lead to 'complex' numbers with 1e-15 for imaginary portion.  If so, drop it
+            if((x_.type == _CPLX) && is_greater(abs(re(x_,contextptr),contextptr),abs(im(x_,contextptr)*1e10,contextptr),contextptr)) {
+              x_vals[counter] = re(x_, contextptr)._DOUBLE_val;
+              if(x_vals[counter] > x_max) x_max = x_vals[counter];
+              if(x_vals[counter] < x_min) x_min = x_vals[counter];
+            } else
+              defined[counter] = false;
+          } else {
+            x_vals[counter] = x_._DOUBLE_val;
+            if(x_vals[counter] > x_max) x_max = x_vals[counter];
+            if(x_vals[counter] < x_min) x_min = x_vals[counter];
+          }
+          if (y_.type!=_DOUBLE_) {
+            // rounding errors can lead to 'complex' numbers with 1e-15 for imaginary portion.  If so, drop it
+            if((y_.type == _CPLX) && is_greater(abs(re(y_,contextptr),contextptr),abs(im(y_,contextptr)*1e10,contextptr),contextptr)) {
+              y_vals[counter] = re(y_, contextptr)._DOUBLE_val;
+              if(y_vals[counter] > y_max) y_max = y_vals[counter];
+              if(y_vals[counter] < y_min) y_min = y_vals[counter];
+            } else
+              defined[counter] = false;
+          } else {
+            y_vals[counter] = y_._DOUBLE_val;
+            if(y_vals[counter] > y_max) y_max = y_vals[counter];
+            if(y_vals[counter] < y_min) y_min = y_vals[counter];
+          }
+          indeces[counter++] = newi;
+          insert_to_array(x_vals, y_vals, indeces, defined, current_index, counter);
+          continue;
+        }
+        // Woohoo! All values defined.  Now lets see if the curvature is acceptable;
+        double xp, x0, xn, x_res;
+        xp = x_vals[current_index-1];
+        x0 = x_vals[current_index];
+        xn = x_vals[current_index+1];
+        double x_min_to_use, x_max_to_use;
+        if(!x_min_provided) {
+          x_min_to_use = x_min;
+        } else {
+          x_min_to_use = function_xmin - (x_max - function_xmin)*.25;
+          if((xp < x_min_to_use) && (x0 < x_min_to_use) && (xn < x_min_to_use)) {
+            //Outside visible window
+            current_index++;
+            continue;
+          }
+          x_min_to_use = function_xmin;
+        }
+        if(!x_max_provided) {
+          x_max_to_use = x_max;
+        } else {
+          x_max_to_use = function_xmax + (function_xmax - x_min_to_use)*.25;
+          if((xp > x_max_to_use) && (x0 > x_max_to_use) && (xn > x_max_to_use)) {
+            //Outside visible window
+            current_index++;
+            continue;
+          }
+          x_max_to_use = function_xmax;
+        } 
+        if(logx) {
+          xp = std::log10(xp);
+          x0 = std::log10(x0);
+          xn = std::log10(xn);
+          x_res = (std::log10(x_max_to_use) - std::log10(x_min_to_use)) / 700;
+        } else
+          x_res = (x_max_to_use - x_min_to_use) / 700;
+        if((x_res > 0) && (std::abs(x0-xp) < x_res) && (std::abs(x0-xn) < x_res) && (std::abs(xn-xp) < x_res)) {
+          // Changes are within window resolution, so no need to try and refine things
+          current_index++;
+          continue;
+        }
+        double yp, y0, yn, y_res;
+        yp = y_vals[current_index-1];
+        y0 = y_vals[current_index];
+        yn = y_vals[current_index+1];
+        double y_min_to_use, y_max_to_use;
+        if(!y_min_provided) {
+          y_min_to_use = y_min;
+        } else {
+          y_min_to_use = function_ymin - (y_max - function_ymin)*.25;
+          if((yp < y_min_to_use) && (y0 < y_min_to_use) && (yn < y_min_to_use)) {
+            //Outside visible window
+            current_index++;
+            continue;
+          }
+          y_min_to_use = function_ymin;
+        }
+        if(!y_max_provided) {
+          y_max_to_use = y_max;
+        } else {
+          y_max_to_use = function_ymax + (function_ymax - y_min_to_use)*.25;
+          if((yp > y_max_to_use) && (y0 > y_max_to_use) && (yn > y_max_to_use)) {
+            //Outside visible window
+            current_index++;
+            continue;
+          }
+          y_max_to_use = function_ymax;
+        } 
+        if(logy) {
+          yp = std::log10(yp);
+          y0 = std::log10(y0);
+          yn = std::log10(yn);
+          y_res = (std::log10(y_max_to_use) - std::log10(y_min_to_use)) / 300;
+        } else
+          y_res = (y_max_to_use - y_min_to_use) / 300;
+        if((y_res > 0) && (std::abs(y0-yp) < y_res) && (std::abs(y0-yn) < y_res) && (std::abs(yn-yp) < y_res)) {
+          // Changes are within window resolution, so no need to try and refine things
+          current_index++;
+          continue;
+        }
+        // Compute curvature:
+        double local_y_max = yp;
+        if(y0 > local_y_max){ local_y_max = y0; }
+        if(yn > local_y_max){ local_y_max = yn; }
+        double local_y_min = yp;
+        if(y0 < local_y_min){ local_y_min = y0; }
+        if(yn < local_y_min){ local_y_min = yn; }
+        double dx0 = (x0-xp)/(xn-xp);
+        double dx1 = (xn-x0)/(xn-xp);
+        double dy0 = (y0-yp)/(local_y_max-local_y_min);
+        double dy1 = (yn-y0)/(local_y_max-local_y_min);
+        double il0 = 1./std::sqrt(dx0*dx0 + dy0*dy0);
+        double il1 = 1./std::sqrt(dx1*dx1 + dy1*dy1);
+        double sinq = (dx0*dy1 - dy0*dx1) * il0 * il1;
+        if(fabs(sinq) > max_curvature) {
+          // Need to insert more points around where I am.  Insert a new point before me:
+          if(((i0-ip) == 1) && ((in-i0) == 1)) {
+            // Reached maximum resolution
+            current_index++;
+            continue;
+          } 
+          int index_change = 0;
+          if((i0-ip) > 1) { 
+            int newi = (i0 + ip)/2;
+            defined[counter] = true;
+            local_sto(t_vals[newi] * t_unit,*vars._IDNTptr,newcontextptr);
+            if (xy.type==_VECT && xy._VECTptr->size()==2){
+              x_ = evalf2double_nock(mksa_value(xy._VECTptr->front().evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
+              y_ = evalf2double_nock(mksa_value(xy._VECTptr->back().evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
+            } else {
+              xy_ = evalf2double_nock(mksa_value(xy.evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
+              if (xy_.type==_VECT && xy_._VECTptr->size()==2){
+                x_=xy_._VECTptr->front();
+                y_=xy_._VECTptr->back();
+              }
+              else {
+                x_=re(xy_,newcontextptr);
+                y_=im(xy_,newcontextptr).evalf_double(eval_level(contextptr),newcontextptr);
+              }
+            }
+            if ((x_.type!=_DOUBLE_) || has_inf_or_undef(x_)) {
+              // rounding errors can lead to 'complex' numbers with 1e-15 for imaginary portion.  If so, drop it
+              if((x_.type == _CPLX) && is_greater(abs(re(x_,contextptr),contextptr),abs(im(x_,contextptr)*1e10,contextptr),contextptr)) {
+                x_vals[counter] = re(x_, contextptr)._DOUBLE_val;
+                if(x_vals[counter] > x_max) x_max = x_vals[counter];
+                if(x_vals[counter] < x_min) x_min = x_vals[counter];
+              } else
+                defined[counter] = false;
+            } else {
+              x_vals[counter] = x_._DOUBLE_val;
+              if(x_vals[counter] > x_max) x_max = x_vals[counter];
+              if(x_vals[counter] < x_min) x_min = x_vals[counter];
+            }
+            if (y_.type!=_DOUBLE_) {
+              // rounding errors can lead to 'complex' numbers with 1e-15 for imaginary portion.  If so, drop it
+              if((y_.type == _CPLX) && is_greater(abs(re(y_,contextptr),contextptr),abs(im(y_,contextptr)*1e10,contextptr),contextptr)) {
+                y_vals[counter] = re(y_, contextptr)._DOUBLE_val;
+                if(y_vals[counter] > y_max) y_max = y_vals[counter];
+                if(y_vals[counter] < y_min) y_min = y_vals[counter];
+              } else
+                defined[counter] = false;
+            } else {
+              y_vals[counter] = y_._DOUBLE_val;
+              if(y_vals[counter] > y_max) y_max = y_vals[counter];
+              if(y_vals[counter] < y_min) y_min = y_vals[counter];
+            }
+            indeces[counter++] = newi;
+            insert_to_array(x_vals, y_vals, indeces, defined, current_index-1, counter);
+            index_change = 1;
+          }
+          if((in-i0) > 1) { 
+            int newi = (in + i0)/2;
+            defined[counter] = true;
+            local_sto(t_vals[newi] * t_unit,*vars._IDNTptr,newcontextptr);
+            if (xy.type==_VECT && xy._VECTptr->size()==2){
+              x_ = evalf2double_nock(mksa_value(xy._VECTptr->front().evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
+              y_ = evalf2double_nock(mksa_value(xy._VECTptr->back().evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
+            } else {
+              xy_ = evalf2double_nock(mksa_value(xy.evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
+              if (xy_.type==_VECT && xy_._VECTptr->size()==2){
+                x_=xy_._VECTptr->front();
+                y_=xy_._VECTptr->back();
+              }
+              else {
+                x_=re(xy_,newcontextptr);
+                y_=im(xy_,newcontextptr).evalf_double(eval_level(contextptr),newcontextptr);
+              }
+            }
+            if ((x_.type!=_DOUBLE_) || has_inf_or_undef(x_)) {
+              // rounding errors can lead to 'complex' numbers with 1e-15 for imaginary portion.  If so, drop it
+              if((x_.type == _CPLX) && is_greater(abs(re(x_,contextptr),contextptr),abs(im(x_,contextptr)*1e10,contextptr),contextptr)) {
+                x_vals[counter] = re(x_, contextptr)._DOUBLE_val;
+                if(x_vals[counter] > x_max) x_max = x_vals[counter];
+                if(x_vals[counter] < x_min) x_min = x_vals[counter];
+              } else
+                defined[counter] = false;
+            } else {
+              x_vals[counter] = x_._DOUBLE_val;
+              if(x_vals[counter] > x_max) x_max = x_vals[counter];
+              if(x_vals[counter] < x_min) x_min = x_vals[counter];
+            }
+            if (y_.type!=_DOUBLE_) {
+              // rounding errors can lead to 'complex' numbers with 1e-15 for imaginary portion.  If so, drop it
+              if((y_.type == _CPLX) && is_greater(abs(re(y_,contextptr),contextptr),abs(im(y_,contextptr)*1e10,contextptr),contextptr)) {
+                y_vals[counter] = re(y_, contextptr)._DOUBLE_val;
+                if(y_vals[counter] > y_max) y_max = y_vals[counter];
+                if(y_vals[counter] < y_min) y_min = y_vals[counter];
+              } else
+                defined[counter] = false;
+            } else {
+              y_vals[counter] = y_._DOUBLE_val;
+              if(y_vals[counter] > y_max) y_max = y_vals[counter];
+              if(y_vals[counter] < y_min) y_min = y_vals[counter];
+            }
+            indeces[counter++] = newi;
+            insert_to_array(x_vals, y_vals, indeces, defined, current_index+index_change, counter);
+          }
+        } else
+          current_index++;
+      }
+    }
+    // Should have a nice array of numbers now.  Go ahead and build output array:
+    double u_offset, u_coeff;
+    if(is_one(t_unit_orig) || has_inf_or_undef(t_unit_orig)) {
+      u_offset = 0;
+      u_coeff = 1;
+    } else {
+      u_offset = mksa_offset(symbolic(at_unit,makevecteur(plus_one,t_unit_orig)),contextptr)._DOUBLE_val;
+      u_coeff = mksa_coefficient(symbolic(at_unit,makevecteur(plus_one,t_unit_orig)), contextptr)._DOUBLE_val;
+    }
+    for(int count = 0; count < counter; count++) {
+      double t_val = t_vals[indeces[count]]/u_coeff - u_offset;
+      if(defined[count])
+        res.push_back(makevecteur(t_val,x_vals[count],y_vals[count]));
+      else
+        res.push_back(makevecteur(t_val,plus_one,plus_inf));
+    }
+#else
     int nstep=int((function_tmax-function_tmin)/function_tstep+.5);
+
     // bool old_io_graph=io_graph(contextptr);
     // io_graph(false,contextptr);
     for (int count=0;count<=nstep;++count,t+= function_tstep){
       local_sto_double(t,*vars._IDNTptr,newcontextptr);
       // vars._IDNTptr->localvalue->back()._DOUBLE_val =t;
       if (xy.type==_VECT && xy._VECTptr->size()==2){
-#ifdef SWIFT_CALCS_OPTIONS
-        if(has_offset_units)
-          x_ = evalf2double_nock(mksa_value(xy._VECTptr->front().evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
-        else
-#endif
 	  x_=xy._VECTptr->front().evalf2double(eval_level(contextptr),newcontextptr);
-#ifdef SWIFT_CALCS_OPTIONS
-        if(has_offset_units)
-          y_ = evalf2double_nock(mksa_value(xy._VECTptr->back().evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
-        else
-#endif
 	  y_=xy._VECTptr->back().evalf2double(eval_level(contextptr),newcontextptr);
       }
       else {
-#ifdef SWIFT_CALCS_OPTIONS
-        if(has_offset_units)
-          xy_ = evalf2double_nock(mksa_value(xy.evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
-        else
-#endif
 	  xy_=xy.evalf2double(eval_level(contextptr),newcontextptr);
 	if (xy_.type==_VECT && xy_._VECTptr->size()==2){
 	  x_=xy_._VECTptr->front();
@@ -7916,11 +8511,6 @@ namespace giac {
 	     (fabs(oldi-i)>(function_xmax-function_xmin)/5) ){
 	  local_sto_double_increment(-function_tstep/2,*vars._IDNTptr,newcontextptr);
 	  // vars._IDNTptr->localvalue->back()._DOUBLE_val -= function_tstep/2;
-#ifdef SWIFT_CALCS_OPTIONS
-          if(has_offset_units)
-            xy_ = evalf2double_nock(mksa_value(xy.evalf(eval_level(contextptr),newcontextptr),newcontextptr),eval_level(contextptr),newcontextptr);
-          else
-#endif
 	  xy_=xy.evalf2double(eval_level(contextptr),newcontextptr);
 	  if (xy_.type==_VECT && xy_._VECTptr->size()==2){
 	    x_=xy_._VECTptr->front();
@@ -7953,33 +8543,18 @@ namespace giac {
       else
 	joindre=true;
       if (joindre)
-#ifdef SWIFT_CALCS_OPTIONS
-          chemin.push_back(makevecteur(i,j));
-#else
 	  chemin.push_back(gen(i,j));
-#endif
       else {
 	if (!chemin.empty()) {
-#ifdef SWIFT_CALCS_OPTIONS 
-            // THIS IS AN AREA WHERE WE BLOW UP...WHAT SHOULD WE DO?
-#else
 	    res.push_back(symb_pnt(symb_curve(gen(makevecteur(fC,vars,function_tmin,t,0,equation,parameq),_PNT__VECT),gen(chemin,_GROUP__VECT)),attribut,contextptr));
-#endif
         }
 	function_tmin=t;
-#ifdef SWIFT_CALCS_OPTIONS
-          chemin.push_back(makevecteur(i,j));
-#else
 	  chemin=vecteur(1,gen(i,j));
-#endif
       }
       oldi=i;
       oldj=j;
     }
     if (!chemin.empty())
-#ifdef SWIFT_CALCS_OPTIONS // Swift Calcs options to output 2d array of x y pairs, instead of points etc as we do our own plotting
-      res = mergevecteur(res, chemin);
-#else
       res.push_back(symb_pnt(symb_curve(gen(makevecteur(fC,vars,function_tmin,function_tmax,0,equation,parameq),_PNT__VECT),gen(chemin,_GROUP__VECT)),attribut,contextptr));
 #endif
     leave(protect,localvar,newcontextptr);
@@ -7996,8 +8571,14 @@ namespace giac {
     // gen e(res,_SEQ__VECT);
     return res; // e;
   }
-
+#ifdef SWIFT_CALCS_OPTIONS
   gen paramplotparam(const gen & args,bool densityplot,const context * contextptr){
+    return paramplotparam(args, densityplot, false, false, contextptr);
+  }
+  gen paramplotparam(const gen & args,bool densityplot,const bool logx, const bool logy, const context * contextptr){
+#else
+  gen paramplotparam(const gen & args,bool densityplot,const context * contextptr){
+#endif
     // args= [x(t)+i*y(t),t] should add a t interval
     bool f_autoscale=autoscale;
     if (args.type!=_VECT)
@@ -8013,6 +8594,20 @@ namespace giac {
       return symbolic(at_plotparam,args);
     gen f=vargs.front();
 #ifdef SWIFT_CALCS_OPTIONS
+    gen & t_unit_finder=vargs[1]._SYMBptr->feuille;
+    vecteur & t_unit_finderv=*t_unit_finder._VECTptr;
+    gen t_unit_finder_h(t_unit_finderv[1]);
+    t_unit_finder_h=t_unit_finder_h._SYMBptr->feuille;
+    gen t_unit_orig = t_unit_finder_h._VECTptr->front();
+    gen t_unit = mksa_reduce_base(t_unit_finder_h._VECTptr->front(),contextptr);
+    if(is_one(t_unit)) {
+      t_unit_orig = evalf(t_unit_finder_h._VECTptr->back(),0,contextptr);
+      t_unit = mksa_reduce_base(t_unit_finder_h._VECTptr->back(),contextptr);
+    }
+    if((t_unit_orig.type == _SYMB) && t_unit_orig.is_symb_of_sommet(at_unit))
+      t_unit_orig = t_unit_orig._SYMBptr->feuille._VECTptr->back();
+    else
+      t_unit_orig = plus_one;
     vargs = mksa_value(vargs,contextptr);
 #endif
     gen vars=vargs[1];
@@ -8061,6 +8656,16 @@ namespace giac {
 	f_autoscale=false;
 	readrange(vargs[i],tmin,tmax,vargs[i],tmin,tmax,contextptr); 
 	umin=tmin; umax=tmax;
+      }
+#endif
+#ifdef SWIFT_CALCS_OPTIONS
+      if (readvar(vargs[i])==gen(identificateur("x__limits"))) {
+  f_autoscale=false;
+  readrange(vargs[i],gnuplot_xmin,gnuplot_xmax,vargs[i],xmin,xmax,contextptr);
+      }
+      if (readvar(vargs[i])==gen(identificateur("y__limits"))) {
+  f_autoscale=false;
+  readrange(vargs[i],gnuplot_ymin,gnuplot_ymax,vargs[i],ymin,ymax,contextptr);
       }
 #endif
       if (readvar(vargs[i])==x__IDNT_e){
@@ -8146,8 +8751,45 @@ namespace giac {
     }
     if (!readrange(vars,tmin,tmax,vars,tmin,tmax,contextptr))
       return gensizeerr(gettext("2nd arg must be a free variable"));
+#ifdef SWIFT_CALCS_OPTIONS
+    return plotparam(f,vars,attributs,densityplot,logx,logy,t_unit,t_unit_orig,xmin,xmax,ymin,ymax,tmin,tmax,tstep,eq,parameq,contextptr);
+#else
     return plotparam(f,vars,attributs,densityplot,xmin,xmax,ymin,ymax,tmin,tmax,tstep,eq,parameq,contextptr);
+#endif
   }
+#ifdef SWIFT_CALCS_OPTIONS
+  gen _plotparam(const gen & args,const context * contextptr){
+    if ( args.type==_STRNG && args.subtype==-1) return  args;
+    return paramplotparam(args,true,false,false,contextptr);
+  }
+  static const char _plotparam_s []="plotparam";
+  static define_unary_function_eval_quoted (__plotparam,&giac::_plotparam,_plotparam_s);
+  define_unary_function_ptr5( at_plotparam ,alias_at_plotparam,&__plotparam,_QUOTE_ARGUMENTS,true);
+  
+  gen _plotparamlog(const gen & args,const context * contextptr){
+    if ( args.type==_STRNG && args.subtype==-1) return  args;
+    return paramplotparam(args,true,true,false,contextptr);
+  }
+  static const char _plotparamlog_s []="plotparamlog";
+  static define_unary_function_eval_quoted (__plotparamlog,&giac::_plotparamlog,_plotparamlog_s);
+  define_unary_function_ptr5( at_plotparamlog ,alias_at_plotparamlog,&__plotparamlog,_QUOTE_ARGUMENTS,true);
+  
+  gen _plotparamylog(const gen & args,const context * contextptr){
+    if ( args.type==_STRNG && args.subtype==-1) return  args;
+    return paramplotparam(args,true,false,true,contextptr);
+  }
+  static const char _plotparamylog_s []="plotparamylog";
+  static define_unary_function_eval_quoted (__plotparamylog,&giac::_plotparamylog,_plotparamylog_s);
+  define_unary_function_ptr5( at_plotparamylog ,alias_at_plotparamylog,&__plotparamylog,_QUOTE_ARGUMENTS,true);
+  
+  gen _plotparamyloglog(const gen & args,const context * contextptr){
+    if ( args.type==_STRNG && args.subtype==-1) return  args;
+    return paramplotparam(args,true,true,true,contextptr);
+  }
+  static const char _plotparamyloglog_s []="plotparamyloglog";
+  static define_unary_function_eval_quoted (__plotparamyloglog,&giac::_plotparamyloglog,_plotparamyloglog_s);
+  define_unary_function_ptr5( at_plotparamyloglog ,alias_at_plotparamyloglog,&__plotparamyloglog,_QUOTE_ARGUMENTS,true);
+#else
   gen _plotparam(const gen & args,const context * contextptr){
     if ( args.type==_STRNG && args.subtype==-1) return  args;
     return paramplotparam(args,true,contextptr);
@@ -8155,6 +8797,7 @@ namespace giac {
   static const char _plotparam_s []="plotparam";
   static define_unary_function_eval_quoted (__plotparam,&giac::_plotparam,_plotparam_s);
   define_unary_function_ptr5( at_plotparam ,alias_at_plotparam,&__plotparam,_QUOTE_ARGUMENTS,true);
+#endif
 
   static const char _courbe_parametrique_s []="courbe_parametrique";
   static define_unary_function_eval_quoted (__courbe_parametrique,&giac::_plotparam,_courbe_parametrique_s);
