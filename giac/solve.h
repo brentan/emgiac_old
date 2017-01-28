@@ -56,6 +56,9 @@ namespace giac {
   extern const unary_function_ptr * const  at_solve ;
   gen in_fsolve(vecteur & v,GIAC_CONTEXT);
   gen _fsolve(const gen & args,GIAC_CONTEXT);
+  #ifdef SWIFT_CALCS_OPTIONS
+    gen apply_final_units(const gen & a,const gen & m,const gen & u,const gen & o);
+  #endif
   // also sets iszero to -2 if endpoints have same sign, -1 if err or undef
   // 1 if zero found, 2 if sign reversal (no undef),
   // set iszero to 0 on entry if only one root

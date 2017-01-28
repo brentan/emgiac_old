@@ -5222,6 +5222,23 @@ namespace giac {
   gen apply_units(const gen & g, const gen & u, const gen & o) {
     return apply_units(g+o,u);
   }
+  vecteur apply_final_units(const vecteur & a,const vecteur & m,const vecteur & u,const vecteur & o) {
+    const_iterateur at=a.begin(),atend=a.end(), mt=m.begin(),mtend=m.end(), ut=u.begin(),utend=u.end(), ot=o.begin(),otend=o.end();
+    vecteur vout;
+    vout.reserve(atend-at);
+    for (;at!=atend;++at,++mt,++ut,++ot){
+      gen tmp=apply_final_units(*at,*mt,*ut,*ot);
+      vout.push_back(tmp);
+    }
+    return vout;
+  }
+  vecteur apply_final_units(const vecteur & a,const gen & m,const gen & u,const vecteur & o) {
+    if(m.type == _VECT) return apply_final_units(a,*m._VECTptr,*u._VECTptr,o);
+    vecteur vout;
+    vout.reserve(1);
+    vout.push_back(apply_final_units(a.front(),m,u,o.front()));
+    return vout;
+  }
   gen odesolve(const gen & t0orig,const gen & t1orig,const gen & f,const gen & y0orig,gen & tstep_in,bool tstep_passed,bool return_curve,double * ymin,double * ymax,int maxstep,GIAC_CONTEXT){ 
 #else
   gen odesolve(const gen & t0orig,const gen & t1orig,const gen & f,const gen & y0orig,const gen & tstep_in,bool return_curve,double * ymin,double * ymax,int maxstep,GIAC_CONTEXT){ 
@@ -5445,9 +5462,6 @@ namespace giac {
        if (err<=hoptimal) then time += h; y_init=RK5_final; h=min(hoptimal,t_final-t_current)
        else h=hoptimal
      */
-#ifdef SWIFT_CALCS_OPTIONS
-    double tstep_initial = tstep;
-#endif
     gen tolerance=epsilon(contextptr)>1e-12?epsilon(contextptr):1e-12;
     vecteur yt(dim+1),ytvar(yv);
 #ifdef SWIFT_CALCS_OPTIONS
@@ -5497,6 +5511,10 @@ namespace giac {
       t1_e = t1_e + 273.15;
       offset_t = gen(-273.15);
     }
+    bool do_mksa = false;
+    if(_usimplify_hits_temperature(evalf(eval(gen(odesolve_f),eval_level(contextptr),contextptr),1,contextptr),contextptr)) 
+      do_mksa = true;
+    double tstep_initial = tstep;
 #else
     for (int i=0;i<dim;++i)
       yt[i]=y0v[i];
@@ -5545,10 +5563,27 @@ namespace giac {
         out += gen2string(ytvar[i]) + ". The function returned units of ";
         out += gen2string(_usimplify_base(symbolic(at_unit, makevecteur(plus_one, firsteval[i])),contextptr)) + ", however units of " + gen2string(_usimplify_base(symbolic(at_unit, makevecteur(plus_one, (y_unit.type==_VECT ? (*y_unit._VECTptr)[i] : y_unit)/t_unit)),contextptr)) + " were expected.";
         return gensizeerr(gettext(out.data()));
-      } else
+      } else if(do_mksa)
         odesolve_f[i] = odesolve_f[i] * factor; // Add in conversion factor to the expression
     }
-    firsteval=remove_units(subst(odesolve_f,ytvar,apply_units(yt,dim,y_unit,t_unit),false,contextptr));
+
+    if(!do_mksa) {// Do unit simplifications upfront:
+      odesolve_f = mksa_value(odesolve_f, contextptr);
+      t0_e =  mksa_value(symbolic(at_unit,makevecteur(t0_e,t_unit)), contextptr);
+      last_t_e = t0_e;
+      t1_e =  mksa_value(symbolic(at_unit,makevecteur(t1_e,t_unit)), contextptr);
+      tstep = mksa_value(symbolic(at_unit,makevecteur(tstep,t_unit)), contextptr)._DOUBLE_val;
+      tstep_initial = tstep;
+      t_unit = get_units(mksa_reduce_base(symbolic(at_unit,makevecteur(plus_one,t_unit)), contextptr));
+      yt = mksa_value(apply_units(yt,dim,y_unit,t_unit),contextptr);
+      if(y_unit.type == _VECT) {
+        for (int i=0;i<dim;++i) 
+          (*y_unit._VECTptr)[i] = get_units(mksa_reduce_base(symbolic(at_unit,makevecteur(plus_one,(*y_unit._VECTptr)[i])), contextptr));
+      } else
+        y_unit = get_units(mksa_reduce_base(symbolic(at_unit,makevecteur(plus_one,y_unit)), contextptr));
+      firsteval=subst(odesolve_f,ytvar,yt,false,contextptr);
+    } else
+      firsteval=remove_units(subst(odesolve_f,ytvar,apply_units(yt,dim,y_unit,t_unit),false,contextptr));
     gen direction=t1_e-t0_e;
     double temps_total=(abs(direction,contextptr) - tolerance)._DOUBLE_val,temps=0;
     direction=direction/temps_total;
@@ -5583,10 +5618,17 @@ namespace giac {
 	yt1[dim]=yt[dim]+butcher_c[j]*dt;
 	vecteur & bkj = *butcher_k[j]._VECTptr;
 #ifdef SWIFT_CALCS_OPTIONS
-	if (j<6)
-	  bkj=remove_units(subst(odesolve_f,ytvar,apply_units(yt1,dim,y_unit,t_unit),false,contextptr));
-	else
-	  bkj=lasteval=remove_units(subst(odesolve_f,ytvar,apply_units(yt1,dim,y_unit,t_unit),false,contextptr));
+  if(do_mksa) {
+  	if (j<6)
+  	  bkj=remove_units(subst(odesolve_f,ytvar,apply_units(yt1,dim,y_unit,t_unit),false,contextptr));
+  	else
+  	  bkj=lasteval=remove_units(subst(odesolve_f,ytvar,apply_units(yt1,dim,y_unit,t_unit),false,contextptr));
+  } else {
+    if (j<6)
+      bkj=subst(odesolve_f,ytvar,yt1,false,contextptr);
+    else
+      bkj=lasteval=subst(odesolve_f,ytvar,yt1,false,contextptr);
+  }
 #else
         if (j<6)
           bkj=subst(odesolve_f,ytvar,yt1,false,contextptr);
@@ -5636,11 +5678,16 @@ namespace giac {
           tstep=hopt._DOUBLE_val;
         if(return_curve && tstep_passed && ((nstep+1) >= maxstep) && (maxstep < 50000) && (tot_size < 1000)) maxstep += 1;
         if(return_curve && tstep_passed && !is_greater(tstep_initial-tolerance, abs(t_e - last_t_e,contextptr),contextptr)) {
-          resv.push_back(mergevecteur(makevecteur(apply_units(t_e,t_unit_orig,offset_t)),apply_units(y_final5,y_unit_orig,offset_y)));
+          if(do_mksa)
+            resv.push_back(mergevecteur(makevecteur(apply_units(t_e,t_unit_orig,offset_t)),apply_units(y_final5,y_unit_orig,offset_y)));
+          else
+            resv.push_back(mergevecteur(makevecteur(apply_final_units(t_e,t_unit,t_unit_orig,offset_t)),apply_final_units(y_final5,y_unit,y_unit_orig,offset_y)));
           last_t_e = t_e;
           tot_size++;
-        } else if (return_curve && !tstep_passed)
+        } else if (return_curve && !tstep_passed && do_mksa)
           resv.push_back(mergevecteur(makevecteur(apply_units(t_e,t_unit_orig,offset_t)),apply_units(y_final5,y_unit_orig,offset_y)));
+        else if (return_curve && !tstep_passed)
+          resv.push_back(mergevecteur(makevecteur(apply_final_units(t_e,t_unit,t_unit_orig,offset_t)),apply_final_units(y_final5,y_unit,y_unit_orig,offset_y)));
         if(tstep_passed && is_greater(t_e + tstep, last_t_e + tstep_initial,contextptr)) 
           tstep = abs(last_t_e + tstep_initial - t_e,contextptr)._DOUBLE_val;
 #else
@@ -5665,7 +5712,10 @@ namespace giac {
     else {
       if (t_e!=t1_e)
 #ifdef SWIFT_CALCS_OPTIONS
+      if(do_mksa)
         return mergevecteur(makevecteur(apply_units(t_e,t_unit_orig,offset_t)),apply_units(y_final5,y_unit_orig,offset_y));
+      else
+        return mergevecteur(makevecteur(apply_final_units(t_e,t_unit,t_unit_orig,offset_t)),apply_final_units(y_final5,y_unit,y_unit_orig,offset_y));
 #else
         return makevecteur(t_e,y_final5);
 #endif

@@ -4106,11 +4106,22 @@ namespace giac {
   gen apply_final_units(const gen & a,const gen & m,const gen & u,const gen & o) {
     if(a.type==_VECT) {
       gen a2 = a;
-      for(int i = 0; i < int(a._VECTptr->size()); i++)
-        (*a2._VECTptr)[i] = ((*a._VECTptr)[i] + (*o._VECTptr)[i])  * _usimplify_base(symbolic(at_unit, makevecteur(plus_one, (*m._VECTptr)[i]/(*u._VECTptr)[i])),context0);
+      for(int i = 0; i < int(a._VECTptr->size()); i++) {
+        if((*u._VECTptr)[i]==_degF_unit && (*m._VECTptr)[i]==_K_unit)
+          (*a2._VECTptr)[i] = (*a._VECTptr)[i] * _usimplify_base(symbolic(at_unit, makevecteur(plus_one, (*m._VECTptr)[i]/_Rankine_unit)),context0) + (*o._VECTptr)[i];
+        else if((*u._VECTptr)[i]==_degC_unit && (*m._VECTptr)[i]==_K_unit)
+          (*a2._VECTptr)[i] = (*a._VECTptr)[i] + (*o._VECTptr)[i];
+        else
+          (*a2._VECTptr)[i] = (*a._VECTptr)[i] * _usimplify_base(symbolic(at_unit, makevecteur(plus_one, (*m._VECTptr)[i]/(*u._VECTptr)[i])),context0) + (*o._VECTptr)[i];
+      }
       return apply_units(a2, u);
     } else {
-      return apply_units((a+o) * _usimplify_base(symbolic(at_unit, makevecteur(plus_one, m/u)),context0), u);
+      if(u==_degF_unit && m==_K_unit)
+        return apply_units(a * _usimplify_base(symbolic(at_unit, makevecteur(plus_one, m/_Rankine_unit)),context0) + o, u);
+      else if(u==_degC_unit && m==_K_unit)
+        return apply_units(a + o, u);
+      else
+        return apply_units(a * _usimplify_base(symbolic(at_unit, makevecteur(plus_one, m/u)),context0) + o, u);
     }
   }
 #endif
@@ -4181,8 +4192,16 @@ namespace giac {
         offset_a = gen(-273.15);
       }
     }
-    guess = mksa_value(apply_units(guess, a_unit),contextptr); // convert guess to mksa
     gen mksa_a_unit = get_units(mksa_reduce_base(a_unit, contextptr));
+    guess = mksa_value(apply_units(guess, a_unit),contextptr); // convert guess to mksa
+
+    // Test for any offset units in the expressions...if so, we have to do unit simplifications on each loop, otherwise we can 
+    // do it once upfront, saving a boatload of computational time
+    bool do_mksa = false;
+    if(_usimplify_hits_temperature(evalf(eval(f,eval_level(contextptr),contextptr),1,contextptr),contextptr)) 
+      do_mksa = true;
+    else // Do unit simplifications upfront:
+      f = mksa_value(f, contextptr);
 #endif
     if (guess.is_symb_of_sommet(at_interval))
       guess=(guess._SYMBptr->feuille[0]+guess._SYMBptr->feuille[1])/2;
@@ -4207,10 +4226,11 @@ namespace giac {
       try {
 #endif
 #ifdef SWIFT_CALCS_OPTIONS
+      if(do_mksa)
         fa=mksa_value(evalf(eval(subst(f,x,apply_units(a,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),1,contextptr),contextptr);
-#else
-	fa=evalf(eval(subst(f,x,a,false,contextptr),eval_level(contextptr),contextptr),1,contextptr); 
+      else
 #endif
+	fa=evalf(eval(subst(f,x,a,false,contextptr),eval_level(contextptr),contextptr),1,contextptr); 
 	// First loop to localize the solution with prefactor
 	gen lambda(init_prefactor);
 	int k;
@@ -4223,10 +4243,11 @@ namespace giac {
 	    return gensizeerr(gettext("Stopped by user interruption.")); 
 	  }
 #ifdef SWIFT_CALCS_OPTIONS
+      if(do_mksa)
           d=mksa_value(eval(subst(invdf,x,apply_units(a,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),contextptr);
-#else
-          d=eval(subst(invdf,x,a,false,contextptr),eval_level(contextptr),contextptr);
+      else
 #endif
+          d=eval(subst(invdf,x,a,false,contextptr),eval_level(contextptr),contextptr);
 	  // of << k << " " << d << " " << invdf << " " << x << " " << a << " ";
 	  // of << d << " " << fa << " ";
 	  if (inv_after)
@@ -4236,10 +4257,11 @@ namespace giac {
 	  if (is_undef(d) || (d.type==_VECT &&d._VECTptr->empty())){
 	    a=newton_rand(j,real,rand_xmin,rand_xmax,f,contextptr);
 #ifdef SWIFT_CALCS_OPTIONS
+      if(do_mksa)
             fa=mksa_value(evalf(eval(subst(f,x,apply_units(a,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),1,contextptr),contextptr);
-#else
-            fa=evalf(eval(subst(f,x,a,false,contextptr),eval_level(contextptr),contextptr),1,contextptr); 
+      else
 #endif
+            fa=evalf(eval(subst(f,x,a,false,contextptr),eval_level(contextptr),contextptr),1,contextptr); 
 	    continue;
 	  }	    
 	  if (d.type!=_FLOAT_ && d.type!=_DOUBLE_ && d.type!=_CPLX && d.type!=_REAL && d.type!=_VECT && !is_undef(d) && !is_inf(d))
@@ -4247,10 +4269,11 @@ namespace giac {
 	  if (k==0 && is_zero(d,contextptr) && is_greater(abs(fa,contextptr),std::sqrt(eps2),contextptr)){
 	    a=newton_rand(j,real,rand_xmin,rand_xmax,f,contextptr);
 #ifdef SWIFT_CALCS_OPTIONS
+      if(do_mksa)
             fa=mksa_value(evalf(eval(subst(f,x,apply_units(a,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),1,contextptr),contextptr);
-#else
-            fa=evalf(eval(subst(f,x,a,false,contextptr),eval_level(contextptr),contextptr),1,contextptr); 
+      else
 #endif
+            fa=evalf(eval(subst(f,x,a,false,contextptr),eval_level(contextptr),contextptr),1,contextptr); 
 	    continue;
 	  }
 	  // of << d << " " << endl;
@@ -4265,10 +4288,11 @@ namespace giac {
 		break;
 	      }
 #ifdef SWIFT_CALCS_OPTIONS
+        if(do_mksa)
               fa=mksa_value(evalf(eval(subst(f,x,apply_units(a,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),1,contextptr),contextptr);
-#else
-              fa=evalf(eval(subst(f,x,a,false,contextptr),eval_level(contextptr),contextptr),1,contextptr); 
+        else
 #endif
+              fa=evalf(eval(subst(f,x,a,false,contextptr),eval_level(contextptr),contextptr),1,contextptr); 
 	      continue;
 	    }
 	  }
@@ -4276,10 +4300,11 @@ namespace giac {
 	    if(real && !is_zero(im(b,contextptr),contextptr)){
 	      a=newton_rand(j,real,rand_xmin,rand_xmax,contextptr);
 #ifdef SWIFT_CALCS_OPTIONS
+        if(do_mksa)
               fa=mksa_value(evalf(eval(subst(f,x,apply_units(a,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),1,contextptr),contextptr);
-#else
-              fa=evalf(eval(subst(f,x,a,false,contextptr),eval_level(contextptr),contextptr),1,contextptr); 
+        else
 #endif
+              fa=evalf(eval(subst(f,x,a,false,contextptr),eval_level(contextptr),contextptr),1,contextptr); 
 	      continue;
 	    }
 	  }
@@ -4294,10 +4319,11 @@ namespace giac {
 	    break;
 	  }
 #ifdef SWIFT_CALCS_OPTIONS
+    if(do_mksa)
           fb=mksa_value(evalf(eval(subst(f,x,apply_units(b,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),1,contextptr),contextptr);
-#else
-          fb=evalf(eval(subst(f,x,b,false,contextptr),eval_level(contextptr),contextptr),1,contextptr); 
+    else
 #endif
+          fb=evalf(eval(subst(f,x,b,false,contextptr),eval_level(contextptr),contextptr),1,contextptr); 
 	  if ( (real && !is_zero(im(fb,contextptr),contextptr)) ||
 	       is_positive(_l2norm(fb,contextptr)-_l2norm(fa,contextptr),contextptr)){
 	    // Decrease prefactor and try again
@@ -4332,6 +4358,7 @@ namespace giac {
 	    return gensizeerr(gettext("Stopped by user interruption.")); 
 	  }
 #ifdef SWIFT_CALCS_OPTIONS
+        if(do_mksa) {
           fa=mksa_value(evalf(eval(subst(f,x,apply_units(a,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),1,contextptr),contextptr);
           d=mksa_value(eval(subst(invdf,x,apply_units(a,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),contextptr);
           /*if(f_unit.type == _VECT) {
@@ -4344,11 +4371,14 @@ namespace giac {
             d=linsolve(evalf(d,1,contextptr),-fa,contextptr);
           else
             d=-evalf(d*fa,1,contextptr);
-#else
+        } else {
+#endif
           if (inv_after)
             d=linsolve(evalf(subst(invdf,x,a,false,contextptr),1,contextptr),-subst(f,x,a,false,contextptr),contextptr);
           else
             d=-evalf(subst(invdf,x,a,false,contextptr)*subst(f,x,a,false,contextptr),1,contextptr);
+#ifdef SWIFT_CALCS_OPTIONS
+        }
 #endif
 	  a=a+d;
 	  if (is_positive(epsg2-_l2norm(d,contextptr)/max(1,abs(a,contextptr),contextptr),contextptr))
