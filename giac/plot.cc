@@ -1279,23 +1279,61 @@ namespace giac {
     indeces[insert+1] = i_to_insert;
     defined[insert+1] = d_to_insert;
   }
-  double y_prime(const double *x, const double *y, const bool *d, const int i, const int count) {
+  // Not true y_prime, but absolute value of the percieved slope as shown on the plot, so log axes matter!
+  double y_prime(const double *x, const double *y, const bool *d, const int i, const int count, const bool logx, const bool logy) {
     if(i == 0) {
       // Start position
       if(!d[0] || !d[1]) return 0;
-      return std::abs(y[1]-y[0])/(x[1]-x[0]);
+      if(logx && logy)
+        return std::abs(std::log10(y[1])-std::log10(y[0]))/(std::log10(x[1])-std::log10(x[0]));
+      else if(logy)
+        return std::abs(std::log10(y[1])-std::log10(y[0]))/(x[1]-x[0]);
+      else if(logx)
+        return std::abs(y[1]-y[0])/(std::log10(x[1])-std::log10(x[0]));
+      else
+        return std::abs(y[1]-y[0])/(x[1]-x[0]);
     } if(i == (count-1)) {
       // end position
       if(!d[i] || !d[i-1]) return 0;
-      return std::abs(y[i]-y[i-1])/(x[i]-x[i-1]);
+      if(logx && logy)
+        return std::abs(std::log10(y[i])-std::log10(y[i-1]))/(std::log10(x[i])-std::log10(x[i-1]));
+      else if(logy)
+        return std::abs(std::log10(y[i])-std::log10(y[i-1]))/(x[i]-x[i-1]);
+      else if(logx)
+        return std::abs(y[i]-y[i-1])/(std::log10(x[i])-std::log10(x[i-1]));
+      else
+        return std::abs(y[i]-y[i-1])/(x[i]-x[i-1]);
     }
     if(!d[i]) return 0;
     if(!d[i-1] && !d[i+1]) return 0;
-    if(!d[i-1]) 
-      return std::abs(y[i+1]-y[i])/(x[i+1]-x[i]);
-    if(!d[i+1])
-      return std::abs(y[i]-y[i-1])/(x[i]-x[i-1]);
-    return 0.5*std::abs(y[i+1]-y[i])/(x[i+1]-x[i]) + 0.5*std::abs(y[i+1]-y[i])/(x[i+1]-x[i]);
+    if(!d[i-1]) {
+      if(logx && logy)
+        return std::abs(std::log10(y[i+1])-std::log10(y[i]))/(std::log10(x[i+1])-std::log10(x[i]));
+      else if(logy)
+        return std::abs(std::log10(y[i+1])-std::log10(y[i]))/(x[i+1]-x[i]);
+      else if(logx)
+        return std::abs(y[i+1]-y[i])/(std::log10(x[i+1])-std::log10(x[i]));
+      else
+        return std::abs(y[i+1]-y[i])/(x[i+1]-x[i]);
+    }
+    if(!d[i+1]) {
+      if(logx && logy)
+        return std::abs(std::log10(y[i])-std::log10(y[i-1]))/(std::log10(x[i])-std::log10(x[i-1]));
+      else if(logy)
+        return std::abs(std::log10(y[i])-std::log10(y[i-1]))/(x[i]-x[i-1]);
+      else if(logx)
+        return std::abs(y[i]-y[i-1])/(std::log10(x[i])-std::log10(x[i-1]));
+      else
+        return std::abs(y[i]-y[i-1])/(x[i]-x[i-1]);
+    }
+    if(logx && logy)
+      return 0.5*std::abs(std::log10(y[i+1])-std::log10(y[i]))/(std::log10(x[i+1])-std::log10(x[i])) + 0.5*std::abs(std::log10(y[i+1])-std::log10(y[i]))/(std::log10(x[i+1])-std::log10(x[i]));
+    else if(logy)
+      return 0.5*std::abs(std::log10(y[i+1])-std::log10(y[i]))/(x[i+1]-x[i]) + 0.5*std::abs(std::log10(y[i+1])-std::log10(y[i]))/(x[i+1]-x[i]);
+    else if(logx)
+      return 0.5*std::abs(y[i+1]-y[i])/(std::log10(x[i+1])-std::log10(x[i])) + 0.5*std::abs(y[i+1]-y[i])/(std::log10(x[i+1])-std::log10(x[i]));
+    else
+      return 0.5*std::abs(y[i+1]-y[i])/(x[i+1]-x[i]) + 0.5*std::abs(y[i+1]-y[i])/(x[i+1]-x[i]);
   }
 
   gen plotfunc(const gen & f,const gen & vars,const vecteur & attributs,bool densityplot,double function_xmin,double function_xmax,double function_ymin,double function_ymax,double function_zmin, double function_zmax,int nstep,int jstep,bool showeq,const context * contextptr){
@@ -1459,13 +1497,21 @@ namespace giac {
               if(i!=last_y_min_index && defined[i] && y_vals[i]>range_y_min && y_vals[i]<find_y_min) { find_y_min = y_vals[i]; i_min = i; }
               if(i!=last_y_max_index && defined[i] && y_vals[i]<range_y_max && y_vals[i]>find_y_max) { find_y_max = y_vals[i]; i_max = i; }
             }
-            double delta = ((y_max_provided ? function_ymax : find_y_max) - (y_min_provided ? function_ymin : find_y_min)) / (function_xmax - function_xmin);
+            double delta;
+            if(logx && logy)
+              delta = (std::log10(y_max_provided ? function_ymax : find_y_max) - std::log10(y_min_provided ? function_ymin : find_y_min)) / (std::log10(function_xmax) - std::log10(function_xmin));
+            else if(logy)
+              delta = (std::log10(y_max_provided ? function_ymax : find_y_max) - std::log10(y_min_provided ? function_ymin : find_y_min)) / (function_xmax - function_xmin);
+            else if(logx)
+              delta = ((y_max_provided ? function_ymax : find_y_max) - (y_min_provided ? function_ymin : find_y_min)) / (std::log10(function_xmax) - std::log10(function_xmin));
+            else
+              delta = ((y_max_provided ? function_ymax : find_y_max) - (y_min_provided ? function_ymin : find_y_min)) / (function_xmax - function_xmin);
             bool repeat = false;
-            if(!y_max_provided && y_prime(x_vals, y_vals, defined, i_max, counter)/delta > big) {
+            if(!y_max_provided && y_prime(x_vals, y_vals, defined, i_max, counter, logx, logy)/delta > big) {
               repeat = true;
               last_y_max_index = i_max;
             }
-            if(!y_min_provided && y_prime(x_vals, y_vals, defined, i_min, counter)/delta > big) {
+            if(!y_min_provided && y_prime(x_vals, y_vals, defined, i_min, counter, logx, logy)/delta > big) {
               repeat = true;
               last_y_min_index = i_min;
             }
@@ -1514,13 +1560,29 @@ namespace giac {
             indeces[counter++] = newi;
             insert_to_array(x_vals, y_vals, indeces, defined, current_index-1, counter);
             if(check_y_max) {
-              double delta = (range_y_max - (y_min_provided ? function_ymin : range_y_min)) / (function_xmax - function_xmin);
-              if(y_prime(x_vals, y_vals, defined, current_index-1, counter)/delta <= big) range_y_max = y_vals[current_index-1];
+              double delta;
+              if(logx && logy)
+                delta = (std::log10(range_y_max) - std::log10(y_min_provided ? function_ymin : range_y_min)) / (std::log10(function_xmax) - std::log10(function_xmin));
+              else if(logy)
+                delta = (std::log10(range_y_max) - std::log10(y_min_provided ? function_ymin : range_y_min)) / (function_xmax - function_xmin);
+              else if(logx)
+                delta = (range_y_max - (y_min_provided ? function_ymin : range_y_min)) / (std::log10(function_xmax) - std::log10(function_xmin));
+              else
+                delta = (range_y_max - (y_min_provided ? function_ymin : range_y_min)) / (function_xmax - function_xmin);
+              if(y_prime(x_vals, y_vals, defined, current_index-1, counter, logx, logy)/delta <= big) range_y_max = y_vals[current_index-1];
               check_y_max = false;
             }
             if(check_y_min) {
-              double delta = ((y_max_provided ? function_ymax : range_y_max) - range_y_min) / (function_xmax - function_xmin);
-              if(y_prime(x_vals, y_vals, defined, current_index-1, counter)/delta <= big) range_y_min = y_vals[current_index-1];
+              double delta;
+              if(logx && logy)
+                delta = (std::log10(y_max_provided ? function_ymax : range_y_max) - std::log10(range_y_min)) / (std::log10(function_xmax) - std::log10(function_xmin));
+              else if(logy)
+                delta = (std::log10(y_max_provided ? function_ymax : range_y_max) - std::log10(range_y_min)) / (function_xmax - function_xmin);
+              else if(logx)
+                delta = ((y_max_provided ? function_ymax : range_y_max) - range_y_min) / (std::log10(function_xmax) - std::log10(function_xmin));
+              else
+                delta = ((y_max_provided ? function_ymax : range_y_max) - range_y_min) / (function_xmax - function_xmin);
+              if(y_prime(x_vals, y_vals, defined, current_index-1, counter, logx, logy)/delta <= big) range_y_min = y_vals[current_index-1];
               check_y_min = false;
             }
             continue;
@@ -1557,13 +1619,29 @@ namespace giac {
             indeces[counter++] = newi;
             insert_to_array(x_vals, y_vals, indeces, defined, current_index, counter);
             if(check_y_max) {
-              double delta = (range_y_max - (y_min_provided ? function_ymin : range_y_min)) / (function_xmax - function_xmin);
-              if(y_prime(x_vals, y_vals, defined, current_index, counter)/delta <= big) range_y_max = y_vals[current_index];
+              double delta;
+              if(logx && logy)
+                delta = (std::log10(range_y_max) - std::log10(y_min_provided ? function_ymin : range_y_min)) / (std::log10(function_xmax) - std::log10(function_xmin));
+              else if(logy)
+                delta = (std::log10(range_y_max) - std::log10(y_min_provided ? function_ymin : range_y_min)) / (function_xmax - function_xmin);
+              else if(logx)
+                delta = (range_y_max - (y_min_provided ? function_ymin : range_y_min)) / (std::log10(function_xmax) - std::log10(function_xmin));
+              else
+                delta = (range_y_max - (y_min_provided ? function_ymin : range_y_min)) / (function_xmax - function_xmin);
+              if(y_prime(x_vals, y_vals, defined, current_index, counter, logx, logy)/delta <= big) range_y_max = y_vals[current_index];
               check_y_max = false;
             }
             if(check_y_min) {
-              double delta = ((y_max_provided ? function_ymax : range_y_max) - range_y_min) / (function_xmax - function_xmin);
-              if(y_prime(x_vals, y_vals, defined, current_index, counter)/delta <= big) range_y_min = y_vals[current_index];
+              double delta;
+              if(logx && logy)
+                delta = (std::log10(y_max_provided ? function_ymax : range_y_max) - std::log10(range_y_min)) / (std::log10(function_xmax) - std::log10(function_xmin));
+              else if(logy)
+                delta = (std::log10(y_max_provided ? function_ymax : range_y_max) - std::log10(range_y_min)) / (function_xmax - function_xmin);
+              else if(logx)
+                delta = ((y_max_provided ? function_ymax : range_y_max) - range_y_min) / (std::log10(function_xmax) - std::log10(function_xmin));
+              else
+                delta = ((y_max_provided ? function_ymax : range_y_max) - range_y_min) / (function_xmax - function_xmin);
+              if(y_prime(x_vals, y_vals, defined, current_index, counter, logx, logy)/delta <= big) range_y_min = y_vals[current_index];
               check_y_min = false;
             }
             continue;
@@ -1667,13 +1745,29 @@ namespace giac {
               indeces[counter++] = newi;
               insert_to_array(x_vals, y_vals, indeces, defined, current_index-1, counter);
               if(check_y_max) {
-                double delta = (range_y_max - (y_min_provided ? function_ymin : range_y_min)) / (function_xmax - function_xmin);
-                if(y_prime(x_vals, y_vals, defined, current_index-1, counter)/delta <= big) range_y_max = y_vals[current_index-1];
+                double delta;
+                if(logx && logy)
+                  delta = (std::log10(range_y_max) - std::log10(y_min_provided ? function_ymin : range_y_min)) / (std::log10(function_xmax) - std::log10(function_xmin));
+                else if(logy)
+                  delta = (std::log10(range_y_max) - std::log10(y_min_provided ? function_ymin : range_y_min)) / (function_xmax - function_xmin);
+                else if(logx)
+                  delta = (range_y_max - (y_min_provided ? function_ymin : range_y_min)) / (std::log10(function_xmax) - std::log10(function_xmin));
+                else
+                  delta = (range_y_max - (y_min_provided ? function_ymin : range_y_min)) / (function_xmax - function_xmin);
+                if(y_prime(x_vals, y_vals, defined, current_index-1, counter, logx, logy)/delta <= big) range_y_max = y_vals[current_index-1];
                 check_y_max = false;
               }
               if(check_y_min) {
-                double delta = ((y_max_provided ? function_ymax : range_y_max) - range_y_min) / (function_xmax - function_xmin);
-                if(y_prime(x_vals, y_vals, defined, current_index-1, counter)/delta <= big) range_y_min = y_vals[current_index-1];
+                double delta;
+                if(logx && logy)
+                  delta = (std::log10(y_max_provided ? function_ymax : range_y_max) - std::log10(range_y_min)) / (std::log10(function_xmax) - std::log10(function_xmin));
+                else if(logy)
+                  delta = (std::log10(y_max_provided ? function_ymax : range_y_max) - std::log10(range_y_min)) / (function_xmax - function_xmin);
+                else if(logx)
+                  delta = ((y_max_provided ? function_ymax : range_y_max) - range_y_min) / (std::log10(function_xmax) - std::log10(function_xmin));
+                else
+                  delta = ((y_max_provided ? function_ymax : range_y_max) - range_y_min) / (function_xmax - function_xmin);
+                if(y_prime(x_vals, y_vals, defined, current_index-1, counter, logx, logy)/delta <= big) range_y_min = y_vals[current_index-1];
                 check_y_min = false;
               }
               index_change = 1;
@@ -1705,13 +1799,29 @@ namespace giac {
               indeces[counter++] = newi;
               insert_to_array(x_vals, y_vals, indeces, defined, current_index+index_change, counter);
               if(check_y_max) {
-                double delta = (range_y_max - (y_min_provided ? function_ymin : range_y_min)) / (function_xmax - function_xmin);
-                if(y_prime(x_vals, y_vals, defined, current_index+index_change, counter)/delta <= big) range_y_max = y_vals[current_index+index_change];
+                double delta;
+                if(logx && logy)
+                  delta = (std::log10(range_y_max) - std::log10(y_min_provided ? function_ymin : range_y_min)) / (std::log10(function_xmax) - std::log10(function_xmin));
+                else if(logy)
+                  delta = (std::log10(range_y_max) - std::log10(y_min_provided ? function_ymin : range_y_min)) / (function_xmax - function_xmin);
+                else if(logx)
+                  delta = (range_y_max - (y_min_provided ? function_ymin : range_y_min)) / (std::log10(function_xmax) - std::log10(function_xmin));
+                else
+                  delta = (range_y_max - (y_min_provided ? function_ymin : range_y_min)) / (function_xmax - function_xmin);
+                if(y_prime(x_vals, y_vals, defined, current_index+index_change, counter, logx, logy)/delta <= big) range_y_max = y_vals[current_index+index_change];
                 check_y_max = false;
               }
               if(check_y_min) {
-                double delta = ((y_max_provided ? function_ymax : range_y_max) - range_y_min) / (function_xmax - function_xmin);
-                if(y_prime(x_vals, y_vals, defined, current_index+index_change, counter)/delta <= big) range_y_min = y_vals[current_index+index_change];
+                double delta;
+                if(logx && logy)
+                  delta = (std::log10(y_max_provided ? function_ymax : range_y_max) - std::log10(range_y_min)) / (std::log10(function_xmax) - std::log10(function_xmin));
+                else if(logy)
+                  delta = (std::log10(y_max_provided ? function_ymax : range_y_max) - std::log10(range_y_min)) / (function_xmax - function_xmin);
+                else if(logx)
+                  delta = ((y_max_provided ? function_ymax : range_y_max) - range_y_min) / (std::log10(function_xmax) - std::log10(function_xmin));
+                else
+                  delta = ((y_max_provided ? function_ymax : range_y_max) - range_y_min) / (function_xmax - function_xmin);
+                if(y_prime(x_vals, y_vals, defined, current_index+index_change, counter, logx, logy)/delta <= big) range_y_min = y_vals[current_index+index_change];
                 check_y_min = false;
               }
             }
