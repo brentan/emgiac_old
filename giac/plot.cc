@@ -1367,7 +1367,7 @@ namespace giac {
 	if (attributs.size()>1 && attributs[1].type==_VECT && attributs[1]._VECTptr->size()>i)
 	  cur_attributs.push_back((*attributs[1]._VECTptr)[i]);
 #ifdef SWIFT_CALCS_OPTIONS
-        gen tmp=plotfunc(vf[i],vars,cur_attributs,logx, logy, x_offset, x_unit, false,function_xmin,function_xmax,function_ymin,function_ymax,function_zmin,function_zmax,nstep,jstep,showeq,contextptr);
+  gen tmp=plotfunc(vf[i],vars,cur_attributs,logx, logy, x_offset, x_unit, false,function_xmin,function_xmax,function_ymin,function_ymax,function_zmin,function_zmax,nstep,jstep,showeq,contextptr);
 #else
 	gen tmp=plotfunc(vf[i],vars,cur_attributs,false,function_xmin,function_xmax,function_ymin,function_ymax,function_zmin,function_zmax,nstep,jstep,showeq,contextptr);
 #endif
@@ -1394,7 +1394,7 @@ namespace giac {
         y=quotesubst(f,vars,locvar,contextptr);
         do_mksa = true;
       } else 
-        y = normal(mksa_value(y,contextptr),newcontextptr);
+        y = simplify(mksa_value(y,contextptr),newcontextptr);
 #else
       gen y=quotesubst(f,vars,locvar,contextptr),yy;
 #endif
