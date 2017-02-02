@@ -109,6 +109,9 @@ namespace giac {
 
   std::string print_DOUBLE_(double d,unsigned ndigits);
   gen makecomplex(const gen & a,const gen &b);
+#ifdef SWIFT_CALCS_OPTIONS
+  void local_sto(const gen & value,const identificateur & i,GIAC_CONTEXT);
+#endif
 
   void local_sto_double(double value,const identificateur & i,GIAC_CONTEXT);
   void local_sto_double_increment(double value,const identificateur & i,GIAC_CONTEXT);

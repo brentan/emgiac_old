@@ -3055,8 +3055,73 @@ namespace giac {
 	v.pop_back();
       }
       else {
-	gen xval=x.eval(1,contextptr);
-	gen a(v[2]),b(v[3]);
+      	gen xval=x.eval(1,contextptr);
+      	gen a(v[2]),b(v[3]);
+#ifdef SWIFT_CALCS_OPTIONS
+        if(evalf_double(a,1,contextptr).type==_SYMB && evalf_double(a,1,contextptr).is_symb_of_sommet(at_unit)) {
+          a = evalf_double(a,1,contextptr);
+          if(evalf_double(b,1,contextptr).type==_SYMB && evalf_double(b,1,contextptr).is_symb_of_sommet(at_unit)) {
+            b = evalf_double(b,1,contextptr);
+            // Ensure matching units:
+            if(mksa_reduce_base(a,contextptr) == mksa_reduce_base(b,contextptr)) {
+              // Convert lower limit to upper limit:
+              a = _usimplify_base(_ufactor(makesequence(a,symbolic(at_unit, makevecteur(plus_one, b._SYMBptr->feuille._VECTptr->back()))),contextptr),contextptr);
+              // Find limit units:
+              gen limit_units = b._SYMBptr->feuille._VECTptr->back();
+              // Plugin units to expression:
+              context * newcontextptr= (context *) contextptr;
+              purgenoassume(xval,newcontextptr);
+              //v[0]=quotesubst(v[0],xval,xval * symbolic(at_unit, makevecteur(plus_one,limit_units)),contextptr);
+              v[0]=quotesubst(v[0],xval,identificateur("x__temp"),contextptr);
+              local_sto(xval * symbolic(at_unit, makevecteur(plus_one,limit_units)),identificateur("x__temp"),newcontextptr);
+              v[0] = evalf(v[0], eval_level(contextptr),newcontextptr);
+              // Strip units from limit:
+              v[2] = a._SYMBptr->feuille._VECTptr->front();
+              v[3] = b._SYMBptr->feuille._VECTptr->front();
+              return _integrate(v,contextptr) * symbolic(at_unit, makevecteur(plus_one,limit_units));
+            } else {
+              std::string out = "Incompatible units: Integral lower limit has units of '";
+              out += gen2string(a._SYMBptr->feuille._VECTptr->back()) + "' and upper limit units of '" + gen2string(b._SYMBptr->feuille._VECTptr->back()) + "'";
+              return gensizeerr(gettext(out.data()));
+            }
+          }
+          if(is_zero(b)) {
+            // Find limit units:
+            gen limit_units = a._SYMBptr->feuille._VECTptr->back();
+            // Plugin units to expression:
+            context * newcontextptr= (context *) contextptr;
+            purgenoassume(xval,newcontextptr);
+            v[0]=quotesubst(v[0],xval,gen(identificateur("x__temp")),contextptr);
+            local_sto(xval * symbolic(at_unit, makevecteur(plus_one,limit_units)),identificateur("x__temp"),newcontextptr);
+            v[0] = evalf(v[0], eval_level(contextptr),newcontextptr);
+            // Strip units from limit:
+            v[2] = a._SYMBptr->feuille._VECTptr->front();
+            return _integrate(v,contextptr) * symbolic(at_unit, makevecteur(plus_one,limit_units));
+          }
+          std::string out = "Incompatible units: Integral lower limit has units of '";
+          out += gen2string(a._SYMBptr->feuille._VECTptr->back()) + "' but upper limit has no units.";
+          return gensizeerr(gettext(out.data()));
+        }
+        if(evalf_double(b,1,contextptr).type==_SYMB && b.is_symb_of_sommet(at_unit)) {
+          b = evalf_double(b,1,contextptr);
+          if(is_zero(a)) {
+            // Find limit units:
+            gen limit_units = b._SYMBptr->feuille._VECTptr->back();
+            // Plugin units to expression:
+            context * newcontextptr= (context *) contextptr;
+            purgenoassume(xval,newcontextptr);
+            v[0]=quotesubst(v[0],xval,gen(identificateur("x__temp")),contextptr);
+            local_sto(xval * symbolic(at_unit, makevecteur(plus_one,limit_units)),identificateur("x__temp"),newcontextptr);
+            v[0] = evalf(v[0], eval_level(contextptr),newcontextptr);
+            // Strip units from limit:
+            v[3] = b._SYMBptr->feuille._VECTptr->front();
+            return _integrate(v,contextptr) * symbolic(at_unit, makevecteur(plus_one,limit_units));
+          }
+          std::string out = "Incompatible units: Integral lower limit has no units but upper limit has units of '";
+          out += gen2string(b._SYMBptr->feuille._VECTptr->back()) + "'";
+          return gensizeerr(gettext(out.data()));
+        }
+#endif
 	if (evalf_double(a,1,contextptr).type==_DOUBLE_ && evalf_double(b,1,contextptr).type==_DOUBLE_){
 	  bool neg=false;
 	  if (is_greater(v[2],v[3],contextptr)){
@@ -3765,6 +3830,8 @@ namespace giac {
     return evalf_int(f0,x0,a,b,eps,nmax,true,contextptr);
   }
   gen evalf_int(const gen & f0,const gen & x0,const gen & a,const gen &b,const gen & eps,int nmax,bool romberg_method,GIAC_CONTEXT){
+//print_emscripten("HERE 2");
+        // NEED TO ADD SIMILAR CODE TO PLOT/ODE SOLVER/FSOLVE THAT DEALS WITH UNITS IN THE LOOPS BUT RETURNS NUMERICAL RESULTS, ALSO IN TEGRAL ABOVE
     gen x(x0),f(f0);
     if (x.type!=_IDNT){
       x=identificateur(" x");
@@ -3902,6 +3969,7 @@ namespace giac {
     return l.front();
   }
   gen intnum(const gen & args,bool romberg_method,GIAC_CONTEXT){
+    //args.print_emscripten("NUMERICAL INTEGRAL: ");
     if ( args.type==_STRNG && args.subtype==-1) return  args;
     if ( (args.type!=_VECT) || (args._VECTptr->size()<2) )
       return gensizeerr(contextptr);
@@ -3973,6 +4041,10 @@ namespace giac {
     }
     if (eps.type!=_DOUBLE_ && eps.type!=_FLOAT_ && eps.type!=_REAL)
       eps=epsilon(contextptr);
+#ifdef SWIFT_CALCS_OPTIONS
+//print_emscripten("HERE");  NEED TO LOOK FOR UNITS IN LIMITS AND IF SO, STILL PASS IT ALONG!
+//    if(a.type == _SYMB && a.is_symb_of_sommet(at_unit))
+#endif
     if ( x.type!=_IDNT || 
 	 (a.type!=_DOUBLE_ && a.type!=_REAL) 
 	 || (b.type!=_DOUBLE_ && b.type!=_REAL) 

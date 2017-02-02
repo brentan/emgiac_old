@@ -1197,14 +1197,14 @@ namespace giac {
     else
       i.localvalue->back() += value;
   }
-  static void local_sto(const gen & value,const identificateur & i,GIAC_CONTEXT){
+  void local_sto(const gen & value,const identificateur & i,GIAC_CONTEXT){
     if (contextptr)
       (*contextptr->tabptr)[i.id_name]=value;
     else 
       i.localvalue->back()=value;
   }
 
-  static void local_sto_increment(const gen & value,const identificateur & i,GIAC_CONTEXT){
+  void local_sto_increment(const gen & value,const identificateur & i,GIAC_CONTEXT){
     if (contextptr)
       (*contextptr->tabptr)[i.id_name] += value;
     else
