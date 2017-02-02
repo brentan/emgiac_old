@@ -10339,7 +10339,13 @@ namespace giac {
       if(g.type == _VECT) {
         if(u.type != _VECT) {
           if(int(g._VECTptr->size())==1) return apply_units(g,gen(makevecteur(u)));
-          return gentypeerr("Expecting vector for units to apply");
+          const_iterateur it=g._VECTptr->begin(),itend=g._VECTptr->end();
+          vecteur vout;
+          vout.reserve(itend-it);
+          for (;it!=itend;++it){
+            vout.push_back(apply_units(*it,u));
+          }
+          return gen(vout, g.subtype);
         }
         if(int(g._VECTptr->size()) != int(u._VECTptr->size())) return gentypeerr("unit and coefficient vectors must be same size");
         return gen(apply_units(*g._VECTptr, *u._VECTptr),g.subtype);

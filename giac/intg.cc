@@ -3058,16 +3058,14 @@ namespace giac {
       	gen xval=x.eval(1,contextptr);
       	gen a(v[2]),b(v[3]);
 #ifdef SWIFT_CALCS_OPTIONS
-        if(evalf_double(a,1,contextptr).type==_SYMB && evalf_double(a,1,contextptr).is_symb_of_sommet(at_unit)) {
-          a = evalf_double(a,1,contextptr);
-          if(evalf_double(b,1,contextptr).type==_SYMB && evalf_double(b,1,contextptr).is_symb_of_sommet(at_unit)) {
-            b = evalf_double(b,1,contextptr);
+        if(!is_one(get_units(a)) && evalf_double(remove_units(a),1,contextptr).type==_DOUBLE_) {
+          if(!is_one(get_units(b)) && evalf_double(remove_units(b),1,contextptr).type==_DOUBLE_) {
             // Ensure matching units:
             if(mksa_reduce_base(a,contextptr) == mksa_reduce_base(b,contextptr)) {
               // Convert lower limit to upper limit:
-              a = _usimplify_base(_ufactor(makesequence(a,symbolic(at_unit, makevecteur(plus_one, b._SYMBptr->feuille._VECTptr->back()))),contextptr),contextptr);
+              a = _usimplify_base(_ufactor(makesequence(a,symbolic(at_unit, makevecteur(plus_one, get_units(b)))),contextptr),contextptr);
               // Find limit units:
-              gen limit_units = b._SYMBptr->feuille._VECTptr->back();
+              gen limit_units = get_units(b);
               // Plugin units to expression:
               context * newcontextptr= (context *) contextptr;
               purgenoassume(xval,newcontextptr);
@@ -3076,18 +3074,18 @@ namespace giac {
               local_sto(xval * symbolic(at_unit, makevecteur(plus_one,limit_units)),identificateur("x__temp"),newcontextptr);
               v[0] = evalf(v[0], eval_level(contextptr),newcontextptr);
               // Strip units from limit:
-              v[2] = a._SYMBptr->feuille._VECTptr->front();
-              v[3] = b._SYMBptr->feuille._VECTptr->front();
+              v[2] = remove_units(a);
+              v[3] = remove_units(b);
               return _integrate(v,contextptr) * symbolic(at_unit, makevecteur(plus_one,limit_units));
             } else {
               std::string out = "Incompatible units: Integral lower limit has units of '";
-              out += gen2string(a._SYMBptr->feuille._VECTptr->back()) + "' and upper limit units of '" + gen2string(b._SYMBptr->feuille._VECTptr->back()) + "'";
+              out += gen2string(get_units(a)) + "' and upper limit units of '" + gen2string(get_units(b)) + "'";
               return gensizeerr(gettext(out.data()));
             }
           }
           if(is_zero(b)) {
             // Find limit units:
-            gen limit_units = a._SYMBptr->feuille._VECTptr->back();
+            gen limit_units = get_units(a);
             // Plugin units to expression:
             context * newcontextptr= (context *) contextptr;
             purgenoassume(xval,newcontextptr);
@@ -3095,18 +3093,17 @@ namespace giac {
             local_sto(xval * symbolic(at_unit, makevecteur(plus_one,limit_units)),identificateur("x__temp"),newcontextptr);
             v[0] = evalf(v[0], eval_level(contextptr),newcontextptr);
             // Strip units from limit:
-            v[2] = a._SYMBptr->feuille._VECTptr->front();
+            v[2] = remove_units(a);
             return _integrate(v,contextptr) * symbolic(at_unit, makevecteur(plus_one,limit_units));
           }
           std::string out = "Incompatible units: Integral lower limit has units of '";
-          out += gen2string(a._SYMBptr->feuille._VECTptr->back()) + "' but upper limit has no units.";
+          out += gen2string(get_units(a)) + "' but upper limit has no units.";
           return gensizeerr(gettext(out.data()));
         }
-        if(evalf_double(b,1,contextptr).type==_SYMB && b.is_symb_of_sommet(at_unit)) {
-          b = evalf_double(b,1,contextptr);
+        if(!is_one(get_units(b)) && evalf_double(remove_units(b),1,contextptr).type==_DOUBLE_) {
           if(is_zero(a)) {
             // Find limit units:
-            gen limit_units = b._SYMBptr->feuille._VECTptr->back();
+            gen limit_units = get_units(b);
             // Plugin units to expression:
             context * newcontextptr= (context *) contextptr;
             purgenoassume(xval,newcontextptr);
@@ -3114,11 +3111,11 @@ namespace giac {
             local_sto(xval * symbolic(at_unit, makevecteur(plus_one,limit_units)),identificateur("x__temp"),newcontextptr);
             v[0] = evalf(v[0], eval_level(contextptr),newcontextptr);
             // Strip units from limit:
-            v[3] = b._SYMBptr->feuille._VECTptr->front();
+            v[3] = remove_units(b);
             return _integrate(v,contextptr) * symbolic(at_unit, makevecteur(plus_one,limit_units));
           }
           std::string out = "Incompatible units: Integral lower limit has no units but upper limit has units of '";
-          out += gen2string(b._SYMBptr->feuille._VECTptr->back()) + "'";
+          out += gen2string(get_units(b)) + "'";
           return gensizeerr(gettext(out.data()));
         }
 #endif
@@ -3711,8 +3708,17 @@ namespace giac {
     return true;
   }
 #else // using -1..1 scaling instead of 0..1
+#ifdef SWIFT_CALCS_OPTIONS
+  static bool tegral_util(const gen & f,const gen &x, const gen &a,const gen &b,gen & i30,gen & i30abs, gen &err,const bool do_mksa,const gen & limit_unit,const gen & f_unit,GIAC_CONTEXT){
+#else
   static bool tegral_util(const gen & f,const gen &x, const gen &a,const gen &b,gen & i30,gen & i30abs, gen &err,GIAC_CONTEXT){
+#endif
+#ifdef SWIFT_CALCS_OPTIONS
+    gen h=(b-a),i14,i6;
+    if(!do_mksa) h = evalf_double(h,1,contextptr);
+#else
     gen h=evalf_double(b-a,1,contextptr),i14,i6;
+#endif
     //int s30=15,s14=14,s6=6;
     long_double c30[]={-0.98799251802048542849,-0.93727339240070590430,-0.84820658341042721620,-0.72441773136017004742,-0.57097217260853884754,-0.39415134707756336990,-0.20119409399743452230,0.00000000000000000000,0.20119409399743452230,0.39415134707756336990,0.57097217260853884754,0.72441773136017004742,0.84820658341042721620,0.93727339240070590430,0.98799251802048542849};
     long_double b30[]={0.15376620998058634177e-1,0.35183023744054062355e-1,0.53579610233585967506e-1,0.69785338963077157224e-1,0.83134602908496966777e-1,0.93080500007781105513e-1,0.99215742663555788228e-1,0.10128912096278063644,0.99215742663555788228e-1,0.93080500007781105514e-1,0.83134602908496966777e-1,0.69785338963077157224e-1,0.53579610233585967507e-1,0.35183023744054062355e-1,0.15376620998058634177e-1};
@@ -3721,18 +3727,22 @@ namespace giac {
     vecteur v30(15),v30abs(15);
     for (int i=0;i<15;i++){
       v30[i]=evalf_double(eval(subst(f,x,((a+b)+double(c30[i])*h)/2,false,contextptr),1,contextptr),1,contextptr);
+#ifdef SWIFT_CALCS_OPTIONS
+      if(do_mksa) v30abs[i]=_l2norm(mksa_value(v30[i],contextptr),contextptr);
+      else
+#endif
       v30abs[i]=_l2norm(v30[i],contextptr);
       if (v30abs[i].type!=_DOUBLE_)
-	return false;
+	      return false;
     }
     i30abs=i30=i14=i6=0;
     for (int i=0;i<=7;i++){
       i30 += double(b30[i])*v30[i];
       if (i<7)
-	i30 += double(b30[14-i])*v30[14-i];
+	      i30 += double(b30[14-i])*v30[14-i];
       i30abs += double(b30[i])*v30abs[i];
       if (i<7)
-	i30abs += double(b30[14-i])*v30abs[14-i];
+	      i30abs += double(b30[14-i])*v30abs[14-i];
     }
     for (int i=0;i<=6;i++){
       i14 += double(b14[i])*v30[i];
@@ -3742,13 +3752,24 @@ namespace giac {
     }
     for (int i=1;i<15;i+=2){
       if (i==7)
-	continue;
+	      continue;
       i6 += double(b6[(i-1)/2])*v30[i];
     }
+#ifdef SWIFT_CALCS_OPTIONS
+      if(do_mksa) {
+        i30 = mksa_value(i30*h,contextptr);
+        i30abs = mksa_value(i30abs*h,contextptr);
+        i14 = mksa_value(i14*h,contextptr);
+        i6 = mksa_value(i6*h,contextptr);
+      } else {
+#endif
     i30 = i30*h;
     i30abs = i30abs*h;
     i14 = i14*h;
     i6 = i6*h;
+#ifdef SWIFT_CALCS_OPTIONS
+    }
+#endif
     gen err1=_l2norm(i30-i14,contextptr);
     gen err2=_l2norm(i30-i6,contextptr);
     if (is_zero(err1) || is_zero(err2))
@@ -3756,96 +3777,178 @@ namespace giac {
     else {
       // check if err1 and err2 corresponds to errors in h^14 and h^6
       if (is_greater(abs(14./6.-ln(err1,contextptr)/ln(err2,contextptr)),.1,contextptr))
-	err=err1;
+	      err=err1;
       else {
-	err=err1/err2;
-	err=err1*(err*err);
+      	err=err1/err2;
+      	err=err1*(err*err);
       }
     }
     return true;
   }
 #endif
+#ifdef SWIFT_CALCS_OPTIONS
+  static bool tegral_util(const gen & f,const gen &x, const gen &a,const gen &b,gen & i30,gen & i30abs, gen &err,GIAC_CONTEXT){
+    return tegral_util(f,x,a,b,i30,i30abs,err,false,plus_one,plus_one,contextptr);
+  }
+#endif
 
   // nmax=max number of subdivisions (may be 1000 or more...)
+#ifdef SWIFT_CALCS_OPTIONS
+  bool tegral(const gen & f,const gen & x,const gen & a_,const gen &b_,const gen & eps,int nmax,gen & value,const bool do_mksa,const gen & limit_unit,const gen & f_unit,GIAC_CONTEXT){
+#else
   bool tegral(const gen & f,const gen & x,const gen & a_,const gen &b_,const gen & eps,int nmax,gen & value,GIAC_CONTEXT){
+#endif    
     gen a=evalf(a_,1,contextptr),b=evalf(b_,1,contextptr);
     // adaptive integration, cf. Hairer
     gen i30,i30abs,err,maxerr,ERR,I30ABS;
     int maxerrpos;
+#ifdef SWIFT_CALCS_OPTIONS
+    if (!tegral_util(f,x,a,b,i30,i30abs,err,do_mksa,limit_unit,f_unit,contextptr))
+#else
     if (!tegral_util(f,x,a,b,i30,i30abs,err,contextptr))
+#endif
       return false;
     vecteur v(1,makevecteur(a,b,i30,i30abs,err));
-    for (;int(v.size())<nmax;){
+    for (;int(v.size())<nmax;) {
       // sum of errors, check for end
       i30=I30ABS=ERR=maxerr=0;
       maxerrpos=0;
       for (unsigned i=0;i<v.size();++i){
-	if (v[i].type!=_VECT || v[i]._VECTptr->size()<5)
-	  return false;
-	vecteur w=*v[i]._VECTptr;
-	i30 = i30+w[2]; // += does not work in emscripten
-	I30ABS = I30ABS+w[3];
-	ERR = ERR+w[4];
-	if (is_strictly_greater(w[4],maxerr,contextptr)){
-	  maxerrpos=i;
-	  maxerr=w[4];
-	}
+      	if (v[i].type!=_VECT || v[i]._VECTptr->size()<5)
+      	  return false;
+      	vecteur w=*v[i]._VECTptr;
+      	i30 = i30+w[2]; // += does not work in emscripten
+      	I30ABS = I30ABS+w[3];
+      	ERR = ERR+w[4];
+      	if (is_strictly_greater(w[4],maxerr,contextptr)){
+      	  maxerrpos=i;
+      	  maxerr=w[4];
+      	}
       }
+#ifdef SWIFT_CALCS_OPTIONS
+      value = apply_units(i30, limit_unit*f_unit);
+#else
       value=i30;
+#endif
       // minimal number of intervals added for int(frac(x),x,0,6.4)
       if (!is_undef(ERR) && is_greater(eps,ERR/I30ABS,contextptr)) 
-	return true;
+	      return true;
       // cut interval at maxerrpos in 2 parts
       vecteur & w = *v[maxerrpos]._VECTptr;
       gen A=w[0],B=w[1],C=(A+B)/2;
       if (A==C || B==C){
-	// can not subdivise anymore
-	if (is_greater(1e-4,ERR/I30ABS,contextptr)){
-	  *logptr(contextptr) << "Low accuracy, error estimate " << ERR/I30ABS << "\nError might be underestimated if initial boundary was +/-infinity" << endl;
-	  return true;
-	}
-	return false; 
+      	// can not subdivise anymore
+      	if (is_greater(1e-4,ERR/I30ABS,contextptr)){
+      	  *logptr(contextptr) << "Low accuracy, error estimate " << ERR/I30ABS << "\nError might be underestimated if initial boundary was +/-infinity" << endl;
+      	  return true;
+      	}
+      	return false; 
       }
+#ifdef SWIFT_CALCS_OPTIONS
+      if (!tegral_util(f,x,A,C,i30,i30abs,err,do_mksa,limit_unit,f_unit,contextptr)){
+#else
       if (!tegral_util(f,x,A,C,i30,i30abs,err,contextptr)){
-	if (is_greater(1e-4,ERR/I30ABS,contextptr)){
-	  *logptr(contextptr) << "Low accuracy, error estimate " << ERR/I30ABS << "\nError might be underestimated if initial boundary was +/-infinity" << endl;
-	  return true;
-	}
-	return false;
+#endif
+      	if (is_greater(1e-4,ERR/I30ABS,contextptr)){
+      	  *logptr(contextptr) << "Low accuracy, error estimate " << ERR/I30ABS << "\nError might be underestimated if initial boundary was +/-infinity" << endl;
+      	  return true;
+      	}
+      	return false;
       }
       v[maxerrpos]=makevecteur(A,C,i30,i30abs,err);
+#ifdef SWIFT_CALCS_OPTIONS
+      if (!tegral_util(f,x,C,B,i30,i30abs,err,do_mksa,limit_unit,f_unit,contextptr)){
+#else
       if (!tegral_util(f,x,C,B,i30,i30abs,err,contextptr)){
-	if (is_greater(1e-4,ERR/I30ABS,contextptr)){
-	  *logptr(contextptr) << "Low accuracy, error estimate " << ERR/I30ABS << "\nError might be underestimated if initial boundary was +/-infinity" << endl;
-	  return true;
-	}
-	return false;
+#endif
+      	if (is_greater(1e-4,ERR/I30ABS,contextptr)){
+      	  *logptr(contextptr) << "Low accuracy, error estimate " << ERR/I30ABS << "\nError might be underestimated if initial boundary was +/-infinity" << endl;
+      	  return true;
+      	}
+      	return false;
       }
       v.push_back(makevecteur(C,B,i30,i30abs,err));
     }
     return false; // too many iterations
   }
+#ifdef SWIFT_CALCS_OPTIONS
+  bool tegral(const gen & f,const gen & x,const gen & a_,const gen &b_,const gen & eps,int nmax,gen & value,GIAC_CONTEXT){
+    return tegral(f,x,a_,b_,eps,nmax,value,false,plus_one,plus_one,contextptr);
+  }
+#endif
 
   gen romberg(const gen & f0,const gen & x0,const gen & a,const gen &b,const gen & eps,int nmax,GIAC_CONTEXT){
     return evalf_int(f0,x0,a,b,eps,nmax,true,contextptr);
   }
-  gen evalf_int(const gen & f0,const gen & x0,const gen & a,const gen &b,const gen & eps,int nmax,bool romberg_method,GIAC_CONTEXT){
-//print_emscripten("HERE 2");
-        // NEED TO ADD SIMILAR CODE TO PLOT/ODE SOLVER/FSOLVE THAT DEALS WITH UNITS IN THE LOOPS BUT RETURNS NUMERICAL RESULTS, ALSO IN TEGRAL ABOVE
+  gen evalf_int(const gen & f0,const gen & x0,const gen & a_,const gen &b_,const gen & eps,int nmax,bool romberg_method,GIAC_CONTEXT){
     gen x(x0),f(f0);
+    gen a = a_;
+    gen b = b_;
     if (x.type!=_IDNT){
       x=identificateur(" x");
       f=subst(f,x0,x,false,contextptr);
     }
     gen value=undef;
+    // a, b and eps should be evalf-ed, and eps>0
+#ifdef SWIFT_CALCS_OPTIONS
+    gen limit_unit = plus_one;
+    gen f_unit = plus_one;
+    if(!is_one(get_units(a)) && evalf_double(remove_units(a),1,contextptr).type==_DOUBLE_) {
+      if(!is_one(get_units(b)) && evalf_double(remove_units(b),1,contextptr).type==_DOUBLE_) {
+        // Ensure matching units:
+        if(mksa_reduce_base(a,contextptr) == mksa_reduce_base(b,contextptr)) {
+          limit_unit = mksa_reduce_base(a,contextptr);
+        } else {
+          std::string out = "Incompatible units: Integral lower limit has units of '";
+          out += gen2string(get_units(a)) + "' and upper limit units of '" + gen2string(get_units(b)) + "'";
+          return gensizeerr(gettext(out.data()));
+        }
+      } else if(is_zero(b)) {
+        limit_unit = mksa_reduce_base(a,contextptr);
+      } else {
+        std::string out = "Incompatible units: Integral lower limit has units of '";
+        out += gen2string(get_units(a)) + "' but upper limit has no units.";
+        return gensizeerr(gettext(out.data()));
+      }
+    } else if(!is_one(get_units(b)) && evalf_double(remove_units(b),1,contextptr).type==_DOUBLE_) {
+      if(is_zero(a)) {
+        limit_unit = mksa_reduce_base(b,contextptr);
+      } else {
+        std::string out = "Incompatible units: Integral lower limit has no units but upper limit has units of '";
+        out += gen2string(get_units(b)) + "'";
+        return gensizeerr(gettext(out.data()));
+      }
+    }
+    bool do_mksa = false;
+    if(_usimplify_hits_temperature(evalf(eval(f,eval_level(contextptr),contextptr),1,contextptr),contextptr) || _usimplify_hits_temperature(get_units(a),contextptr) || _usimplify_hits_temperature(get_units(b),contextptr)) {
+      // BUMMER!  Need to deal with temperature units
+      f_unit = mksa_reduce_base(evalf(eval(subst(f,x,(is_zero(a) ? b : a)*gen(0.9925165489491),false,contextptr),eval_level(contextptr),contextptr),1,contextptr),contextptr); 
+      a = _usimplify_base(_ufactor(makesequence(a,symbolic(at_unit, makevecteur(plus_one, get_units(b)))),contextptr),contextptr);
+      limit_unit = get_units(b);
+      do_mksa = true;
+    } else {
+      a = mksa_value(a,contextptr);
+      b = mksa_value(b,contextptr);
+      f_unit = mksa_reduce_base(evalf(eval(subst(f,x,(is_zero(a) ? b : a)*gen(0.9925165489491) * symbolic(at_unit, makevecteur(plus_one,limit_unit)),false,contextptr),eval_level(contextptr),contextptr),1,contextptr),contextptr); 
+      f = mksa_value(evalf(eval(f,1,contextptr),1,contextptr), contextptr);
+    }
+    if(is_undef(f_unit)) return gensizeerr("Could not determine units of function");
+    if (!romberg_method && tegral(f,x,a,b,eps,(1 << nmax),value,do_mksa,limit_unit,f_unit,contextptr))
+      return value;
+#else
     if (!romberg_method && tegral(f,x,a,b,eps,(1 << nmax),value,contextptr))
       return value;
     if (!romberg_method)
       *logptr(contextptr) << "Adaptive method failure, will try with Romberg, last approximation was " << value << endl;
-    // a, b and eps should be evalf-ed, and eps>0
+#endif
     gen h=b-a;
     vecteur old_line,cur_line;
 #ifdef NO_STDEXCEPT
+#ifdef SWIFT_CALCS_OPTIONS
+    if(do_mksa)
+      old_line.push_back(mksa_value(evalf(h*(limit(f,*x._IDNTptr,a,1,contextptr)+limit(f,*x._IDNTptr,b,-1,contextptr))/2,eval_level(contextptr),contextptr),contextptr));
+    else
+#endif
     old_line.push_back(evalf(h*(limit(f,*x._IDNTptr,a,1,contextptr)+limit(f,*x._IDNTptr,b,-1,contextptr))/2,eval_level(contextptr),contextptr));
 #else
     try {
@@ -3856,14 +3959,22 @@ namespace giac {
 #endif
     if (is_inf(old_line[0])|| is_undef(old_line[0]) || !lop(old_line[0],at_bounded_function).empty()){
       // FIXME middle point in arbitrary precision
+#ifndef SWIFT_CALCS_OPTIONS
       *logptr(contextptr) << gettext("Infinity or undefined limit at bounds.\nUsing middle point Romberg method") << endl;
+#endif
       gen y=(a+b)/2;
       gen fy=subst(f,x,y,false,contextptr);
+#ifdef SWIFT_CALCS_OPTIONS
+      if(do_mksa) fy = mksa_value(fy,contextptr);
+#endif
       // Workaround for undefined middle point
       if (is_undef(fy) || is_inf(fy)){
-	fy=limit(f,*x._IDNTptr,y,0,contextptr);
-	if (is_undef(fy) || is_inf(fy))
-	  return undef;
+      	fy=limit(f,*x._IDNTptr,y,0,contextptr);
+#ifdef SWIFT_CALCS_OPTIONS
+        if(do_mksa) fy = mksa_value(fy,contextptr);
+#endif
+      	if (is_undef(fy) || is_inf(fy))
+      	  return undef;
       }
       old_line=vecteur(1,fy*h);
       // At the i-th step of the loop compute the middle approx of the integral
@@ -3872,87 +3983,135 @@ namespace giac {
       int n=3;
       h=(b-a)/3;
       for (int i=0;i<nmax;++i){
-	cur_line.clear();
-	// compute trapeze
-	gen y=a+h/2,sum;
-	if (is_exactly_zero(y-a))
-	  return old_line;
-	for (int j=0;j<n;++j){
-	  if (j%3==1){
-	    y=y+h; // skip, already computed
-	    continue;
-	  }
-	  gen fy=subst(f,x,y,false,contextptr);
-	  // Workaround if fy undefined
-	  if (is_undef(fy) || is_inf(fy)){
-	    fy=limit(f,*x._IDNTptr,y,0,contextptr);
-	    if (is_undef(fy) || is_inf(fy))
-	      return undef;
-	  }
-	  sum=sum+evalf(fy,eval_level(contextptr),contextptr);
-	  y=y+h;
-	}
-	cur_line.push_back(old_line[0]/3+sum*h); 
-	h=h/3;
-	n = 3*n ;
-	gen pui9=1;
-	for (int j=0;j<=i;++j){
-	  pui9=9*pui9;
-	  cur_line.push_back((pui9*cur_line[j]-old_line[j])/(pui9-1));
-	}
-	gen err=abs(old_line[i]-cur_line[i+1],contextptr);
-	if (i>nmax/2 && (ck_is_greater(eps,err,contextptr)
-			 || ck_is_greater(eps*abs(cur_line[i+1],contextptr),err,contextptr)) )
-	  return (old_line[i]+cur_line[i+1])/2;
-	if (i!=nmax-1)
-	  old_line=cur_line;
+      	cur_line.clear();
+      	// compute trapeze
+      	gen y=a+h/2,sum;
+      	if (is_exactly_zero(y-a)) {
+#ifdef SWIFT_CALCS_OPTIONS
+          return apply_units(old_line,f_unit * limit_unit);
+#else
+      	  return old_line;
+#endif
+        }
+      	for (int j=0;j<n;++j){
+      	  if (j%3==1){
+      	    y=y+h; // skip, already computed
+      	    continue;
+      	  }
+      	  gen fy=subst(f,x,y,false,contextptr);
+#ifdef SWIFT_CALCS_OPTIONS
+          if(do_mksa) fy = mksa_value(fy,contextptr);
+#endif
+      	  // Workaround if fy undefined
+      	  if (is_undef(fy) || is_inf(fy)){
+      	    fy=limit(f,*x._IDNTptr,y,0,contextptr);
+#ifdef SWIFT_CALCS_OPTIONS
+            if(do_mksa) fy = mksa_value(fy,contextptr);
+#endif
+      	    if (is_undef(fy) || is_inf(fy))
+      	      return undef;
+      	  }
+      	  sum=sum+evalf(fy,eval_level(contextptr),contextptr);
+      	  y=y+h;
+      	}
+#ifdef SWIFT_CALCS_OPTIONS
+        if(do_mksa) cur_line.push_back(old_line[0]/3+sum*mksa_value(h,contextptr)); 
+        else
+#endif
+      	cur_line.push_back(old_line[0]/3+sum*h); 
+      	h=h/3;
+      	n = 3*n ;
+      	gen pui9=1;
+      	for (int j=0;j<=i;++j){
+      	  pui9=9*pui9;
+      	  cur_line.push_back((pui9*cur_line[j]-old_line[j])/(pui9-1));
+      	}
+      	gen err=abs(old_line[i]-cur_line[i+1],contextptr);
+      	if (i>nmax/2 && (ck_is_greater(eps,err,contextptr)
+      			 || ck_is_greater(eps*abs(cur_line[i+1],contextptr),err,contextptr)) ) {
+#ifdef SWIFT_CALCS_OPTIONS
+          return apply_units((old_line[i]+cur_line[i+1])/2,f_unit * limit_unit);
+#else
+      	  return (old_line[i]+cur_line[i+1])/2;
+#endif
+        }
+      	if (i!=nmax-1)
+      	  old_line=cur_line;
       }
       if (calc_mode(contextptr)==1)
-	return undef;
+	      return undef;
       *logptr(contextptr) << gettext("Unable to find numeric integral using Romberg method, returning the last approximations") << endl;
+#ifdef SWIFT_CALCS_OPTIONS
+      cur_line=is_undef(value)?makevecteur(apply_units(old_line.back(),f_unit * limit_unit),apply_units(cur_line.back(),f_unit * limit_unit)):makevecteur(apply_units(cur_line.back(),f_unit * limit_unit),value);
+#else
       cur_line=is_undef(value)?makevecteur(old_line.back(),cur_line.back()):makevecteur(cur_line.back(),value);
+#endif
       return cur_line;
       // return rombergo(f,x,a,b,nmax,contextptr);
     }
     int n=1;
     // At the i-th step of the loop compute the trapeze approx of the integral
     // and use old_line to compute cur_line
-    for (int i=0;i<nmax;++i){
+    for (int i=0;i<nmax;++i) {
       cur_line.clear();
       // compute trapeze
       gen y=a+h/2,sum;
-      if (is_exactly_zero(y-a))
-	return old_line;
-      for (int j=0;j<n;++j){
-	gen fy=subst(f,x,y,false,contextptr);
-	// Workaround for romberg((1-cos(x))/x^2,x,-1,1)?
-	if (is_undef(fy) || is_inf(fy)){
-	  fy=limit(f,*x._IDNTptr,y,0,contextptr);
-	  if (is_undef(fy) || is_inf(fy))
-	    return undef;
-	}
-	sum=sum+evalf(fy,eval_level(contextptr),contextptr);
-	y=y+h;
+      if (is_exactly_zero(y-a)) {
+#ifdef SWIFT_CALCS_OPTIONS
+        return apply_units(old_line,f_unit * limit_unit);
+#else
+	      return old_line;
+#endif
+      }
+      for (int j=0;j<n;++j) {
+      	gen fy=subst(f,x,y,false,contextptr);
+#ifdef SWIFT_CALCS_OPTIONS
+        if(do_mksa) fy = mksa_value(fy,contextptr);
+#endif
+      	// Workaround for romberg((1-cos(x))/x^2,x,-1,1)?
+      	if (is_undef(fy) || is_inf(fy)) {
+      	  fy=limit(f,*x._IDNTptr,y,0,contextptr);
+#ifdef SWIFT_CALCS_OPTIONS
+          if(do_mksa) fy = mksa_value(fy,contextptr);
+#endif
+      	  if (is_undef(fy) || is_inf(fy))
+      	    return undef;
+      	}
+      	sum=sum+evalf(fy,eval_level(contextptr),contextptr);
+      	y=y+h;
       }
       h=h/2;
+#ifdef SWIFT_CALCS_OPTIONS
+      if(do_mksa) cur_line.push_back(old_line[0]/2+sum*mksa_value(h,contextptr)); 
+      else
+#endif
       cur_line.push_back(old_line[0]/2+sum*h); 
       n = 2*n ;
       gen pui4=1;
-      for (int j=0;j<=i;++j){
-	pui4=4*pui4;
-	cur_line.push_back((pui4*cur_line[j]-old_line[j])/(pui4-1));
+      for (int j=0;j<=i;++j) {
+      	pui4=4*pui4;
+      	cur_line.push_back((pui4*cur_line[j]-old_line[j])/(pui4-1));
       }
       gen err=abs(old_line[i]-cur_line[i+1],contextptr);
       if (i>nmax/2 && (ck_is_greater(eps,err,contextptr)
-		       || ck_is_greater(eps*abs(cur_line[i+1],contextptr),err,contextptr)) )
-	return (old_line[i]+cur_line[i+1])/2;
+		       || ck_is_greater(eps*abs(cur_line[i+1],contextptr),err,contextptr)) ) {
+#ifdef SWIFT_CALCS_OPTIONS
+        return apply_units((old_line[i]+cur_line[i+1])/2,f_unit * limit_unit);
+#else
+        return (old_line[i]+cur_line[i+1])/2;
+#endif
+      }
       if (i!=nmax-1)
-	old_line=cur_line;
+      	old_line=cur_line;
     }
     if (calc_mode(contextptr)==1)
       return undef;
     *logptr(contextptr) << gettext("Unable to find numeric integral using Romberg method, returning the last approximations") << endl;
+#ifdef SWIFT_CALCS_OPTIONS
+    cur_line=is_undef(value)?makevecteur(apply_units(old_line.back(),f_unit * limit_unit),apply_units(cur_line.back(),f_unit * limit_unit)):makevecteur(apply_units(cur_line.back(),f_unit * limit_unit),value);
+#else
     cur_line=is_undef(value)?makevecteur(old_line.back(),cur_line.back()):makevecteur(cur_line.back(),value);
+#endif
     return cur_line;
   }
   gen ggb_var(const gen & f){
@@ -3969,7 +4128,6 @@ namespace giac {
     return l.front();
   }
   gen intnum(const gen & args,bool romberg_method,GIAC_CONTEXT){
-    //args.print_emscripten("NUMERICAL INTEGRAL: ");
     if ( args.type==_STRNG && args.subtype==-1) return  args;
     if ( (args.type!=_VECT) || (args._VECTptr->size()<2) )
       return gensizeerr(contextptr);
@@ -4042,8 +4200,32 @@ namespace giac {
     if (eps.type!=_DOUBLE_ && eps.type!=_FLOAT_ && eps.type!=_REAL)
       eps=epsilon(contextptr);
 #ifdef SWIFT_CALCS_OPTIONS
-//print_emscripten("HERE");  NEED TO LOOK FOR UNITS IN LIMITS AND IF SO, STILL PASS IT ALONG!
-//    if(a.type == _SYMB && a.is_symb_of_sommet(at_unit))
+    if(!is_one(get_units(a)) && evalf_double(remove_units(a),1,contextptr).type==_DOUBLE_) {
+      if(!is_one(get_units(b)) && evalf_double(remove_units(b),1,contextptr).type==_DOUBLE_) {
+        // Ensure matching units:
+        if(mksa_reduce_base(a,contextptr) == mksa_reduce_base(b,contextptr)) {
+          return evalf_int(f,x,a,b,eps,n,romberg_method,contextptr);
+        } else {
+          std::string out = "Incompatible units: Integral lower limit has units of '";
+          out += gen2string(get_units(a)) + "' and upper limit units of '" + gen2string(get_units(b)) + "'";
+          return gensizeerr(gettext(out.data()));
+        }
+      } else if(is_zero(b)) {
+        return evalf_int(f,x,a,b,eps,n,romberg_method,contextptr);
+      } else {
+        std::string out = "Incompatible units: Integral lower limit has units of '";
+        out += gen2string(get_units(a)) + "' but upper limit has no units.";
+        return gensizeerr(gettext(out.data()));
+      }
+    } else if(!is_one(get_units(b)) && evalf_double(remove_units(b),1,contextptr).type==_DOUBLE_) {
+      if(is_zero(a)) {
+        return evalf_int(f,x,a,b,eps,n,romberg_method,contextptr);
+      } else {
+        std::string out = "Incompatible units: Integral lower limit has no units but upper limit has units of '";
+        out += gen2string(get_units(b)) + "'";
+        return gensizeerr(gettext(out.data()));
+      }
+    }
 #endif
     if ( x.type!=_IDNT || 
 	 (a.type!=_DOUBLE_ && a.type!=_REAL) 
