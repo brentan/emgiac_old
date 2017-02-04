@@ -3803,6 +3803,11 @@ namespace giac {
 	  vptr->push_back(zero);
 	}
 	// change indice's value
+#ifdef SWIFT_CALCS_OPTIONS
+        if(a.type!=_VECT && ckmatrix(*vptr) && (int(vptr->front()._VECTptr->size()) == 1)) 
+          (*vptr)[indice.val]=makevecteur(a);
+        else
+#endif
 	(*vptr)[indice.val]=a;
 	if (in_place)
 	  return valeur; // string2gen("Done",false);
@@ -5343,7 +5348,14 @@ namespace giac {
     	return 0;
     	//return symb_at(makevecteur(v.front(),b));
     }
+#ifdef SWIFT_CALCS_OPTIONS
+    gen res = a.operator_at(b,contextptr);
+    if(a.type==_VECT && res.type==_VECT && ckmatrix(*(a._VECTptr)) && !ckmatrix(*(res._VECTptr)) && (int(a._VECTptr->front()._VECTptr->size()) == 1) && (int(res._VECTptr->size()) == 1) && (res._VECTptr->front().type != _VECT)) 
+      return res._VECTptr->front();
+    return res;
+#else
     return a.operator_at(b,contextptr);
+#endif
   }
   static const char _at_s []="at";
   static define_unary_function_eval4_index (165,__at,&giac::_at,_at_s,&printasat,&texprintasat);
