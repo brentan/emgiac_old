@@ -738,7 +738,24 @@ namespace giac {
   }
 
   static string escapeUnderscore(const string s0) {
-    std::size_t found_index = s0.find_first_of("_"); 
+    std::size_t found_index;
+#ifdef SWIFT_CALCS_OPTIONS
+    // Change variable decorations, which have syntax ___NAME___ within the variable, to appropriate syntax:
+    found_index = s0.find_last_of("~");  
+    if(found_index != std::string::npos) {
+      std::string before, command, after;
+      before = s0.substr(0,found_index);
+      after = s0.substr(found_index+1,std::string::npos);
+      found_index = before.find_last_of("~");
+      if(found_index != std::string::npos) {
+        // THIS SHOULD ALWAYS HAPPEN
+        command = before.substr(found_index+1,std::string::npos);
+        before = before.substr(0,found_index);
+        return "\\over" + command + "{" + escapeUnderscore(before) + "}" + escapeUnderscore(after);
+      }
+    }
+#endif
+    found_index = s0.find_first_of("_"); 
     if(found_index == std::string::npos)
       return s0;
     else if(s0.substr(found_index+1,std::string::npos).size() < 2)
