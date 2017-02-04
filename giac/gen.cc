@@ -8818,7 +8818,6 @@ namespace giac {
   gen gen::operator [] (const gen & i) const {
     return operator_at(i,context0);
   }
-  
   gen gen::operator_at(const gen & i,GIAC_CONTEXT) const {
     if (i.type==_DOUBLE_){
       double id=i._DOUBLE_val;
