@@ -3959,7 +3959,7 @@ namespace giac {
       }
     }
     if(is_error(f_unit)) return f_unit;
-    if(is_undef(f_unit)) return gensizeerr("Could not determine units of function using either upper or lower limit.  Ensure integrand is defined at limits.");
+    if(is_undef(f_unit)) return symbolic(at_integrate,makesequence(f0,x0,a_,b_)); //gensizeerr("Could not determine units of function using either upper or lower limit.  Ensure integrand is defined at limits.");
     if (!romberg_method && tegral(f,x,a,b,eps,(1 << nmax),value,do_mksa,limit_unit,f_unit,contextptr))
       return value;
 #else
@@ -4045,7 +4045,7 @@ namespace giac {
       	  }
       	  sum=sum+evalf(fy,eval_level(contextptr),contextptr);
 #ifdef SWIFT_CALCS_OPTIONS
-      if(!is_fully_numeric(sum)) return gensizeerr("Could not evaluate integral numerically.  Ensure all variables are defined.");
+      if(!is_fully_numeric(sum)) symbolic(at_integrate,makesequence(f0,x0,a_,b_));//return gensizeerr("Could not evaluate integral numerically.  Ensure all variables are defined.");
 #endif
       	  y=y+h;
       	}
@@ -4114,7 +4114,7 @@ namespace giac {
       	}
       	sum=sum+evalf(fy,eval_level(contextptr),contextptr);
 #ifdef SWIFT_CALCS_OPTIONS
-      if(!is_fully_numeric(sum)) return gensizeerr("Could not evaluate integral numerically.  Ensure all variables are defined.");
+      if(!is_fully_numeric(sum)) return symbolic(at_integrate,makesequence(f0,x0,a_,b_)); //gensizeerr("Could not evaluate integral numerically.  Ensure all variables are defined.");
 #endif
       	y=y+h;
       }

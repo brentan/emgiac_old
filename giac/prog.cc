@@ -859,25 +859,32 @@ namespace giac {
         *logptr(contextptr) << gettext("// Parsing ") << d << endl;
       #endif
       if (c.is_symb_of_sommet(at_derive))
-	*logptr(contextptr) << gettext("Warning, defining a derivative function should be done with function_diff or unapply: ") << c << endl;
-       if (c.type==_SYMB && c._SYMBptr->sommet!=at_local && c._SYMBptr->sommet!=at_bloc && c._SYMBptr->sommet!=at_when && c._SYMBptr->sommet!=at_for && c._SYMBptr->sommet!=at_ifte){
-	 vecteur lofc=lop(c,at_of);
-	 vecteur lofc_no_d;
-	 vecteur av=gen2vecteur(a);
-	 for (unsigned i=0;i<lofc.size();++i){
-	   if (lofc[i][1]!=d && !equalposcomp(av,lofc[i][1]) )
-	     lofc_no_d.push_back(lofc[i]);
-	 }
-	 if (!lofc_no_d.empty()){
-	   *logptr(contextptr) << gettext("Warning: algebraic function defined in term of others functions may lead to evaluation errors") << endl;
-	   CERR << c.print(contextptr) << endl;
-	   *logptr(contextptr) << gettext("Perhaps you meant ") << d.print(contextptr) << ":=unapply(" << c.print(contextptr) << ",";
-	   if (a.type==_VECT && a.subtype==_SEQ__VECT && a._VECTptr->size()==1)
-	     *logptr(contextptr) << a._VECTptr->front().print(contextptr) << ")" << endl;
-	   else
-	     *logptr(contextptr) << a.print(contextptr) << ")" << endl;
-	 }
-       }
+	      *logptr(contextptr) << gettext("Warning, defining a derivative function should be done with function_diff or unapply: ") << c << endl;
+      if (c.type==_SYMB && c._SYMBptr->sommet!=at_local && c._SYMBptr->sommet!=at_bloc && c._SYMBptr->sommet!=at_when && c._SYMBptr->sommet!=at_for && c._SYMBptr->sommet!=at_ifte){
+        vecteur lofc=lop(c,at_of);
+        vecteur lofc_no_d;
+        vecteur av=gen2vecteur(a);
+        for (unsigned i=0;i<lofc.size();++i){
+          if (lofc[i][1]!=d && !equalposcomp(av,lofc[i][1]) )
+            lofc_no_d.push_back(lofc[i]);
+        }
+	      if (!lofc_no_d.empty()){
+#ifdef SWIFT_CALCS_OPTIONS
+          // No need to say 'perhaps you meant', just do the apply ourselves:
+          context * newcontextptr = (context *) contextptr;
+          purgenoassume(a,newcontextptr);
+          gen g = _unapply(makesequence(c,a),newcontextptr);
+          return symbolic(at_sto,gen(makevecteur(g,d),_SEQ__VECT));
+#endif
+    	    *logptr(contextptr) << gettext("Warning: algebraic function defined in term of others functions may lead to evaluation errors") << endl;
+    	    CERR << c.print(contextptr) << endl;
+    	    *logptr(contextptr) << gettext("Perhaps you meant ") << d.print(contextptr) << ":=unapply(" << c.print(contextptr) << ",";
+    	    if (a.type==_VECT && a.subtype==_SEQ__VECT && a._VECTptr->size()==1)
+    	      *logptr(contextptr) << a._VECTptr->front().print(contextptr) << ")" << endl;
+    	    else
+    	      *logptr(contextptr) << a.print(contextptr) << ")" << endl;
+    	  }
+      }
     }
     gen newa,newc;
     replace_keywords(a,((embedd&&c.type==_VECT)?makevecteur(c):c),newa,newc,contextptr);
@@ -1430,14 +1437,14 @@ namespace giac {
     if (!is_integer(test)){
       test=test.evalf_double(eval_level(contextptr),contextptr);
       if ( (test.type!=_DOUBLE_) && (test.type!=_CPLX) ){
-	if (isifte){
+	      if (isifte) {
           if(is_error(test)) 
             return gensizeerr(gettext("Error in If statement: ") + get_error_message(test));
           else 
-	    return gensizeerr(gettext("Error while evaluating If statement.")); 
-	}
-	else
-	  return symb_when(eval(args,1,contextptr));
+	          return gensizeerr(gettext("Error while evaluating If statement.")); 
+    	  }
+    	  else
+	        return symb_when(eval(args,1,contextptr));
       }
     }
     bool rt;

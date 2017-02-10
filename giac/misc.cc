@@ -5072,12 +5072,12 @@ static define_unary_function_eval (__simplex_reduce,&_simplex_reduce,_simplex_re
       prog = undef;
     for(int i = 0; i < int(x.size()-1); i++) {
       if(i==int(x.size()-2) && !((w.size() >= 5) && is_one(w[4]))) // If no extrapolation, use >= on last command
-        prog = symb_ifte(symbolic(at_evalf,symb_and(symb_superieur_egal(gen(w[2]),x[i]),symb_superieur_egal(x[i+1],gen(w[2])))), o[i], prog);
+        prog = symb_when(symbolic(at_evalf,symb_and(symb_superieur_egal(gen(w[2]),x[i]),symb_superieur_egal(x[i+1],gen(w[2])))), o[i], prog);
       else
-        prog = symb_ifte(symbolic(at_evalf,symb_and(symb_superieur_egal(gen(w[2]),x[i]),symb_superieur_strict(x[i+1],gen(w[2])))), o[i], prog);
+        prog = symb_when(symbolic(at_evalf,symb_and(symb_superieur_egal(gen(w[2]),x[i]),symb_superieur_strict(x[i+1],gen(w[2])))), o[i], prog);
     }
     if((w.size() >= 5) && is_one(w[4]))
-      prog = symb_ifte(symbolic(at_evalf,symb_superieur_egal(gen(w[2]),x[int(x.size()-1)])), o[int(x.size()-2)], prog);
+      prog = symb_when(symbolic(at_evalf,symb_superieur_egal(gen(w[2]),x[int(x.size()-1)])), o[int(x.size()-2)], prog);
     return symbolic(at_program,gen(makevecteur(w[2],0,gen(symbolic(at_bloc,gen(symbolic(at_return,prog))))),_SEQ__VECT));
   }
 
