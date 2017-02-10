@@ -3155,7 +3155,7 @@ namespace giac {
             // Find limit units:
             gen limit_units = get_units(b);
             // Plugin units to expression:
-            context * newcontextptr= (context *) contextptr;
+            context * newcontextptr= clone_context(contextptr);
             purgenoassume(xval,newcontextptr);
             // Expand expression (same as plot_preprocess basically):
             vecteur lv = lidnt(v[0]);
@@ -3179,7 +3179,7 @@ namespace giac {
           // Find limit units:
           gen limit_units = get_units(a);
           // Plugin units to expression:
-          context * newcontextptr= (context *) contextptr;
+          context * newcontextptr= clone_context(contextptr);
           purgenoassume(xval,newcontextptr);
           // Expand expression (same as plot_preprocess basically):
           vecteur lv = lidnt(v[0]);
@@ -3202,7 +3202,7 @@ namespace giac {
           // Find limit units:
           gen limit_units = get_units(b);
           // Plugin units to expression:
-          context * newcontextptr= (context *) contextptr;
+          context * newcontextptr= clone_context(contextptr);
           purgenoassume(xval,newcontextptr);
           // Expand expression (same as plot_preprocess basically):
           vecteur lv = lidnt(v[0]);

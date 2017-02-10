@@ -1382,7 +1382,7 @@ namespace giac {
     if (vars.type==_IDNT) { // function plot
       gen locvar(vars);
       locvar.subtype=0;
-      context * newcontextptr= (context *) contextptr;
+      context * newcontextptr= clone_context(contextptr);
 #ifdef SWIFT_CALCS_OPTIONS
       remove_angle_mode(true);
       purgenoassume(locvar,newcontextptr);
@@ -8316,7 +8316,7 @@ namespace giac {
     if (function_tstep<=0 || (function_tmax-function_tmin)/function_tstep>max_nstep)
       return gensizeerr(gettext("Plotparam: unable to discretize: tmin, tmax, tstep=")+print_DOUBLE_(function_tmin,12)+","+print_DOUBLE_(function_tmax,12)+","+print_DOUBLE_(function_tstep,12)+gettext("\nTry a larger value for tstep"));
     gen fC(f);
-    context * newcontextptr=(context *) contextptr;
+    context * newcontextptr=clone_context(contextptr);
     if (f.type==_VECT && f._VECTptr->size()==2)
       fC=f._VECTptr->front()+cst_i*f._VECTptr->back();
     gen attribut=attributs.empty()?default_color(contextptr):attributs[0];

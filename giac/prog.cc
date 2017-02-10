@@ -871,7 +871,7 @@ namespace giac {
 	      if (!lofc_no_d.empty()){
 #ifdef SWIFT_CALCS_OPTIONS
           // No need to say 'perhaps you meant', just do the apply ourselves:
-          context * newcontextptr = (context *) contextptr;
+          context * newcontextptr = clone_context(contextptr);
           purgenoassume(a,newcontextptr);
           gen g = _unapply(makesequence(c,a),newcontextptr);
           return symbolic(at_sto,gen(makevecteur(g,d),_SEQ__VECT));
