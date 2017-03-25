@@ -45,6 +45,7 @@ using namespace std;
 #include "vector.h"
 #include <algorithm>
 #include <cmath>
+#include "emscripten.h"
 
 // C headers
 #include <stdio.h>
@@ -12111,6 +12112,73 @@ namespace giac {
     return gensizeerr("Stringstreams not available");
 #endif
   }
+
+  #ifdef SWIFT_CALCS_OPTIONS
+
+    // archive is made of couples name/value
+    static void read_string_archive(const std::string & s, GIAC_CONTEXT){
+      vecteur v;
+      istringstream inf(s);
+      readargs_from_stream(inf,v,contextptr);
+      const_iterateur it=v.begin(),itend=v.end();
+      for (;it!=itend;++it){
+        if (it->type!=_STRNG)
+          continue;
+        string name=*it->_STRNGptr;
+        ++it;
+        if (it==itend)
+          break;
+        gen value=*it;
+        (*contextptr->tabptr)[name.c_str()]=value;
+      }
+    }
+    
+    static std::string print_string_archive(const sym_string_tab & m){
+      ostringstream of;
+      sym_string_tab::const_iterator it=m.begin(),itend=m.end();
+      if (it==itend){
+        of << "[ ]" << endl;
+        return of.str();
+      }
+      of << "[" << string2gen(it->first,false) ;
+      of << "," << it->second ;
+      ++it;
+      for (;it!=itend;++it){
+        of << "," << endl ;
+        of << string2gen(it->first,false) ;
+        of << "," << it->second ;
+      }
+      of << "]" << endl;
+      return of.str();
+    }
+    gen _archive_string(const gen & g,GIAC_CONTEXT){
+      sym_string_tab arc;
+      // loop through user variables
+      sym_tab::const_iterator jt=contextptr->tabptr->begin(),jtend=contextptr->tabptr->end();
+      for (;jt!=jtend;++jt){
+        gen b=identificateur(jt->first);
+        arc[b.print(contextptr)]=eval(b,eval_level(contextptr),contextptr);
+      }
+      const std::string output = print_string_archive(arc);
+      return gen(output, contextptr);
+    }
+    static const char _archive_string_s []="archive_string";
+    static define_unary_function_eval (__archive_string,(const gen_op_context)giac::_archive_string,_archive_string_s);
+    define_unary_function_ptr5( at_archive_string ,alias_at_archive_string,&__archive_string,0,true);
+
+    gen _unarchive_string(const gen & g,GIAC_CONTEXT){
+      if ( g.type==_STRNG && g.subtype==-1) return  g;
+      std::string input = "get_archive_data('";
+      input += *g._STRNGptr;
+      input += "')";
+      std::string restore = emscripten_run_script_string(input.data());
+      read_string_archive(restore.data(),contextptr);
+      return 1;
+    }
+    static const char _unarchive_string_s []="unarchive_string";
+    static define_unary_function_eval (__unarchive_string,(const gen_op_context)giac::_unarchive_string,_unarchive_string_s);
+    define_unary_function_ptr5( at_unarchive_string ,alias_at_unarchive_string,&__unarchive_string,0,true);
+  #endif
 
   gen _archive(const gen & args,GIAC_CONTEXT){
     if ( args.type==_STRNG && args.subtype==-1) return  args;

@@ -55,3 +55,4 @@
 //#define HAVE_LIBPARI // uncomment if you want to include pari, currently buggy
 #define TIMEOUT
 //#define HAVE_SYS_TIMES_H 1
+#define HAVE_SSTREAM 1
