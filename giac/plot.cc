@@ -12116,11 +12116,12 @@ namespace giac {
   #ifdef SWIFT_CALCS_OPTIONS
 
     // archive is made of couples name/value
-    static void read_string_archive(const std::string & s, GIAC_CONTEXT){
+    static void read_string_archive(const std::string & s, const vecteur & vars, GIAC_CONTEXT){
       vecteur v;
       istringstream inf(s);
       readargs_from_stream(inf,v,contextptr);
       const_iterateur it=v.begin(),itend=v.end();
+      const_iterateur it2=vars.begin(),it2end=vars.end();
       for (;it!=itend;++it){
         if (it->type!=_STRNG)
           continue;
@@ -12128,8 +12129,20 @@ namespace giac {
         ++it;
         if (it==itend)
           break;
-        gen value=*it;
-        (*contextptr->tabptr)[name.c_str()]=value;
+        bool restore_var = false;
+        for (it2=vars.begin();it2!=it2end;++it2) {
+          if (it2->type!=_STRNG)
+            continue;
+          string test_name=*it2->_STRNGptr;
+          if(name.compare(test_name) == 0) {
+            restore_var = true;
+            break;
+          }
+        }
+        if(restore_var) {
+          gen value=*it;
+          (*contextptr->tabptr)[name.c_str()]=value;
+        }
       }
     }
     
@@ -12140,13 +12153,59 @@ namespace giac {
         of << "[ ]" << endl;
         return of.str();
       }
-      of << "[" << string2gen(it->first,false) ;
-      of << "," << it->second ;
+      of << "[{\"name\":" << string2gen(it->first,false);
+      std::string genout = gen2string(it->second);
+      size_t pos = 0;
+      while((pos = genout.find("\"", pos)) != std::string::npos) {
+        genout.replace(pos, 1, "\\\"");
+        pos += 2;
+      }
+      pos=0;
+      while((pos = genout.find("\n", pos)) != std::string::npos) {
+        genout.replace(pos, 1, "\\n");
+        pos += 2;
+      }
+      of << ", \"data\":\"" << genout << "\", \"latex\":\"";
+      genout = gen2tex(it->second, context0);
+      pos = 0;
+      while((pos = genout.find("\"", pos)) != std::string::npos) {
+        genout.replace(pos, 1, "\\\"");
+        pos += 2;
+      }
+      pos=0;
+      while((pos = genout.find("\n", pos)) != std::string::npos) {
+        genout.replace(pos, 1, "\\n");
+        pos += 2;
+      }
+      of << genout << "\"}";
       ++it;
       for (;it!=itend;++it){
-        of << "," << endl ;
-        of << string2gen(it->first,false) ;
-        of << "," << it->second ;
+        of << ",{\"name\":" ;
+        of << string2gen(it->first,false);
+        genout = gen2string(it->second);
+        pos = 0;
+        while((pos = genout.find("\"", pos)) != std::string::npos) {
+          genout.replace(pos, 1, "\\\"");
+          pos += 2;
+        }
+        pos=0;
+        while((pos = genout.find("\n", pos)) != std::string::npos) {
+          genout.replace(pos, 1, "\\n");
+          pos += 2;
+        }
+        of << ", \"data\":\"" << genout << "\", \"latex\":\"";
+        genout = gen2tex(it->second, context0);
+        pos = 0;
+        while((pos = genout.find("\"", pos)) != std::string::npos) {
+          genout.replace(pos, 1, "\\\"");
+          pos += 2;
+        }
+        pos=0;
+        while((pos = genout.find("\n", pos)) != std::string::npos) {
+          genout.replace(pos, 1, "\\n");
+          pos += 2;
+        }
+        of << genout << "\"}";
       }
       of << "]" << endl;
       return of.str();
@@ -12160,7 +12219,7 @@ namespace giac {
         arc[b.print(contextptr)]=eval(b,eval_level(contextptr),contextptr);
       }
       const std::string output = print_string_archive(arc);
-      return gen(output, contextptr);
+      return string2gen(output, false);
     }
     static const char _archive_string_s []="archive_string";
     static define_unary_function_eval (__archive_string,(const gen_op_context)giac::_archive_string,_archive_string_s);
@@ -12168,11 +12227,17 @@ namespace giac {
 
     gen _unarchive_string(const gen & g,GIAC_CONTEXT){
       if ( g.type==_STRNG && g.subtype==-1) return  g;
+      if ( g.type!=_VECT) return g;
+      vecteur v=*g._VECTptr;
+      if ( v.size() != 2) return g;
+      if (v[0].type != _STRNG) return g;
+      if (v[1].type != _VECT) return g;
+
       std::string input = "get_archive_data('";
-      input += *g._STRNGptr;
+      input += *(v[0])._STRNGptr;
       input += "')";
       std::string restore = emscripten_run_script_string(input.data());
-      read_string_archive(restore.data(),contextptr);
+      read_string_archive(restore.data(),*(v[1])._VECTptr,contextptr);
       return 1;
     }
     static const char _unarchive_string_s []="unarchive_string";
