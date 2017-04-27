@@ -674,6 +674,7 @@ namespace giac {
   gen mksa_value(const gen & g,GIAC_CONTEXT);
   vecteur mksa_value(const vecteur & g,GIAC_CONTEXT);
   gen _usimplify_base_function(const gen & g,const bool angle_mode, const bool unit_remove, const bool mksa, const bool do_recursive, GIAC_CONTEXT);
+  bool _test_for_sommet(const gen & g, const gen & s);
   bool _usimplify_hits_temperature(const gen & g, GIAC_CONTEXT);
   gen remove_units(const gen & g);
   gen remove_units_nosimp(const gen & g);

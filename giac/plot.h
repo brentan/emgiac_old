@@ -187,6 +187,9 @@ namespace giac {
   gen _est(const gen & args,const propriete & f,GIAC_CONTEXT);
 
   vecteur plotpreprocess(const gen & args,GIAC_CONTEXT);
+  #ifdef SWIFT_CALCS_OPTIONS
+    vecteur plotpreprocess_eval(const gen & args,const bool do_quote_eval, GIAC_CONTEXT);
+  #endif
   vecteur gen2vecteur(const gen & arg);
   bool chk_double_interval(const gen & g,double & inf,double & sup,GIAC_CONTEXT);
   bool readrange(const gen & g,double defaultxmin,double defaultxmax,gen & x, double & xmin, double & xmax,GIAC_CONTEXT);

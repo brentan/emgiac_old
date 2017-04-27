@@ -3258,10 +3258,15 @@ namespace giac {
     if ( args.type==_STRNG && args.subtype==-1) return  args;
     if (calc_mode(contextptr)==1 && args.type!=_VECT)
       return _fsolve(makesequence(args,ggb_var(args)),contextptr);
+    vecteur v;
 #ifdef SWIFT_CALCS_OPTIONS
     remove_angle_mode(true);
+    v = plotpreprocess_eval(args, false, contextptr);
+bool showit = false;
+    if(!_test_for_sommet(gen(v), at_local))
 #endif
-    vecteur v(plotpreprocess(args,contextptr));
+    v = plotpreprocess(args,contextptr);
+else showit=true;
     gen res=undef;
     res=in_fsolve(v,contextptr);
 #ifdef SWIFT_CALCS_OPTIONS
@@ -3336,7 +3341,7 @@ namespace giac {
     vecteur I1(lidnt(v[1])); 
     vecteur I0(true_lidnt(v0)); // should remove embedded fsolve/sum/int
     I0=lidnt(makevecteur(evalf(I0,1,contextptr),I1));
-    if (_sort(I0,contextptr)!=_sort(I1,contextptr)) 
+    if (!_test_for_sommet(v0,at_local) && (_sort(I0,contextptr)!=_sort(I1,contextptr)))
       return symbolic(at_fsolve,gen(v,_SEQ__VECT));
     int evalf_after=interv?3:1;
     if (s>=2 && v0.type==_VECT && v[1].type==_VECT && !v[1]._VECTptr->empty()){
@@ -4153,6 +4158,7 @@ namespace giac {
       guessu = gen(gu);
     } else if(is_zero(guess)) guessu = gen(0.00000656434)*symbolic(at_unit, makevecteur(plus_one, a_unit)); // random non-zero to test units)
     else guessu = guess;
+    bool programmatic_function = _test_for_sommet(f,at_local);
     fa =evalf(eval(subst(f,x,guessu,false,contextptr),eval_level(contextptr),contextptr),1,contextptr); 
     gen f_unit = get_units(fa);
     fa = remove_units(fa);
@@ -4198,7 +4204,7 @@ namespace giac {
     // Test for any offset units in the expressions...if so, we have to do unit simplifications on each loop, otherwise we can 
     // do it once upfront, saving a boatload of computational time
     bool do_mksa = false;
-    if(_usimplify_hits_temperature(evalf(eval(f,eval_level(contextptr),contextptr),1,contextptr),contextptr)) 
+    if(_usimplify_hits_temperature(evalf(eval(f,eval_level(contextptr),contextptr),1,contextptr),contextptr) || programmatic_function) 
       do_mksa = true;
     else // Do unit simplifications upfront:
       f = mksa_value(f, contextptr);
@@ -4248,6 +4254,13 @@ namespace giac {
       else
 #endif
           d=eval(subst(invdf,x,a,false,contextptr),eval_level(contextptr),contextptr);
+#ifdef SWIFT_CALCS_OPTIONS
+          if(programmatic_function && is_undef(d)) {
+            // Guess d based on slope of nearby points
+            d=(mksa_value(eval(subst(f,x,apply_units(1.001*a,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),contextptr)-mksa_value(eval(subst(f,x,apply_units(a,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),contextptr))/mksa_value(eval(apply_units(0.001*a,mksa_a_unit),eval_level(contextptr),contextptr),contextptr);
+            if(!inv_after) d = inv(d, contextptr);
+          }
+#endif
 	  // of << k << " " << d << " " << invdf << " " << x << " " << a << " ";
 	  // of << d << " " << fa << " ";
 	  if (inv_after)
@@ -4361,6 +4374,11 @@ namespace giac {
         if(do_mksa) {
           fa=mksa_value(evalf(eval(subst(f,x,apply_units(a,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),1,contextptr),contextptr);
           d=mksa_value(eval(subst(invdf,x,apply_units(a,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),contextptr);
+          if(programmatic_function && is_undef(d)) {
+            // Guess d based on slope of nearby points
+            d=(mksa_value(eval(subst(f,x,apply_units(1.001*a,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),contextptr)-mksa_value(eval(subst(f,x,apply_units(a,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),contextptr))/mksa_value(eval(apply_units(0.001*a,mksa_a_unit),eval_level(contextptr),contextptr),contextptr);
+            if(!inv_after) d = inv(d, contextptr);
+          }
           /*if(f_unit.type == _VECT) {
             for(int jj=0;jj<int(f_unit._VECTptr->size());jj++)  //inv_after = true
               (*d._VECTptr)[jj] = _ufactor(makesequence((*d._VECTptr)[jj], symbolic(at_unit, makevecteur(plus_one, (*f_unit._VECTptr)[jj] / (*a_unit._VECTptr)[jj]))),contextptr);
@@ -4379,6 +4397,7 @@ namespace giac {
             d=-evalf(subst(invdf,x,a,false,contextptr)*subst(f,x,a,false,contextptr),1,contextptr);
 #ifdef SWIFT_CALCS_OPTIONS
         }
+
 #endif
 	  a=a+d;
 	  if (is_positive(epsg2-_l2norm(d,contextptr)/max(1,abs(a,contextptr),contextptr),contextptr))

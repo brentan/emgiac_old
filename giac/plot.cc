@@ -1391,7 +1391,7 @@ namespace giac {
       local_sto(locvar * x_unit,identificateur("x__temp"),newcontextptr);
       y = evalf(y, eval_level(contextptr),newcontextptr);
       bool do_mksa = false;
-      if(is_undef(y) || _usimplify_hits_temperature(y,newcontextptr)) {
+      if(is_undef(y) || _usimplify_hits_temperature(y,newcontextptr) || _test_for_sommet(f, at_local)) {
         y=quotesubst(f,vars,locvar,contextptr);
         do_mksa = true;
       } else 
@@ -8332,7 +8332,7 @@ namespace giac {
     local_sto(locvar * t_unit,identificateur("t__temp"),newcontextptr);
     xy = evalf(xy, eval_level(contextptr),newcontextptr);
     bool do_mksa = false;
-    if(is_undef(xy) || _usimplify_hits_temperature(xy,newcontextptr)) {
+    if(is_undef(xy) || _usimplify_hits_temperature(xy,newcontextptr) || _test_for_sommet(f, at_local)) {
       xy=quotesubst(f,vars,locvar,contextptr);
       do_mksa = true;
     } else 

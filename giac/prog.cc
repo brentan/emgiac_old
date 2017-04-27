@@ -10869,6 +10869,19 @@ namespace giac {
     static define_unary_function_eval (__usimplify_base,&_usimplify_base,_usimplify_base_s);
     define_unary_function_ptr5( at_usimplify_base ,alias_at_usimplify_base,&__usimplify_base,0,true);
 
+    bool _test_for_sommet(const gen & g, const gen & s) {
+      if ( g.type==_STRNG &&  g.subtype==-1) return false;
+      if (g.type == _VECT) {
+        const_iterateur it=g._VECTptr->begin(),itend=g._VECTptr->end();
+        for (;it!=itend;++it)
+          if(_test_for_sommet(*it, s)) return true;
+        return false;
+      }
+      if((g.type == _SYMB) && (g._SYMBptr->sommet == s)) return true;
+      if((g.type == _SYMB) && (g._SYMBptr->feuille.type == _VECT)) return _test_for_sommet(g._SYMBptr->feuille, s);
+      return false;
+    }
+
     bool _usimplify_hits_temperature(const gen & g, GIAC_CONTEXT) {
       if ( g.type==_STRNG &&  g.subtype==-1) return false;
       if (g.type==_VECT) {
