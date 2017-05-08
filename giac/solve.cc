@@ -3262,11 +3262,9 @@ namespace giac {
 #ifdef SWIFT_CALCS_OPTIONS
     remove_angle_mode(true);
     v = plotpreprocess_eval(args, false, contextptr);
-bool showit = false;
     if(!_test_for_sommet(gen(v), at_local))
 #endif
     v = plotpreprocess(args,contextptr);
-else showit=true;
     gen res=undef;
     res=in_fsolve(v,contextptr);
 #ifdef SWIFT_CALCS_OPTIONS
@@ -4249,18 +4247,16 @@ else showit=true;
 	    return gensizeerr(gettext("Stopped by user interruption.")); 
 	  }
 #ifdef SWIFT_CALCS_OPTIONS
-      if(do_mksa)
+      if(do_mksa) {
+        if(programmatic_function) {
+          // Guess d based on slope of nearby points
+          d=(mksa_value(eval(subst(f,x,apply_units(1.001*a,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),contextptr)-mksa_value(eval(subst(f,x,apply_units(a,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),contextptr))/mksa_value(eval(apply_units(0.001*a,mksa_a_unit),eval_level(contextptr),contextptr),contextptr);
+          if(!inv_after) d = inv(d, contextptr);
+        } else
           d=mksa_value(eval(subst(invdf,x,apply_units(a,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),contextptr);
-      else
+      } else
 #endif
           d=eval(subst(invdf,x,a,false,contextptr),eval_level(contextptr),contextptr);
-#ifdef SWIFT_CALCS_OPTIONS
-          if(programmatic_function && is_undef(d)) {
-            // Guess d based on slope of nearby points
-            d=(mksa_value(eval(subst(f,x,apply_units(1.001*a,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),contextptr)-mksa_value(eval(subst(f,x,apply_units(a,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),contextptr))/mksa_value(eval(apply_units(0.001*a,mksa_a_unit),eval_level(contextptr),contextptr),contextptr);
-            if(!inv_after) d = inv(d, contextptr);
-          }
-#endif
 	  // of << k << " " << d << " " << invdf << " " << x << " " << a << " ";
 	  // of << d << " " << fa << " ";
 	  if (inv_after)
@@ -4277,7 +4273,7 @@ else showit=true;
             fa=evalf(eval(subst(f,x,a,false,contextptr),eval_level(contextptr),contextptr),1,contextptr); 
 	    continue;
 	  }	    
-	  if (d.type!=_FLOAT_ && d.type!=_DOUBLE_ && d.type!=_CPLX && d.type!=_REAL && d.type!=_VECT && !is_undef(d) && !is_inf(d))
+          if (d.type!=_FLOAT_ && d.type!=_DOUBLE_ && d.type!=_CPLX && d.type!=_REAL && d.type!=_VECT && !is_undef(d) && !is_inf(d))
 	    return gensizeerr(contextptr);
 	  if (k==0 && is_zero(d,contextptr) && is_greater(abs(fa,contextptr),std::sqrt(eps2),contextptr)){
 	    a=newton_rand(j,real,rand_xmin,rand_xmax,f,contextptr);
@@ -4373,12 +4369,12 @@ else showit=true;
 #ifdef SWIFT_CALCS_OPTIONS
         if(do_mksa) {
           fa=mksa_value(evalf(eval(subst(f,x,apply_units(a,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),1,contextptr),contextptr);
-          d=mksa_value(eval(subst(invdf,x,apply_units(a,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),contextptr);
-          if(programmatic_function && is_undef(d)) {
+          if(programmatic_function) {
             // Guess d based on slope of nearby points
             d=(mksa_value(eval(subst(f,x,apply_units(1.001*a,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),contextptr)-mksa_value(eval(subst(f,x,apply_units(a,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),contextptr))/mksa_value(eval(apply_units(0.001*a,mksa_a_unit),eval_level(contextptr),contextptr),contextptr);
             if(!inv_after) d = inv(d, contextptr);
-          }
+          } else
+            d=mksa_value(eval(subst(invdf,x,apply_units(a,mksa_a_unit),false,contextptr),eval_level(contextptr),contextptr),contextptr);
           /*if(f_unit.type == _VECT) {
             for(int jj=0;jj<int(f_unit._VECTptr->size());jj++)  //inv_after = true
               (*d._VECTptr)[jj] = _ufactor(makesequence((*d._VECTptr)[jj], symbolic(at_unit, makevecteur(plus_one, (*f_unit._VECTptr)[jj] / (*a_unit._VECTptr)[jj]))),contextptr);
