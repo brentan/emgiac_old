@@ -316,7 +316,7 @@ namespace giac {
 	else {
 	  if (i)
 	    s += '*';
-	  if ( e._SYMBptr->sommet==at_plus || e._SYMBptr->sommet==at_neg || is_inequation(e) ){
+	  if ( e._SYMBptr->sommet==at_plus || e._SYMBptr->sommet==at_neg || is_inequation(e) || need_parenthesis(e._SYMBptr->sommet) ){
 	    s += "(";
 	    add_print(s,e,contextptr);
 	    s += ")";
@@ -465,6 +465,8 @@ namespace giac {
   }
 
   static string & add_print_symbolic(string & s,const symbolic & g,GIAC_CONTEXT){
+print_emscripten("HERE: "+s);
+if(g.sommet==at_plus) print_emscripten("AT PLUS");
     if (!g.sommet.ptr()){
       s+="NULL(";
       s+=g.feuille.print();
