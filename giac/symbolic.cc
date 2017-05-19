@@ -465,8 +465,6 @@ namespace giac {
   }
 
   static string & add_print_symbolic(string & s,const symbolic & g,GIAC_CONTEXT){
-print_emscripten("HERE: "+s);
-if(g.sommet==at_plus) print_emscripten("AT PLUS");
     if (!g.sommet.ptr()){
       s+="NULL(";
       s+=g.feuille.print();
