@@ -29,7 +29,7 @@
 #include "SDL/SDL.h"
 #include "SDL/SDL_opengl.h"
 #include <emscripten.h>
-#include <html5.h>
+//#include <html5.h>
 #endif
 
 #include <fstream>
@@ -98,31 +98,6 @@ namespace giac {
 
   static double pow10(double d){
     return std::pow(10.,d);
-  }
-
-  void arc_en_ciel(int k,int & r,int & g,int & b){
-    k += 21;
-    k %= 126;
-    if (k<0)
-      k += 126;
-    if (k<21){
-      r=251; g=0; b=12*k;
-    }
-    if (k>=21 && k<42){
-      r=251-(12*(k-21)); g=0; b=251;
-    } 
-    if (k>=42 && k<63){
-      r=0; g=(k-42)*12; b=251;
-    } 
-    if (k>=63 && k<84){
-      r=0; g=251; b=251-(k-63)*12;
-    } 
-    if (k>=84 && k<105){
-      r=(k-84)*12; g=251; b=0;
-    } 
-    if (k>=105 && k<126){
-      r=251; g=251-(k-105)*12; b=0;
-    } 
   }
 
   void xcas_color(int color,bool dim3){
@@ -233,6 +208,10 @@ namespace giac {
   }
 
   void Opengl::update_infos(const gen & g){
+    if (g.type==_VECT && g.subtype==_GRAPH__VECT){
+      show_axes=false;
+      orthonormalize();
+    }
     if (g.is_symb_of_sommet(at_equal)){
       // detect a title or a x/y-axis name
       gen & f = g._SYMBptr->feuille;
@@ -2488,34 +2467,6 @@ namespace giac {
       return;
     }
     if (v0.is_symb_of_sommet(at_curve) && v0._SYMBptr->feuille.type==_VECT && !v0._SYMBptr->feuille._VECTptr->empty()){
-      if (f._SYMBptr->feuille._VECTptr->size()>=2){
-	gen f=(*v0._SYMBptr->feuille._VECTptr)[1];
-	if (f.type==_VECT){
-	  // COUT << f << endl;
-	  vecteur v =*f._VECTptr;
-	  int n=v.size();
-	  for (int i=0;i<n-1;++i){
-	    glBegin(GL_LINES);
-	    gen tmp=v[i];
-	    if (tmp.type==_VECT && glvertex(*tmp._VECTptr,0,0,contextptr)){
-	      gen tmp1=v[i+1];
-	      if (tmp1.type==_VECT &&glvertex(*tmp1._VECTptr,0,0,contextptr))
-		;
-	      else {
-		COUT << "rendering err0 " << tmp1 << " " << i+1 << "," << n << endl;
-		glvertex(*tmp._VECTptr,0,0,contextptr);
-	      }
-	    }
-	    else {
-	      glvertex(makevecteur(0,0,0),0,0,contextptr);
-	      glvertex(makevecteur(0,0,0),0,0,contextptr);
-	      COUT << "rendering err1 " << tmp << " " << i << "," << n <<endl;
-	    }
-	    glEnd();
-	  }
-	}
-	return;
-      }
       gen f = v0._SYMBptr->feuille._VECTptr->front();
       // f = vect[ pnt,var,xmin,xmax ]
       if (f.type==_VECT && f._VECTptr->size()>=4){
@@ -4360,7 +4311,49 @@ void freeglutStrokeCharacter( int character )
 #endif // ndef NO_NAMESPACE_GIAC
 
 #ifdef EMCC
-const char * gettext(const char * s) { return s; }
-#endif
+#ifdef GIAC_GGB
+const char * gettext(const char * s) { 
+  return s;
+}
+#else // GIAC_GGB
+#include "aspen_translate.h"
+bool tri2(const char4 & a,const char4 & b){
+  int res= strcmp(a[0],b[0]);
+  return res<0;
+}
+
+int giac2aspen(int lang){
+  switch (lang){
+  case 0: case 2:
+    return 1;
+  case 1:
+    return 3;
+  case 3:
+    return 5;
+  case 6:
+    return 7;
+  case 8:
+    return 2;
+  case 5:
+    return 4;
+  }
+  return 0;
+}
+
+const char * gettext(const char * s) { 
+  int lang=language(context0); 
+  // 0 and 2 english 1 french 3 sp 4 el 5 de 6 it 7 tr 8 zh 9 pt
+  lang=giac2aspen(lang);
+  char4 s4={s};
+  std::pair<char4 * const,char4 *const> pp=equal_range(aspen_giac_translations,aspen_giac_translations+aspen_giac_records,s4,tri2);
+  if (pp.first!=pp.second && 
+      pp.second!=aspen_giac_translations+aspen_giac_records &&
+      (*pp.first)[lang]){
+    return (*pp.first)[lang];
+  }
+  return s;
+}
+#endif // GIAC_GGB
+#endif // EMCC
 
 #endif // ndef GIAC_GGB

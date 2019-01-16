@@ -43,8 +43,8 @@ namespace giac {
   void autoscaleminmax(std::vector<double> & v,double & m,double & M,bool fullview);
   // return true if g has a circle inside so that we orthonormalize
   bool autoscaleg(const gen & g,std::vector<double> & vx,std::vector<double> & vy,std::vector<double> & vz,GIAC_CONTEXT);
-  // read inside g for gl_x=xmin..xmax, gl_y= gl_z options and overwrite window limits
-  void overwrite_viewbox(const gen & g,double & window_xmin,double & window_xmax,double & window_ymin,double & window_ymax,double &window_zmin,double & window_zmax);
+  // read inside g for gl_x=xmin..xmax, gl_y= gl_z options and overwrite window limits, return true if axes should be drawn
+  bool overwrite_viewbox(const gen & g,double & window_xmin,double & window_xmax,double & window_ymin,double & window_ymax,double &window_zmin,double & window_zmax);
 
   std::string gen2tex(const gen & e,GIAC_CONTEXT);
   // convert _, &, {, } to \_ \& \{ \}
@@ -66,6 +66,11 @@ namespace giac {
   extern const unary_function_ptr * const  at_TeX ;
   std::string get_path(const std::string & st);
   std::string remove_path(const std::string & st);
+  struct plot_attr {
+    std::string xlegende,ylegende,title;
+  };
+  // find title, xlegende and ylegende in a 2d graphic object
+  void title_legende(const gen & g,plot_attr & p);
 
 #ifndef NO_NAMESPACE_GIAC
 } // namespace giac

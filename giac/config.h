@@ -14,13 +14,13 @@
 #define PACKAGE_NAME "giac"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "giac 1.2"
+#define PACKAGE_STRING "giac 1.4.9"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "giac"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "1.2"
+#define PACKAGE_VERSION "1.4.9"
 
 /* The size of `int', as computed by sizeof. */
 #define SIZEOF_INT 4
@@ -40,7 +40,7 @@
 
 
 /* Version number of package */
-#define VERSION "1.2.2"
+#define VERSION "1.4.9-57"
 
 
 #define EMCC
@@ -52,5 +52,7 @@
 #define HAVE_MPFR_H 1
 #define HAVE_LIBMPFI
 //#define HAVE_LIBPARI // uncomment if you want to include pari, currently buggy
+#define HAVE_LIBGLPK 1
 #define TIMEOUT
+#define HAVE_UNISTD_H
 //#define HAVE_SYS_TIMES_H 1

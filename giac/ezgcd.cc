@@ -296,7 +296,7 @@ namespace giac {
 	break;
       unknowns += int(vit->fact.coord.size())-1; // lcoeff is known
     }
-    if (unknowns>=pcur.lexsorted_degree()/2 || unknowns==0)
+    if (unknowns>=giacmax(5,pcur.lexsorted_degree()/2) || unknowns==0)
       return false;
     polynome lcp(Tfirstcoeff(pcur));
     int dim=pcur.dim;
@@ -343,7 +343,8 @@ namespace giac {
       int N=int(syst.size());
       vecteur linear;
       for (int i=0;i<N;++i){
-	if (is_zero(derive(derive(syst[i],la,context0),la,context0)))
+	gen d1=derive(syst[i],la,context0);
+	if (is_zero(derive(d1,la,context0)))
 	  linear.push_back(syst[i]);
       }
       if (linear.empty())
@@ -352,7 +353,7 @@ namespace giac {
       lvar(linear,indet);
       indet=vecteur(indet.begin()+lv.size(),indet.end());
       vecteur sols=linsolve(linear,indet,context0);
-      if (sols.size()!=indet.size() || is_undef(sols))
+      if (sols.size()!=indet.size() || is_undef(sols) || sols.empty())
 	return false;
       la_val=subst(la_val,indet,sols,false,context0);
       gen tmp=recursive_normal(subst(syst,indet,sols,false,context0),context0);
@@ -377,6 +378,391 @@ namespace giac {
     }
     return true;
   }
+
+  // pcur(x,x1,x2,...) with [x1,x2,...]=[t^n1,t^n2,...]
+  void eval_tn(const polynome & pcur,const index_t & n,polynome & pt){
+    pt.dim=2;
+    pt.coord.clear();
+    pt.coord.reserve(pcur.coord.size());
+    vector< monomial<gen> >::const_iterator it=pcur.coord.begin(),itend=pcur.coord.end();
+    index_t cur(2);
+    for (;it!=itend;++it){
+      const index_t & i=it->index.iref();
+      index_t::const_iterator jt=i.begin(),jtend=i.end();
+      index_t::const_iterator nt=n.begin();
+      cur[0]=*jt;
+      int curn=0;
+      for (++jt;jt!=jtend;++jt,++nt)
+	curn += (*jt)*(*nt);
+      cur[1]=curn;
+      pt.coord.push_back(monomial<gen>(it->value,cur));
+    }
+    pt.tsort();
+  }
+
+  // return true if none of the coefficients of p with same 1st degree are the same
+  bool x_degrees(const polynome & p,vector<int> & d){
+    d.clear();
+    vector< monomial<gen> >::const_iterator it=p.coord.begin(),itend=p.coord.end();
+    int prev=-1;
+    vecteur v;
+    for (;it!=itend;++it){
+      int cur=it->index.iref().front();
+      if (cur!=prev){
+	v=vecteur(1,it->value);
+	d.push_back(cur);
+	prev=cur;
+      }
+      else {
+	if (equalposcomp(v,it->value))
+	  return false;
+	v.push_back(it->value);
+      }
+    }
+    return true;
+  }
+
+  bool lex_or_coeff_sort(const monomial<gen> & a,const monomial<gen> & b){
+    if (a.index.front()!=b.index.front())
+      return a.index.front()>b.index.front();
+    return is_strictly_greater(a.value,b.value,context0);
+  }
+
+  bool try_sparse_factor_bi(polynome & pcur,int mult,factorization & f){
+    int dim=pcur.dim;
+    if (dim<=2)
+      return false;
+    /* Try sparse factorization using bivariate images of a factor of
+       pcur(x,x1,x2,...) with [x1,x2,...]=[t^n1,t^n2,...]
+       where n1,n2,...=1,1,... then 2,1,... then 1,2,...
+    */
+    polynome lcp(Tfirstcoeff(pcur)),lcpt;
+    polynome pt,ptcont;
+    index_t n(dim-1,1);
+    for (;;){
+      eval_tn(pcur,n,pt);
+      pt=pt/Tlgcd(pt);
+      eval_tn(lcp,n,lcpt);
+#if POLY_SPARSE_BI
+      factorization ft;
+      gen extra_div_t;
+      factor(pt,ptcont,ft,false,false,false,1,extra_div_t);
+      if (ft.size()==1){
+	f.push_back(facteur<polynome>(pcur,mult));
+	return true;
+      }
+      factorization::const_iterator vit=ft.begin(),vitend=ft.end();
+#else
+      vecteur lv(makevecteur(vx_var,gen("t",context0)));
+      gen dbg=_poly2symb(makesequence(pt,lv),context0);
+      dbg=_factors(dbg,context0) ;
+      if (dbg.type!=_VECT) return false;
+      vecteur v=*dbg._VECTptr;
+      if (v.size()==2){
+	f.push_back(facteur<polynome>(pcur,mult));
+	return true;
+      }
+      iterateur vit=v.begin(),vitend=v.end();
+#endif
+      // factor must be distinct from other factors 
+      // by one of the degrees in x
+      // select which factor will be reconstructed: 
+      // multby=lcpt/lcoeff(factor of ft) must be as simple as possible
+      // Once selected, the factor will be normalized by * by multby
+      vector<int> seldegs;
+      polynome multby,selp;
+      for (;vit!=vitend;++vit){
+#if POLY_SPARSE_BI
+	if (vit->mult>1) break;
+	const polynome & p=vit->fact;
+#else
+	++vit;
+	if (*vit!=1) break;
+	gen pg=_symb2poly(makesequence(*(vit-1),lv),context0);
+	if (pg.type!=_POLY) break;
+	const polynome & p = *pg._POLYptr;
+#endif
+	index_t D=p.degree();
+	double ratio=p.coord.size()/(double(D[0])*D[1]);
+	if (ratio>0.2)
+	  return false;
+	vector<int> degs;
+	bool b=x_degrees(p,degs);
+	if (degs==seldegs) break;
+	polynome multbynew=lcpt/Tfirstcoeff(p);
+	if (seldegs.empty() || (b && multbynew.coord.size()<multby.coord.size())){
+	  if (!b){ 
+	    // some coeffs are the same, dilate randomly 
+	    // using -1, 1, 2, -2
+	    vecteur lv(dim);
+	    for (int i=0;i<dim;++i){
+	      lv[i]=identificateur("x"+print_INT_(i));
+	    }
+	    gen pcurg=_poly2symb(makesequence(pcur,lv),context0);
+	    vecteur lw(lv);
+	    vecteur dilate=vranm(dim,4,context0);
+	    for (int k=1;k<dim;++k){
+	      int c=dilate[k].val;
+	      switch (c){
+	      case 0:
+		dilate[k]=2;
+		break;
+	      case 1: case 2:
+		dilate[k]=-1;
+		break;
+	      case 3:
+		dilate[k]=2;
+		break;
+	      }
+	    }
+	    for (int k=1;k<dim;++k)
+	      lw[k]=dilate[k]*lv[k];
+	    pcurg=subst(pcurg,lv,lw,false,context0);
+	    pcurg=_symb2poly(makesequence(pcurg,lv),context0);
+	    if (pcurg.type!=_POLY)
+	      return false;
+	    polynome pcur_dilated=*pcurg._POLYptr;
+	    factorization f_dilated;
+	    if (!try_sparse_factor_bi(pcur_dilated,mult,f_dilated))
+	      return false;
+	    factorization::const_iterator fit=f_dilated.begin(),fitend=f_dilated.end();
+	    for (;fit!=fitend;++fit){
+	      pcurg=_poly2symb(makesequence(fit->fact,lv),context0);
+	      for (int k=1;k<dim;++k)
+		lw[k]=lv[k]/dilate[k];
+	      pcurg=subst(pcurg,lv,lw,false,context0);
+	      pcurg=_symb2poly(makesequence(pcurg,lv),context0);
+	      if (pcurg.type!=_POLY)
+		return false;
+	      f.push_back(facteur<polynome>(*pcurg._POLYptr,fit->mult));
+	    }
+	    return true;
+	  }
+	  seldegs=degs;
+	  multby=multbynew;
+	  selp=multby*p;
+	}
+      }
+      if (vit!=vitend){
+	++n[0];
+	if (n[0]>=4)
+	  return false;
+	continue;
+      }
+      // we will deduce x1^ in monomials by comparing with the same factor
+      // of the bivariate factorization with n1=2 instead of n1=1
+      // then x2^ with n1=1 and n2=2
+      // If one bivariate image has less monomials than another one it is an unlucky n, use another one
+      // If one bivariate image has more monomials, then we must throw everything and restart with this bivariate image
+      // Once all monomials are done we should get a factor of pcur 
+      // by extracting the primitive part of this factor
+      sort(selp.coord.begin(),selp.coord.end(),lex_or_coeff_sort);
+      polynome curp,recon(selp); recon.dim=pcur.dim;
+      int increment=1,i=0;
+      for (;i<n.size();){
+	index_t n1(n);
+	n1[i] += increment;
+	int ni=n[i],n1i=n1[i];
+	eval_tn(pcur,n1,pt);
+	pt=pt/Tlgcd(pt);
+#if POLY_SPARSE_BI
+	factor(pt,ptcont,ft,false,false,false,1,extra_div_t);
+	vit=ft.begin();vitend=ft.end();
+#else
+	dbg=_poly2symb(makesequence(pt,lv),context0);
+	dbg=_factors(dbg,context0) ;
+	if (dbg.type!=_VECT) return false;
+	v=*dbg._VECTptr;
+	iterateur vit=v.begin(),vitend=v.end();
+#endif
+	// lcoeff normalization
+	eval_tn(lcp,n1,lcpt);
+	// serch in factorization for seldeg x-degree pattern
+	curp.coord.clear();
+	for (;vit!=vitend;++vit){
+#if POLY_SPARSE_BU
+	  if (vit->mult>1){vit=vitend;} break;
+	  const polynome & p=vit->fact;
+#else
+	  ++vit;
+	  if (*vit!=1) break;
+	  gen pg=_symb2poly(makesequence(*(vit-1),lv),context0);
+	  if (pg.type!=_POLY) break;
+	  const polynome & p = *pg._POLYptr;
+#endif
+	  vector<int> degs;
+	  if (!x_degrees(p,degs)) break;
+	  if (degs==seldegs){
+	    curp=lcpt/Tfirstcoeff(p)*p;
+	    break;
+	  }
+	}
+	if (vit==vitend || curp.coord.empty()) break; // not found or not sqrfree
+	// compare with selp
+	if (curp.coord.size()<selp.coord.size()){ // unlucky
+	  ++increment;
+	  if (increment>3)
+	    break;
+	  continue;
+	}
+	sort(curp.coord.begin(),curp.coord.end(),lex_or_coeff_sort);
+	if (curp.coord.size()>selp.coord.size()){
+	  // selp was unlucky, restart
+	  recon=selp=curp;
+	  n=n1;
+	  break;
+	}
+	// selp and curp size match, now compare monomial by monomial
+	// and extract x[i] exponent in recon
+	vector< monomial<gen> >::iterator rt=recon.coord.begin(),rtend=recon.coord.end(),st=selp.coord.begin(),ct=curp.coord.begin();
+	for (;rt!=rtend;++rt,++st,++ct){
+	  if (st->index[0]!=ct->index[0])
+	    break;
+	  int idx0=st->index[1];
+	  int idx1=ct->index[1];
+	  index_t I=rt->index.iref();
+	  int delta=(idx1-idx0)/(n1i-ni);
+	  if (i==0)
+	    I[1]=delta;
+	  else
+	    I.push_back(delta);
+	  if (i==n.size()-2){
+	    for (int j=0;j<=i;++j){
+	      idx1 -= I[j+1]*n1[j];
+	    }
+	    I.push_back(idx1/n1[i+1]);
+	  }
+	  rt->index=I;
+	}
+	if (rt!=rtend)
+	  break;
+	increment=1;
+	if (i==n.size()-2) ++i;
+	++i;
+      }
+      if (i<n.size()){
+	// restart search
+	++n[i];
+	if (n[i]>=4)
+	  return false;
+	continue;
+      }
+      recon.tsort();
+      // divide by reconstructed factor and restart factorization
+      recon=recon/Tlgcd(recon);
+      polynome quo,rem;
+      if (!pcur.TDivRem(recon,quo,rem,false) || !is_zero(rem))
+	return false;
+      f.push_back(facteur<polynome>(recon,mult));
+      pcur=quo;
+      return try_sparse_factor_bi(pcur,mult,f);
+    } // end endless for
+  }
+
+  void poly_truncate(const polynome & q,polynome & q1,int j){
+    q1.coord.clear();
+    vector< monomial<gen> >::const_iterator jt=q.coord.begin(),jtend=q.coord.end();
+    for (;jt!=jtend;++jt){
+      if (jt->index.total_degree()<j)
+	q1.coord.push_back(*jt);
+    }
+  }
+
+  // multiply keep only if total degree < maxdeg
+  void mulpoly_truncate(const polynome & p,const polynome & q,polynome &res,int maxdeg){
+    res.coord.clear();
+    int dim=p.dim;
+    polynome p1(dim),q1(dim),tmp(dim);
+    for (int i=0;i<maxdeg;++i){
+      // p1 total degree i of p, q1 total degree<maxdeg-i of q
+      int j=maxdeg-i;
+      // create p1 and q1
+      p1.coord.clear();
+      vector< monomial<gen> >::const_iterator it=p.coord.begin(),itend=p.coord.end();
+      for (;it!=itend;++it){
+	if (it->index.total_degree()==i)
+	  p1.coord.push_back(*it);
+      }
+      poly_truncate(q,q1,j);
+      // multiply, 
+      mulpoly(p1,q1,tmp,0);
+      // add to res
+      p1.coord.clear();
+      tmp.TAdd(res,p1);
+      p1.coord.swap(res.coord);
+    }
+  }
+	  
+  // keep only monomials of total_degree==j without first degree
+  void poly_truncate1(const polynome & q,polynome & q1,int j){
+    q1.coord.clear();
+    vector< monomial<gen> >::const_iterator it=q.coord.begin(),itend=q.coord.end();
+    index_t::const_iterator jt,jtend;
+    for (;it!=itend;++it){
+      jt=it->index.begin()+1;
+      jtend=it->index.end();
+      int otherdeg;
+      for (otherdeg=*jt,++jt;jt!=jtend;++jt){
+	otherdeg += *jt;
+      }
+      if (otherdeg==j)
+	q1.coord.push_back(*it);
+    }
+  }
+
+  void other_deg(const polynome & p,vector<int> & pdeg){
+    pdeg.reserve(p.coord.size()); pdeg.clear();
+    vector< monomial<gen> >::const_iterator it=p.coord.begin(),itend=p.coord.end();
+    for (;it!=itend;++it){
+      index_t::const_iterator jt,jtend;
+      jt=it->index.begin()+1;
+      //jtend=jt+dim-1;
+      jtend=it->index.end();
+      int otherdeg;
+      for (otherdeg=*jt,++jt;jt<jtend;++jt){
+	otherdeg += *jt;
+      }
+      pdeg.push_back(otherdeg);
+    }
+  }
+
+  // multiply keep only if total degree excluding 1st deg == maxdeg
+  void mulpoly_truncate1(const polynome & p,const polynome & q,polynome &res,int deg,polynome & p1,polynome & q1,polynome & tmp,vector<int> & pdeg,vector<int> & qdeg){
+    bool eq=deg>=0;
+    int maxdeg=eq?deg:-deg;
+    res.coord.clear();
+    int dim=p.dim;
+    int ps=int(p.coord.size()),qs=int(q.coord.size());
+    p1.coord.reserve(ps);
+    other_deg(p,pdeg);
+    other_deg(q,qdeg);
+    const vector< monomial<gen> > & pcoord=p.coord;
+    const vector< monomial<gen> > & qcoord=q.coord;
+    for (int i=0;i<=maxdeg;++i){
+      // p1 total degree <=i of p or ==i if deg>0, 
+      // q1 total degree==maxdeg-i of q
+      int j=maxdeg-i;
+      // create p1 and q1
+      p1.coord.clear();
+      for (int k=0;k<ps;++k){
+	int otherdeg=pdeg[k];
+	if (eq?otherdeg==i:otherdeg<=i)
+	  p1.coord.push_back(pcoord[k]);
+      }
+      q1.coord.clear();
+      for (int k=0;k<qs;++k){
+	if (qdeg[k]==j)
+	  q1.coord.push_back(qcoord[k]);
+      }
+      // multiply, 
+      mulpoly(p1,q1,tmp,0);
+      // add to res
+      p1.coord.clear();
+      tmp.TAdd(res,p1);
+      p1.coord.swap(res.coord);
+    }
+  }
+
 	  
   bool try_hensel_lift_factor(const polynome & pcur,const polynome & F0,const factorization & v0,int mult,factorization & f){
     int dim=pcur.dim;
@@ -436,8 +822,8 @@ namespace giac {
 	  peval_xk_xn_zero(jt->fact,2,tmp); // should only depend on x2
 	  if (Tis_constant(tmp))
 	    constante=constante*pow(jt->fact,jt->mult);
-	  else 
-	    flcoeff0.push_back(tmp);
+	  //else 
+	  flcoeff0.push_back(tmp);
 	} // flcoeff0 contains the list of factors of lcoeff(pcur) evaled at 0
 	F0it=fx1x2.begin();
 	F0itend=fx1x2.end();
@@ -546,6 +932,7 @@ namespace giac {
 	if (!is_zero(*it))
 	  U[i].coord.push_back(monomial<gen>(*it,deg-n,1,pcur_adjusted.dim));
       }
+      // CERR << Tcontent(U[i]) << endl;
     }
     polynome quo(dim),rem(dim),tmp(dim);
     // we have now pcur_adjusted = product P_i + O(total_degree>=1)
@@ -553,6 +940,67 @@ namespace giac {
     // lift to pcur_adjusted = product P_i + O(total_degree>=k+1)
     // for deg from 1 to total_degree(pcur_adjusted)
     // P_i += (pcur_adjusted-product P_i) * U_j mod total_degree(k+1)
+#if 1 // def EZGCD_DEGONLY
+    if (is_zero(b)){
+      polynome tmp4(dim),tmp5(dim),tmp6(dim),prod(dim);
+      vector<int> tmpi1,tmpi2;
+      for (int deg=1;deg<=Total;++deg){
+	prod=P[s-2];
+	for (int i=s-3;i>=0;--i){
+	  // reduce_poly(prod * P[i],b,deg+1,prod); // keep up to deg
+	  tmp.coord.clear();
+	  mulpoly_truncate1(prod,P[i],tmp,-deg,tmp4,tmp5,tmp6,tmpi1,tmpi2);
+	  prod.coord.swap(tmp.coord);
+	  //if (prod!=prod1) CERR << "err " << deg << endl;
+	} // end loop on i
+	mulpoly_truncate1(prod,P[s-1],tmp,deg,tmp4,tmp5,tmp6,tmpi1,tmpi2);
+	prod.coord.swap(tmp.coord);
+	poly_truncate1(pcur_adjusted,tmp,deg);
+	prod = tmp - prod;
+	if (prod.coord.empty()){
+	  // check total degrees
+	  int tdeg=0;
+	  for (int i=0;i<s;++i)
+	    tdeg += P[i].total_degree();
+	  if (tdeg==Total){ 
+	    if (deg!=Total){
+	      prod=P[s-1];
+	      for (int i=s-2;i>=0;--i){
+		// prod = prod * P[i]; 
+		tmp.coord.clear();
+		mulpoly(prod,P[i],tmp,0);
+		prod.coord.swap(tmp.coord);
+	      }
+	      // N.B. prod==pcur_adjusted does not always work!
+	      if ((prod-pcur_adjusted).coord.empty())
+		deg=Total;
+	    }
+	    if (deg==Total){
+	      for (int i=0;i<s;++i){
+		f.push_back(facteur<polynome>(P[i]/lgcd(P[i]),mult));
+	      }
+	      return true;
+	    }
+	  }
+	  continue;
+	}
+	//CERR << Tcontent(prod) << endl;
+	for (int i=0;i<s;++i){
+	  // U[i] depends only on 1st var no need to reduce
+	  mulpoly(prod,U[i],rem,0);
+	  //CERR << "deg " << deg << " " << Tcontent(rem) << endl;
+	  if (!divrem1(rem,P0[i],quo,tmp,0) && !rem.TDivRem1(P0[i],quo,tmp,true,0))
+	    return false;
+	  rem.coord.swap(tmp.coord); // poly_truncate1(tmp,rem,deg);
+	  // divide by D
+	  vector< monomial<gen> >::const_iterator r1=rem.coord.begin(),r2=rem.coord.end();
+	  Div<gen>(r1,r2,D,rem.coord);
+	  P[i] = P[i] + rem;
+	}
+      }
+    } // end if (is_zero(b))
+    else
+#endif
     for (int deg=1;deg<=Total;++deg){
       polynome prod(P[s-1]);
       for (int i=s-2;i>=0;--i){
@@ -576,7 +1024,8 @@ namespace giac {
 	      mulpoly(prod,P[i],tmp,0);
 	      swap(tmp,prod);
 	    }
-	    if (prod==pcur_adjusted)
+	    // N.B. prod==pcur_adjusted does not always work!
+	    if ((prod-pcur_adjusted).coord.empty())
 	      deg=Total;
 	  }
 	  if (deg==Total){
@@ -588,8 +1037,11 @@ namespace giac {
 	}
 	continue;
       }
+      //CERR << Tcontent(prod) << endl;
       for (int i=0;i<s;++i){
+	// U[i] depends only on 1st var no need to reduce
 	mulpoly(prod,U[i],rem,0);
+	//CERR << "deg " << deg << " " << Tcontent(rem) << endl;
 	if (!divrem1(rem,P0[i],quo,tmp,0) && !rem.TDivRem1(P0[i],quo,tmp,true,0))
 	  return false;
 	reduce_poly(tmp,b,deg+1,rem);
@@ -598,7 +1050,7 @@ namespace giac {
 	Div<gen>(r1,r2,D,rem.coord);
 	P[i] = P[i] + rem;
       }
-    }
+    } // end for
     // FIXME combine factors 
     if (s==2){
       f.push_back(facteur<polynome>(pcur,mult));
@@ -639,6 +1091,36 @@ namespace giac {
     }
     f.push_back(facteur<polynome>(pcur_adjusted/lgcd(pcur_adjusted),mult));
     return true;
+  }
+
+  // find u,v,d s.t. u*p+v*q=d by Hensel lift
+  bool try_hensel_egcd(const polynome & p,const polynome & q,polynome &u,polynome &v,polynome & d){
+    // check # of variables
+    //if (p.dim<=1 || p.dim!=q.dim)
+      return false;
+    // check that 0 is a good evaluation point (same degree, gcd==1)
+    vecteur b(1,0);
+    polynome p0(1),q0(1);
+    find_good_eval(p,q,p0,q0,b,(debug_infolevel>=2));
+    if (!is_zero(b))
+      return false;
+    int pdeg=p.lexsorted_degree(),qdeg=q.lexsorted_degree();
+    if (p0.lexsorted_degree()!=pdeg || q0.lexsorted_degree()!=qdeg)
+      return false;
+    gen g=gcd(pdeg,qdeg);
+    if (g.type==_POLY && g._POLYptr->lexsorted_degree())
+      return false;
+    // Bezout at other variables==0
+    polynome u0(1),v0(1),d0(1);
+    egcd(p0,q0,u0,v0,d0); // d0 must be constant
+    // now p*u0+q*v0-d0=O(1) where O(k) means of order >= k wrt other variables
+    // p*uk+q*vk-d0=O(k) -> p*(uk+uk1)+q*(v+vk1)-d0=O(k+1)
+    // with uk1 and vk1=O(k+1)
+    // we have p0*uk1+q0*vk1=d0-p*uk-q*vk=yk
+    // hence uk1=yk*u0/d0 % q0, vk1=yk*v0/d0 % p0
+    // rational (Pade-like) reconstruction uk=fraction of polynomials 
+    // with max degree wrt other variables <=k/2
+    // once both fractions corresp. to uk and vk stabilizes, check identity
   }
 
   // Hensel linear or quadratic lift

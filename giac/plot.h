@@ -64,13 +64,11 @@ enum Fl_Color {	// standard colors
   FL_COLOR_CUBE		= 56
 };
 #else // GIAC_HAS_STO_38
-#ifndef LP64
+//#ifndef LP64
 typedef ptrdiff_t Int;
-#else
-typedef signed long Int;
-#endif
-#include "Colors.h"
-//#include "../../src/Colors.h"
+//#else typedef signed long Int; #endif
+//#include "Colors.h"
+#include "../../src/Colors.h"
 enum Fl_Color {
   FL_BLACK = ColorBlack,
   FL_WHITE = ColorWhite,
@@ -198,6 +196,7 @@ namespace giac {
   int erase_pos(GIAC_CONTEXT);
   int erase_pos(int current,GIAC_CONTEXT);
   bool is_segment(const gen & e);
+  bool is_pnt_or_pixon(const gen & g);
   gen remove_at_pnt(const gen & e);
   gen remove_sto(const gen & e);
   vecteur selection2vecteur(const std::vector<int> & selected,GIAC_CONTEXT);
@@ -272,6 +271,7 @@ namespace giac {
   gen _plotfunc(const gen &,GIAC_CONTEXT);
   gen _funcplot(const gen & args,const context * contextptr);
   gen _plotdensity(const gen & args,const context * contextptr);
+  extern const unary_function_ptr * const  at_innertln;
   extern const unary_function_ptr * const  at_plotfunc;
   extern const unary_function_ptr * const  at_funcplot;
   // gen _plot(const gen &);
@@ -280,9 +280,12 @@ namespace giac {
 
   gen _erase(const gen & args,GIAC_CONTEXT);
   extern const unary_function_ptr * const  at_erase;
-
+  
+  extern int pixon_size; 
+  vecteur merge_pixon(const vecteur & v);
   gen _pixon(const gen & args,GIAC_CONTEXT);
   extern const unary_function_ptr * const  at_pixon;
+  void pixon_print(const gen &g,std::string & S,GIAC_CONTEXT);
 
   gen _pixoff(const gen & args,GIAC_CONTEXT);
   extern const unary_function_ptr * const  at_pixoff;
@@ -329,6 +332,7 @@ namespace giac {
   extern const unary_function_ptr * const  at_ordonnee;
 
   gen _cote(const gen & args,GIAC_CONTEXT);
+  extern const unary_function_ptr * const  at_cote;
   extern const unary_function_ptr * const  at_coordonnees;
   gen _coordonnees(const gen & args,GIAC_CONTEXT);
   gen _coordonnees_polaires(const gen & args,GIAC_CONTEXT);
@@ -797,7 +801,7 @@ namespace giac {
   extern const unary_function_ptr * const  at_Bezier;
 
 
-#if defined(GIAC_GENERIC_CONSTANTS) || (defined(VISUALC) && !defined(RTOS_THREADX)) || defined(__x86_64__)
+#if defined(GIAC_GENERIC_CONSTANTS) || (defined(VISUALC) && !defined(RTOS_THREADX)) || defined(x86_64)
   extern unary_function_ptr point_sommet_tab_op[];
   extern unary_function_ptr nosplit_polygon_function[];
   extern unary_function_ptr measure_functions[];

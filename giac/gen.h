@@ -133,11 +133,12 @@ namespace giac {
   }
 #endif
   int gcd(int a,int b);
-  int smod(int a,int b); // where b is assumed to be positive
-  inline int smod(longlong r,int m){
-    int R=r%m;
-    return smod(R,m);
+  inline int smod_adjust(int r,int m){ // precondition -m<r<m
+    r += (unsigned(r)>>31)*m; // make positive
+    return r-(unsigned((m>>1)-r)>>31)*m;
   }
+  int smod(int a,int b); // where b is assumed to be positive
+  int smod(longlong a,int b); 
   int simplify(int & a,int & b);
 
   struct ref_mpz_t {
@@ -460,16 +461,18 @@ namespace giac {
     gen operator () (const gen & arg,GIAC_CONTEXT) const;
 #ifdef NO_UNARY_FUNCTION_COMPOSE
     inline unary_function_eval * ptr() const {
-#ifdef __x86_64__
-      return (unary_function_eval *) (((ulonglong ) _ptr) & 0xfffffffffffffffc);
+      return (unary_function_eval *) (((size_t) _ptr) & ~(uintptr_t)3);
+#ifdef x86_64
+      //return (unary_function_eval *) (((ulonglong ) _ptr) & 0xfffffffffffffffc);
 #else
-      return (unary_function_eval *) (((size_t) _ptr) & 0xfffffffc);
+      //return (unary_function_eval *) (((size_t) _ptr) & 0xfffffffc);
 #endif
     }
 #else // NO_UNARY_FUNCTION_COMPOSE
     inline unary_function_abstract * ptr () const
     {
-#ifdef __x86_64__
+      return (unary_function_abstract *) (((ulonglong ) _ptr) & ~(uintptr_t)3);
+#ifdef x86_64
       return (unary_function_abstract *) (((ulonglong ) _ptr) & 0xfffffffffffffffc);
 #else
       return (unary_function_abstract *) (((size_t) _ptr) & 0xfffffffc);
@@ -479,25 +482,28 @@ namespace giac {
     bool quoted() const ;
     inline bool operator ==(const unary_function_ptr & u) const { 
       // if (&u==this) return true; 
-#ifdef __x86_64__
-      return ((ulonglong)(_ptr) & 0xfffffffffffffffc)  == ((ulonglong)( u._ptr) & 0xfffffffffffffffc ); 
+      return ((ulonglong)(_ptr) & ~(uintptr_t)3 )  == ((ulonglong)( u._ptr) & ~(uintptr_t)3 );
+#ifdef x86_64
+      //return ((ulonglong)(_ptr) & 0xfffffffffffffffc)  == ((ulonglong)( u._ptr) & 0xfffffffffffffffc ); 
 #else
-      return ((size_t)(_ptr) & 0xfffffffc) == ((size_t)(u._ptr) & 0xfffffffc); 
+      //return ((size_t)(_ptr) & 0xfffffffc) == ((size_t)(u._ptr) & 0xfffffffc); 
 #endif
     }
     inline bool operator !=(const unary_function_ptr & u) const { return !(*this==u); }
     inline bool operator ==(const unary_function_ptr * u) const { 
       // if (&u==this) return true; 
-#ifdef __x86_64__
-      return u && ( ((ulonglong)(_ptr) & 0xfffffffffffffffc) == ((ulonglong)(u->_ptr) & 0xfffffffffffffffc) ); 
+      return u && ( ((ulonglong)(_ptr) &  ~(uintptr_t)3 ) == ((ulonglong)(u->_ptr) &  ~(uintptr_t)3) ); 
+#ifdef x86_64
+      //return u && ( ((ulonglong)(_ptr) & 0xfffffffffffffffc) == ((ulonglong)(u->_ptr) & 0xfffffffffffffffc) ); 
 #else
-      return u && ( ((size_t)(_ptr) & 0xfffffffc) == ((size_t)(u->_ptr) & 0xfffffffc ) ); 
+      //return u && ( ((size_t)(_ptr) & 0xfffffffc) == ((size_t)(u->_ptr) & 0xfffffffc ) ); 
 #endif
     }
     inline bool operator !=(const unary_function_ptr * u) const { return !(*this==u); }
     const char * dbgprint() const;
   };
 
+  void delete_ptr(signed char subtype,short int type_save,ref_mpz_t * ptr_save);
   // FIXME: for little-endian check if type/unused/subtype order is correct!
   class gen {
   public:
@@ -539,7 +545,7 @@ namespace giac {
       ref_vecteur * __VECTptr ; // vecteur: std::vectors & dense_POLY1 (type _VECT)
       ref_sparse_poly1 * __SPOL1ptr ; // std::vector<monome>: sparse 1-d poly (type _SPOL1)
       ref_string * __STRNGptr;
-      unsigned _FUNC_;
+      size_t _FUNC_;
       // ref_unary_function_ptr * __FUNCptr;
       ref_gen_user * __USERptr;
       ref_gen_map * __MAPptr;
@@ -555,11 +561,20 @@ namespace giac {
       return __ZINTptr->ref_count;
 #endif
     }
+#ifdef SMARTPTR64
+    gen()  {
+      * ((ulonglong * ) this)=0;
+#ifdef COMPILE_FOR_STABILITY
+      control_c();
+#endif
+    };
+#else
     gen(): type(_INT_),subtype(0),val(0) {
 #ifdef COMPILE_FOR_STABILITY
       control_c();
 #endif
     };
+#endif
 #ifdef SMARTPTR64
     gen(void *ptr,short int subt)  {
 #ifdef COMPILE_FOR_STABILITY
@@ -582,6 +597,22 @@ namespace giac {
       __POINTERptr=new ref_void_pointer(ptr); 
     };
 #endif
+#ifdef SMARTPTR64
+    gen(int i) {
+      * ((ulonglong * ) this)=0;
+      val=i;
+#ifdef COMPILE_FOR_STABILITY
+      control_c();
+#endif
+    };
+    gen(size_t i) {
+      * ((ulonglong * ) this)=0;
+      val=int(i);
+#ifdef COMPILE_FOR_STABILITY
+      control_c();
+#endif
+    };
+#else
     gen(int i): type(_INT_),subtype(0),val(i) {
 #ifdef COMPILE_FOR_STABILITY
       control_c();
@@ -592,6 +623,7 @@ namespace giac {
       control_c();
 #endif
     };
+#endif
     gen(long i);
     gen(longlong i);
     gen(longlong i,int nbits);
@@ -628,6 +660,7 @@ namespace giac {
     gen (const symbolic & s);
     gen (ref_symbolic * sptr);
     gen (const gen_user & g);
+    gen (ref_gen_user * sptr);
     gen (const real_object & g);
     gen (const real_interval & g);
     // Pls do not use this constructor unless you know exactly what you do
@@ -647,17 +680,93 @@ namespace giac {
     gen (const mpz_class &);
 #endif
     gen (const my_mpz &);
-    ~gen();
+    void delete_gen();
+    ~gen(){ 
+      if ( type>_DOUBLE_ && type!=_FLOAT_
+#if !defined SMARTPTR64 // || defined STATIC_BUILTIN_LEXER_FUNCTIONS
+	   && type!=_FUNC 
+#endif
+	   ){
+	// optimization for ref_count access must be checked in multi-thread
+	ref_count_t * rc=(ref_count_t *) & ref_count();
+	if (*rc!=-1 && !--*rc){
+	  delete_gen();
+	}
+      }
+    }
 
     bool in_eval(int level,gen & evaled,const context * contextptr) const;
-    gen eval(int level,const context * contextptr) const;
+    inline gen eval(int level,const context * contextptr) const{
+      // CERR << "eval " << *this << " " << level << endl;
+      gen res;
+      // return in_eval(level,res,contextptr)?res:*this;
+      if (in_eval(level,res,contextptr))
+	return res;
+      else
+      return *this;
+    }
     // inline gen eval() const { return eval(DEFAULT_EVAL_LEVEL,context0); }
     bool in_evalf(int level,gen & evaled,const context * contextptr) const;
     gen evalf(int level,const context * contextptr) const;
     // inline gen evalf() const { return evalf(DEFAULT_EVAL_LEVEL,context0); }
     gen evalf_double(int level,const context * contextptr) const ;
     gen evalf2double(int level,const context * contextptr) const;
-    gen & operator = (const gen & a);
+#if defined SMARTPTR64 
+    gen & operator = (const gen & a){
+      ulonglong al=*((ulonglong *) &a);
+      unsigned char atype=al&0x1f;
+      ulonglong tl=*((ulonglong *) this);
+      // Copy before deleting because the target might be embedded in a
+      // with a ptr_val.ref_count of a equals to 1
+      // short int type_save=type; // short int subtype_save=subtype; 
+      * ((ulonglong *) this) = al;
+      if (atype>_DOUBLE_ && atype!=_FLOAT_ 
+	  && (al >> 16)	){
+	ref_count_t * rc=(ref_count_t *)& ((ref_mpz_t *)(al>>16) )->ref_count;
+	if (*rc!=-1)
+	  ++(*rc); // increase ref count
+      }
+      // Now we delete the target 
+      if ( (tl &0x1f)>_DOUBLE_)
+	delete_ptr( (signed char) ((tl&0xff00)>>8),(tl &0x1f),(ref_mpz_t *) (tl >> 16));
+      return *this;
+    }
+    
+#else // SMARTPTR64
+    gen & operator = (const gen & a){
+      register unsigned t=(type << _DECALAGE) | a.type;
+      if (!t){
+	subtype=a.subtype;
+	val=a.val;
+	return *this;
+      }
+      if (a.type>_DOUBLE_ && a.type!=_FLOAT_ 
+	  && a.type!=_FUNC && a.__ZINTptr
+	  ){
+	ref_count_t * rc=(ref_count_t *)&a.ref_count();
+	if (*rc!=-1)
+	  ++(*rc); // increase ref count
+      }
+      // Copy before deleting because the target might be embedded in a
+      // with a ptr_val.ref_count of a equals to 1
+      short int type_save=type; // short int subtype_save=subtype; 
+      ref_mpz_t * ptr_save = __ZINTptr;
+#ifdef DOUBLEVAL
+      _DOUBLE_val = a._DOUBLE_val;
+      subtype=a.subtype;
+#else
+      * ((ulonglong *) this) = *((ulonglong * ) &a);
+#endif
+      __ZINTptr=a.__ZINTptr;
+      type=a.type;
+      // Now we delete the target 
+      if ( type_save>_DOUBLE_ && type_save!=_FLOAT_
+	   && type_save!=_FUNC 
+	   )
+	delete_ptr(subtype,type_save,ptr_save);
+      return *this;
+    }
+#endif // SMARTPTR64
     int to_int() const ;
     double to_double(const context * contextptr) const;
     bool is_vector_of_size(size_t n) const;
@@ -720,6 +829,7 @@ namespace giac {
     inline void * ref_POINTER_val() const ;
   };
 
+  bool ref_mpz_t2gen(ref_mpz_t * mptr,gen & g); // return true if mptr used in g
   gen change_subtype(const gen &g,int newsubtype);
   gen genfromstring(const std::string & s);
   // pointer to an int describing display mode for complex numbers
@@ -821,6 +931,7 @@ namespace giac {
     volatile ref_count_t ref_count;
     int display;
     gen re,im;
+    ref_complex(const std::complex<double> & c):ref_count(1),display(0),re(real(c)),im(imag(c)) {}
     ref_complex(const gen & R,const gen & I):ref_count(1),display(0),re(R),im(I) {}
     ref_complex(const gen & R,const gen & I,int display_mode):ref_count(1),display(display_mode),re(R),im(I) {}
   };
@@ -845,7 +956,7 @@ namespace giac {
   void gen_sort_f(iterateur it,iterateur itend,bool (*f)(const gen &a,const gen &b));
   void gen_sort_f_context(iterateur it,iterateur itend,bool (*f)(const gen &a,const gen &b,GIAC_CONTEXT),GIAC_CONTEXT);
   gen makemap(); // make a new map
-  gen chartab2gen(char * & s,GIAC_CONTEXT);
+  gen chartab2gen(char * s,GIAC_CONTEXT);
 
 
   bool is_zero(const gen & a,GIAC_CONTEXT0);
@@ -867,15 +978,16 @@ namespace giac {
   gen operator && (const gen & a,const gen & b);
   gen operator || (const gen & a,const gen & b);
   gen operator_plus (const gen & a,const gen & b,GIAC_CONTEXT);
+  gen operator_plus (const gen & a,const gen & b,unsigned t,GIAC_CONTEXT);
   gen operator + (const gen & a,const gen & b);
-  gen operator_plus_eq (gen & a,const gen & b,GIAC_CONTEXT);
-  inline gen operator += (gen & a,const gen & b){ 
+  gen & operator_plus_eq (gen & a,const gen & b,GIAC_CONTEXT);
+  inline gen & operator += (gen & a,const gen & b){ 
     return operator_plus_eq(a,b,giac::context0);
   }
   Tfraction<gen> operator + (const Tfraction<gen> & a,const Tfraction<gen> & b); // specialization
   gen sym_add (const gen & a,const gen & b,GIAC_CONTEXT);
-  gen operator_minus_eq (gen & a,const gen & b,GIAC_CONTEXT);
-  inline gen operator -= (gen & a,const gen & b){ 
+  gen & operator_minus_eq (gen & a,const gen & b,GIAC_CONTEXT);
+  inline gen & operator -= (gen & a,const gen & b){ 
     return operator_minus_eq(a,b,giac::context0);
   }
   gen operator_minus (const gen & a,const gen & b,GIAC_CONTEXT);
@@ -902,7 +1014,11 @@ namespace giac {
   inline wchar_t * wprint(const gen & g,GIAC_CONTEXT){ return g.wprint(contextptr); }
 
   inline void swapgen(gen & a,gen &b){
+#ifdef SMARTPTR64
+    std::swap(* (ulonglong *)&a,* (ulonglong *)&b);
+#else
     gen tmp=a; a=b; b=tmp;
+#endif
   }
   gen algebraic_EXTension(const gen & a,const gen & v);
   gen ext_reduce(const gen & a, const gen & v);
@@ -924,6 +1040,7 @@ namespace giac {
   }
   */
   void type_operator_plus_times(const gen & a,const gen & b,gen & c);
+  void type_operator_minus_times(const gen & a,const gen & b,gen & c);
 
   inline void type_operator_plus_times_reduce(const gen & a,const gen & b,gen & c,int reduce){
     type_operator_plus_times(a,b,c);
@@ -949,12 +1066,16 @@ namespace giac {
 
   int fastsign(const gen & a,GIAC_CONTEXT);   // 0 if unknown, 1 if >0, -1 if <0
   gen sign(const gen & a,GIAC_CONTEXT);
+  inline int signint(int i){ return i?(i>0?1:-1):0;}
 
   // Large tests if strictly not precised, if sign is unknown return false 
   bool is_greater(const gen & a,const gen &b,GIAC_CONTEXT);
   bool is_strictly_greater(const gen & a,const gen &b,GIAC_CONTEXT);
   inline bool operator > (const gen & a,const gen & b){
     return is_strictly_greater(a,b,giac::context0);
+  }
+  inline bool operator < (const gen & a, const gen & b) {
+    return is_strictly_greater (b, a, giac::context0);
   }
   bool is_positive(const gen & a,GIAC_CONTEXT);
   bool is_strictly_positive(const gen & a,GIAC_CONTEXT);
@@ -1138,6 +1259,7 @@ namespace giac {
     volatile ref_count_t ref_count;
     gen_user * u;
     ref_gen_user(const gen_user & U):ref_count(1),u(U.memory_alloc()) {}
+    ref_gen_user(gen_user * U):ref_count(1),u(U) {}
     ~ref_gen_user() {delete u;}
   };
 
@@ -1154,7 +1276,7 @@ namespace giac {
   std::istream & operator >> (std::istream & is,gen & a);
 #endif
 
-#if defined(GIAC_GENERIC_CONSTANTS) // || (defined(VISUALC) && !defined(RTOS_THREADX)) || defined(__x86_64__)
+#if defined(GIAC_GENERIC_CONSTANTS) // || (defined(VISUALC) && !defined(RTOS_THREADX)) || defined(x86_64)
   extern const gen zero;
 #else
   extern const gen & zero;
@@ -1166,7 +1288,8 @@ namespace giac {
     monome():coeff(0),exponent(0) {};
     monome(const gen & mycoeff) : coeff(mycoeff),exponent(zero) {};
     monome(const gen &mycoeff,const gen &myexponent) : coeff(mycoeff),exponent(myexponent) {};
-    std::string print() const ;
+    // std::string print() const ;
+    std::string print(GIAC_CONTEXT) const ;
     const char * dbgprint() const ;
   };
 #ifdef NSPIRE
@@ -1540,6 +1663,8 @@ namespace giac {
   extern const alias_type alias_at_normalmod;  
   extern const alias_type alias_at_pointplus;
   extern const alias_type alias_at_pointminus;
+  extern const alias_type alias_at_struct_dot;
+  extern const alias_type alias_at_try_catch;
 
 #ifdef BCD
   inline bool ck_gentobcd(const gen & g,accurate_bcd_float * bcdptr){
@@ -1560,6 +1685,26 @@ namespace giac {
   void sprintfdouble(char *,const char *,double d);
 
   extern "C" const char * caseval(const char *);
+
+// Alloca proposal by Cyrille to make it work on every compiler.
+#ifndef ALLOCA
+  // alloca versions...
+  #if defined(FREERTOS)
+    // for systems that do not support alloca or s[size] syntaxes
+    class Calloca { public:
+      void *ram;
+      Calloca(size_t s): ram(malloc(s)) { }
+      ~Calloca() { free(ram); }
+    };
+    #define ALLOCA(type, var, size) Calloca alloca##var(size); type *var= (type*)(alloca##var.ram)
+  #else
+    #if defined( VISUALC ) || defined( BESTA_OS )
+      #define ALLOCA(type, var, size) type *var= (type*)alloca(size)
+    #else
+      #define ALLOCA(type, var, size) type var[size]
+    #endif
+  #endif
+#endif
 
 #ifndef NO_NAMESPACE_GIAC
 } // namespace giac

@@ -21,6 +21,11 @@ using namespace std;
 #include <stdexcept>
 #include <map>
 #include <iostream>
+#ifdef HAVE_SSTREAM
+#include <sstream>
+#else
+#include <strstream>
+#endif
 #include "gen.h"
 #include "vecteur.h"
 #include "modpoly.h"
@@ -37,6 +42,8 @@ using namespace std;
 #include "ti89.h"
 #include "csturm.h"
 #include "sparse.h"
+#include "modfactor.h"
+#include "quater.h"
 #include "giacintl.h"
 #ifdef HAVE_LIBGSL
 #include <gsl/gsl_linalg.h>
@@ -48,7 +55,8 @@ using namespace std;
 // (link with -framewrok Accelerate)
 // it is not used by default because the Accelerate version is slower 
 // than the current Atlas, at least on OSX.6, and is also slower than giac built-in
-#ifndef APPLE_SMART
+
+#if !defined(APPLE_SMART) && !defined(DONT_USE_LIBLAPLACK) 
 #if defined __APPLE__ && !defined(HAVE_LIBLAPACK) && !defined(USE_GMP_REPLACEMENTS)
 #define HAVE_LIBLAPACK
 #endif
@@ -523,6 +531,39 @@ namespace giac {
     return res;
   }
 
+  void transpose_double(const matrix_double & a,int r0,int r1,int c0,int c1,matrix_double & at){
+    int L=int(a.size()),C=int(a.front().size());
+    if (r0<0) r0=0;
+    if (r1<=r0)
+      r1=L;
+    if (c1<0) c1=0;
+    if (c1<=c0)
+      c1=C;
+    if (r1>L) r1=L;
+    if (c1>C) c1=C;
+    L=r1-r0; C=c1-c0;
+    at.resize(C);
+    for (int i=0;i<C;++i)
+      at[i].resize(L);
+    for (int i=0;i<L;++i){
+      const vector<giac_double> & ai=a[r0+i];
+      for (int j=0;j<C;++j){
+	at[j][i]=ai[c0+j];
+      }
+    }
+  }
+
+  // square matrix inplace transpose
+  void transpose_double(matrix_double &P){
+    int Ps=int(P.size());
+    for (int i=0;i<Ps;++i){
+      for (int j=0;j<i;++j){
+	giac_double t=P[i][j];
+	P[i][j]=P[j][i];
+	P[j][i]=t;
+      }
+    }
+  }
   int alphaposcell(const string & s,int & r){
     int ss=int(s.size());
     r=0;
@@ -558,7 +599,7 @@ namespace giac {
       else
 	break;
     }
-    if (xcas_mode(contextptr))
+    if (array_start(contextptr))
       --c;
     return (i==ss);
   }
@@ -597,7 +638,7 @@ namespace giac {
 	// CERR << "absolute cell "<< a << " " << b <<endl;
 	if (b.type!=_INT_)
 	  continue;
-	if (xcas_mode(contextptr))
+	if (array_start(contextptr))
 	  r=b.val-1;
 	else
 	  r=b.val;
@@ -655,7 +696,7 @@ namespace giac {
     }
     else 
       i=v.front()._VECTptr->front().val+printcell_current_row(contextptr);
-    if (xcas_mode(contextptr))
+    if (array_start(contextptr))
       ++i;
     if (i<0)
       return debut+print_INT_(i);
@@ -790,10 +831,17 @@ namespace giac {
 
   // insert nrows/ncols of fill in m, e.g. fill= [0,0,2] for a spreadsheet
   // or ["","",2] or 0 for a matrix
-  matrice matrice_insert(const matrice & m,int insert_row,int insert_col,int nrows,int ncols,const gen & fill,GIAC_CONTEXT){
+  matrice matrice_insert(const matrice & m,int insert_row,int insert_col,int nrows,int ncols,const gen & fill_,GIAC_CONTEXT){
     int r,c,cell_r,cell_c;
     int decal_i=0,decal_j;
     mdims(m,r,c);
+    gen fill(fill_);
+    if (is_undef(fill)){
+      if (m[0][0].type==_VECT)
+	fill=makevecteur(string2gen("",false),string2gen("",false),2);
+      else
+	fill=0;
+    }
     matrice res;
     res.reserve(r+nrows);
     // i,j position in the old matrix; i+decal_i,i+decal_j in the new
@@ -1031,7 +1079,7 @@ namespace giac {
       ref_vecteur * vptr=0;
       for (int x0=x;x0<=X;++x0){
 #ifdef SMARTPTR64
-	vptr=((ref_vecteur*)(* (longlong *) &(*mptr)[x0] >> 16));
+	vptr=((ref_vecteur*)(* (ulonglong *) &(*mptr)[x0] >> 16));
 #else
 	vptr=(*mptr)[x0].__VECTptr;
 #endif
@@ -1180,6 +1228,7 @@ namespace giac {
 #ifndef NO_STDEXCEPT
 	}
 	catch (std::runtime_error & e){
+	  last_evaled_argptr(contextptr)=NULL;
 	  w[1]=string2gen(e.what(),false);
 	}
 #endif
@@ -1364,7 +1413,7 @@ namespace giac {
     for (int d=0;d<deg;++d)
       dv_d.push_back(v_d[d]*(double)(deg-d)) ;
 #ifndef __APPLE__
-    if (debug_infolevel>1)
+    if (debug_infolevel>2)
       COUT << "Aroot init " << c0 << " after renormalization: " << v_d << endl << "Diff " << dv_d << endl;
 #endif
     // newton method with prefactor
@@ -1389,7 +1438,7 @@ namespace giac {
 	}
 	newfc=horner(v_d,newc);
 #ifndef __APPLE__
-	if (debug_infolevel>1)
+	if (debug_infolevel>2)
 	  CERR << "proot (j=" << j << "i=" << i << "), z'=" << newc << " f(z')=" << newfc << " f(z)=" << fc << " " << prefact << endl;
 #endif
 	if (abs(rapport)<eps)
@@ -1535,6 +1584,96 @@ namespace giac {
     return exp(bestg,contextptr);
   }
 
+  giac_double linfnorm(const vector<giac_double> & v){
+    giac_double res=0;
+    vector<giac_double>::const_iterator it=v.begin(),itend=v.end();
+    for (;it!=itend;++it){
+      giac_double tmp=std::abs(*it);
+      if (tmp>res) res=tmp;
+    }
+    return res;
+  }
+
+  giac_double linfnorm(const matrix_double & v){
+    giac_double res=0;
+    matrix_double::const_iterator it=v.begin(),itend=v.end();
+    for (;it!=itend;++it){
+      giac_double tmp=linfnorm(*it);
+      if (tmp>res) res=tmp;
+    }
+    return res;
+  }
+
+  // linfnorm for diag(d)*M*diag(d)^-1
+  giac_double linfnorm(const matrix_double & M,const vector<giac_double> & d){
+    giac_double res=0;
+    matrix_double::const_iterator it=M.begin(),itend=M.end();
+    int i,j;
+    for (i=0;it!=itend;++i,++it){
+      vector<giac_double>::const_iterator jt=it->begin(),jtend=it->end();
+      for (j=0;jt!=jtend;++j,++jt){
+	int tmp=int(d[i]*(*jt)/d[j]);
+	if (tmp<0) tmp=-tmp;
+	if (tmp>res)
+	  res=tmp;
+      }
+    }
+    return res;
+  }
+
+  bool diagonal_mult(const vector<giac_double> & d,bool invert,const vector<giac_double> & source,vector<giac_double> & target){
+    int n=int(d.size());
+    if (source.size()!=n) return false;
+    target.resize(n);
+    if (invert){
+      for (int i=0;i<n;++i)
+	target[i]=source[i]/d[i];
+    }
+    else {
+      for (int i=0;i<n;++i)
+	target[i]=d[i]*source[i];
+    }
+    return true;
+  }
+
+  void rand_1(vector<giac_double> & z){
+    int n=int(z.size());
+    for (int i=0;i<n;i++){
+      z[i]=(std::rand()<=RAND_MAX/2)?1:-1;
+    }
+  }
+
+  // Balancing sparse matrices for computing eigenvalues, Tzu-Yi Chen, James W. Demme, Linear Algebra and its Application, 309 (2000) 261–287
+  bool balance_krylov(const matrix_double & H,vector<giac_double> & d,int niter,double cutoff){
+    int n=int(H.size());
+    if (!n || n!=H.front().size())
+      return false;
+    d=vector<giac_double>(n,1);
+    vector<giac_double> z(n,1),z1(n),z2(n),p(n),r(n);
+    rand_1(z);
+    multmatvecteur(H,z,z1);
+    giac_double Hinf=linfnorm(z1);
+    matrix_double Htran;
+    transpose_double(H,0,n,0,n,Htran);
+    for (int j=0;j<niter;++j){
+      // z=random vector of +/-1
+      rand_1(z);
+      // p:=D*H*D^-1*z
+      diagonal_mult(d,true,z,z1);
+      multmatvecteur(H,z1,z2);
+      diagonal_mult(d,false,z2,p);
+      // r:=tran(D*H*D^-1)*z=D^-1*tran(H)*D*z
+      diagonal_mult(d,false,z,z1);
+      multmatvecteur(Htran,z1,z2);
+      diagonal_mult(d,true,z2,r);
+      for (int i=0;i<n;++i){
+	if (std::abs(p[i])>cutoff*Hinf && r[i]!=0)
+	  d[i]=d[i]*std::sqrt(std::abs(r[i]/p[i]));
+      }
+    }
+    return true;
+  }
+
   static bool schur_eigenvalues(matrix_double & H1,vecteur & res,double eps,GIAC_CONTEXT){
     int dim=int(H1.size());
     if (debug_infolevel>2){
@@ -1659,9 +1798,13 @@ namespace giac {
       std_matrix_gen2std_matrix_giac_double(P,P1,true);
       if (lapack_schur(H1,P1,false,res))
 	return true;
+#if 0
+      return balanced_eigenvalues(H1,res,2*SOLVER_MAX_ITERATE,eps,true,contextptr);
+#else
       bool ans=francis_schur(H1,0,dim,P1,2*SOLVER_MAX_ITERATE,eps,true,false);
       // CERR << P << endl << H1 << endl;
       return ans && schur_eigenvalues(H1,res,eps,contextptr);
+#endif
     }
     matrix_complex_double H2,P2;
     if (matrice2std_matrix_complex_double(m,H2,
@@ -1879,9 +2022,9 @@ namespace giac {
     bool ans=proot_real1(v,eps,rprec,res,contextptr);
     for (unsigned i=0;i<res.size();++i)
       res[i] += shift;
-    res=multvecteur(prefact,res);
     for (unsigned i=0;i<mult0;++i)
-      res.push_back(0);
+      res.push_back(shift);
+    res=multvecteur(prefact,res);
     return ans;
   }
 
@@ -2153,6 +2296,13 @@ namespace giac {
 	return vecteur(0);
     }
     context ct;
+#ifdef HAVE_LIBPTHREAD
+    pthread_mutex_lock(&context_list_mutex);
+#endif
+    context_list().pop_back();
+#ifdef HAVE_LIBPTHREAD
+    pthread_mutex_unlock(&context_list_mutex);
+#endif
     context * contextptr=&ct;
     epsilon(contextptr)=eps;
     bool add_conjugate=is_zero(im(v,contextptr),contextptr); // ok
@@ -2174,289 +2324,292 @@ namespace giac {
     vecteur v_accurate(accurate_evalf(v,nbits));
     v_accurate=divvecteur(v_accurate,v_accurate.front());
     // compute roots with companion matrix
+    bool precis=true;
     if (crystalball.empty() && !in_proot(v,eps,rprec,crystalball,true,contextptr)){
       // initial guess not precise enough, DKW disabled
       if (0 && int(crystalball.size())==deg && dkw(v_accurate,crystalball,nbits,eps)){
 	proot_cache(v,eps,crystalball);
 	return crystalball;
       }
+      precis=false;
       if (crystalball.size()!=v.size()-1)
 	CERR << "Francis algorithm failure for" << v << endl;
       else
 	CERR << "Francis algorithm not precise enough for" << v << endl;
     }
-    else {
-      int epsbits=-std::log(eps)/std::log(2.);
-      if (int(crystalball.size())==deg 
+    int epsbits=-std::log(eps)/std::log(2.);
+    if (precis && int(crystalball.size())==deg 
 #ifndef EMCC
-	  && dkw(v_accurate,crystalball,nbits,eps)
+	&& dkw(v_accurate,crystalball,nbits,eps)
 #endif
-	  ){
-	proot_cache(v,eps,crystalball);
-	return crystalball;
-      }
-      if ( (rprec<50 || rprec<epsbits+3) && int(crystalball.size())==deg){
-	vecteur dv(derivative(v_accurate));
-	vector<short int> done(deg);
-	for (int j=0;j<deg;++j){
-	  if (done[j])
-	    continue;
-	  // find nearest root
-	  gen cur=crystalball[j],mindist=plus_inf,mindist2=plus_inf;
-	  vector<double> distances(deg);
-	  int k2=-1,k3=-1;
-	  for (int k=0;k<deg;k++){
-	    if (k==j) continue;
-	    gen curdist=abs(cur-crystalball[k],contextptr);
-	    distances[k]=evalf_double(curdist,1,contextptr)._DOUBLE_val;
-	    if (is_strictly_greater(mindist,curdist,contextptr)){
-	      mindist2=mindist;
-	      k3=k2;
-	      mindist=curdist;
-	      k2=k;
-	    }
+	){
+      proot_cache(v,eps,crystalball);
+      return crystalball;
+    }
+    if ( (rprec<50 || rprec<epsbits+3) && int(crystalball.size())==deg){
+      vecteur dv(derivative(v_accurate));
+      vector<short int> done(deg);
+      for (int j=0;j<deg;++j){
+	if (done[j])
+	  continue;
+	// find nearest root
+	gen cur=crystalball[j],mindist=plus_inf,mindist2=plus_inf;
+	vector<double> distances(deg);
+	int k2=-1,k3=-1;
+	for (int k=0;k<deg;k++){
+	  if (k==j) continue;
+	  gen curdist=abs(cur-crystalball[k],contextptr);
+	  distances[k]=evalf_double(curdist,1,contextptr)._DOUBLE_val;
+	  if (is_strictly_greater(mindist,curdist,contextptr)){
+	    mindist2=mindist;
+	    k3=k2;
+	    mindist=curdist;
+	    k2=k;
 	  }
-	  gen tmp=accurate_evalf(crystalball[j],nbits);
-	  gen decal=0;
-	  for (unsigned k=0;int(k)<SOLVER_MAX_ITERATE;++k){
-	    gen num=horner(v_accurate,tmp),den=horner(dv,tmp),ratio=num/den;
-	    decal += ratio;
-	    gen prec=abs(ratio,contextptr);
-	    if (is_greater(eps*deg*10,prec,contextptr)){
-	      done[j]=1;
-	      tmp -= ratio;
-	      num=horner(v_accurate,tmp);
-	      den=horner(dv,tmp);
-	      ratio=num/den;
-	      prec=abs(ratio,contextptr);
-	      int precbits=60;
-	      if (is_exactly_zero(prec))
-		precbits=2*epsbits;
-	      else
-		precbits=_floor(-ln(prec,contextptr)/std::log(2.0),contextptr).val;
-	      if (precbits>2*epsbits)
-		precbits=2*epsbits;
-	      if (precbits<=48)
-		crystalball[j]=evalf_double(tmp,1,contextptr);
-	      else
-		crystalball[j] =accurate_evalf(tmp,precbits);
-	      if (debug_infolevel)
-		CERR << "Root " << j << " " << crystalball[j] << endl;
-	      break;
+	}
+	gen tmp=accurate_evalf(crystalball[j],nbits);
+	gen decal=0;
+	for (unsigned k=0;int(k)<SOLVER_MAX_ITERATE;++k){
+	  gen num=horner(v_accurate,tmp),den=horner(dv,tmp),ratio=num/den;
+	  decal += ratio;
+	  gen prec=abs(ratio,contextptr);
+	  if (is_greater(eps*deg*10,prec,contextptr)){
+	    done[j]=1;
+	    tmp -= ratio;
+	    num=horner(v_accurate,tmp);
+	    den=horner(dv,tmp);
+	    ratio=num/den;
+	    prec=abs(ratio,contextptr);
+	    int precbits=60;
+	    if (is_exactly_zero(prec))
+	      precbits=2*epsbits;
+	    else
+	      precbits=_floor(-ln(prec,contextptr)/std::log(2.0),contextptr).val;
+	    if (precbits>2*epsbits)
+	      precbits=2*epsbits;
+	    if (precbits<=48)
+	      crystalball[j]=evalf_double(tmp,1,contextptr);
+	    else
+	      crystalball[j] =accurate_evalf(tmp,precbits);
+	    if (debug_infolevel)
+	      CERR << "Root " << j << " " << crystalball[j] << endl;
+	    break;
+	  }
+	  if (is_greater(2.5*abs(decal,contextptr),mindist,contextptr)){
+	    // if decal is small wrt mindist2 
+	    // we have roots that are almost equal 
+	    // sort distance, and find a cluster of roots around
+	    vector<double> dists(distances);
+	    sort(distances.begin(),distances.end());
+	    unsigned dd=1; double coeff=2.0;
+	    for (;dd<distances.size()-1;++dd){
+	      if (distances[dd+1]>=coeff*distances[dd])
+		break;
+	      coeff *= .9;
 	    }
-	    if (is_greater(2.5*abs(decal,contextptr),mindist,contextptr)){
-	      // if decal is small wrt mindist2 
-	      // we have roots that are almost equal 
-	      // sort distance, and find a cluster of roots around
-	      vector<double> dists(distances);
-	      sort(distances.begin(),distances.end());
-	      unsigned dd=1; double coeff=2.0;
-	      for (;dd<distances.size()-1;++dd){
-		if (distances[dd+1]>=coeff*distances[dd])
-		  break;
-		coeff *= .9;
-	      }
 #if 1
-	      if (dd<=distances.size()/3){
-		vector<int> positions; vecteur roots;
-		for (unsigned i=0;i<dists.size();++i){
-		  if (done[i])
-		    continue;
-		  if (dists[i]<=distances[dd]){
-		    positions.push_back(i);
-		    roots.push_back(accurate_evalf(crystalball[i],nbits));
-		    if (i+1<dists.size() && add_conjugate && !is_exactly_zero(im(crystalball[i],contextptr))){
-		      positions.push_back(i+1);
-		      roots.push_back(accurate_evalf(crystalball[i+1],nbits));
-		      ++i;
-		    }
+	    if (dd<=distances.size()/3){
+	      vector<int> positions; vecteur roots;
+	      for (unsigned i=0;i<dists.size();++i){
+		if (done[i])
+		  continue;
+		if (dists[i]<=distances[dd]){
+		  positions.push_back(i);
+		  roots.push_back(accurate_evalf(crystalball[i],nbits));
+		  if (i+1<dists.size() && add_conjugate && !is_exactly_zero(im(crystalball[i],contextptr))){
+		    positions.push_back(i+1);
+		    roots.push_back(accurate_evalf(crystalball[i+1],nbits));
+		    ++i;
 		  }
 		}
-		if (roots.size()>=10)
-		  k=SOLVER_MAX_ITERATE;
-		if (debug_infolevel)
-		  CERR << CLOCK() << "Entering generalized Bairstow " << dd << " roots " << positions << endl;
-		vecteur current=pcoeff(roots),dcurrent;
-		for (;int(k)<SOLVER_MAX_ITERATE;++k){
-		  modpoly Q,R,dR;
-		  DivRem(v_accurate,current,0,Q,R);
-		  // find partial derivatives
-		  matrice m;
-		  for (unsigned i=0;i<roots.size();++i){
-		    dR=Q % current;
-		    if (dR.size()<roots.size())
-		      dR=mergevecteur(vecteur(roots.size()-dR.size()),dR);
-		    m.push_back(dR);
-		    Q.push_back(0); // multiply Q by x for next partial derivative
-		  }
-		  // invert jacobian matrix
-		  reverse(m.begin(),m.end());
-		  m=mtran(m);
-		  while (R.size()<m.size())
-		    R.insert(R.begin(),accurate_evalf(zero,nbits));
-		  // solve system
-		  dcurrent=linsolve(m,R,contextptr);
-		  vecteur dcurrentv=lidnt(dcurrent);
-		  if (!dcurrentv.empty()){
-		    if (debug_infolevel)
-		      CERR << "non invertible jacobian" << endl;
-		    break;
-		  }
-		  dcurrent.insert(dcurrent.begin(),0);
-		  // termination test
-		  gen ck=0;
-		  for (unsigned i=1;i<dcurrent.size();++i){
-		    if (!is_exactly_zero(current[i]))
-		      ck+=abs(dcurrent[i]/current[i],contextptr);
-		  }
-		  current=addvecteur(current,dcurrent);
-		  if (is_greater(eps,ck,contextptr))
-		    break;
+	      }
+	      if (roots.size()>=10)
+		k=SOLVER_MAX_ITERATE;
+	      if (debug_infolevel)
+		CERR << CLOCK() << "Entering generalized Bairstow " << dd << " roots " << positions << endl;
+	      vecteur current=pcoeff(roots),dcurrent;
+	      for (;int(k)<SOLVER_MAX_ITERATE;++k){
+		modpoly Q,R,dR;
+		DivRem(v_accurate,current,0,Q,R);
+		// find partial derivatives
+		matrice m;
+		for (unsigned i=0;i<roots.size();++i){
+		  dR=Q % current;
+		  if (dR.size()<roots.size())
+		    dR=mergevecteur(vecteur(roots.size()-dR.size()),dR);
+		  m.push_back(dR);
+		  Q.push_back(0); // multiply Q by x for next partial derivative
 		}
-		if (int(k)>=SOLVER_MAX_ITERATE){
-		  CERR << "Unable to isolate roots number "<< positions << endl << accurate_evalf(roots,50) << endl;
-		  for (unsigned i=0;i<positions.size();++i)
-		    done[positions[i]]=-1;
-		  cache=false;
+		// invert jacobian matrix
+		reverse(m.begin(),m.end());
+		m=mtran(m);
+		while (R.size()<m.size())
+		  R.insert(R.begin(),accurate_evalf(zero,nbits));
+		// solve system
+		dcurrent=linsolve(m,R,contextptr);
+		vecteur dcurrentv=lidnt(dcurrent);
+		if (!dcurrentv.empty()){
+		  if (debug_infolevel)
+		    CERR << "non invertible jacobian" << endl;
 		  break;
+		}
+		dcurrent.insert(dcurrent.begin(),0);
+		// termination test
+		gen ck=0;
+		for (unsigned i=1;i<dcurrent.size();++i){
+		  if (!is_exactly_zero(current[i]))
+		    ck+=abs(dcurrent[i]/current[i],contextptr);
+		}
+		current=addvecteur(current,dcurrent);
+		if (is_greater(eps,ck,contextptr))
+		  break;
+	      }
+	      if (int(k)>=SOLVER_MAX_ITERATE){
+		CERR << "Unable to isolate roots number "<< positions << endl << accurate_evalf(roots,50) << endl;
+		for (unsigned i=0;i<positions.size();++i)
+		  done[positions[i]]=-1;
+		cache=false;
+		break;
+	      }
+	      else {
+		// proot recursive call, and stores roots
+		// check if current has a multiple root up to precision eps
+		int curdeg=current.size()-1;
+		gen multi=-current[1]/(curdeg*current[0]);
+		roots=vecteur(curdeg,multi);
+		vecteur test=pcoeff(roots);
+		test=subvecteur(current,test);
+		gen testn=l2norm(test,contextptr);
+		if (curdeg>1 && is_greater(eps,testn,contextptr)){
+		  int precbits=48;
+		  if (testn!=0)
+		    precbits=_floor(-ln(testn,contextptr)/std::log(2.0),contextptr).val;
+		  multi=accurate_evalf(multi,precbits);
+		  for (unsigned i=0;i<positions.size();++i){
+		    done[positions[i]]=1;
+		    crystalball[positions[i]] =multi;
+		  }
 		}
 		else {
-		  // proot recursive call, and stores roots
-		  // check if current has a multiple root up to precision eps
-		  int curdeg=current.size()-1;
-		  gen multi=-current[1]/(curdeg*current[0]);
-		  roots=vecteur(curdeg,multi);
-		  vecteur test=pcoeff(roots);
-		  test=subvecteur(current,test);
-		  gen testn=l2norm(test,contextptr);
-		  if (curdeg>1 && is_greater(eps,testn,contextptr)){
-		    int precbits=_floor(-ln(testn,contextptr)/std::log(2.0),contextptr).val;
-		    multi=accurate_evalf(multi,precbits);
-		    for (unsigned i=0;i<positions.size();++i){
-		      done[positions[i]]=1;
-		      crystalball[positions[i]] =multi;
-		    }
-		  }
-		  else {
-		    double eps1=std::pow(2.0,-nbits);
-		    roots=proot(current,eps1,nbits);
-		    for (unsigned i=0;i<positions.size();++i){
-		      // -> Set precision
-		      roots[i]=accurate_evalf(roots[i],nbits);
-		      num=horner(v_accurate,roots[i]);
-		      den=horner(dv,roots[i]);
-		      ratio=num/den;
-		      prec=abs(ratio,contextptr);
-		      int precbits=60;
-		      if (is_exactly_zero(prec))
-			precbits=2*epsbits;
-		      else
-			precbits=_floor(-ln(prec,contextptr)/std::log(2.0),contextptr).val;
-		      if (precbits>2*epsbits)
-			precbits=2*epsbits;
-		      done[positions[i]]=1;
-		      if (precbits<=48)
-			crystalball[positions[i]]=evalf_double(roots[i],1,contextptr);
-		      else
-			crystalball[positions[i]] =accurate_evalf(roots[i],precbits);
-		    }
-		  }
-		  break;
-		}
-	      }
-#else
-	      // the second one is crystalball[k2]
-	      if (is_greater(mindist2,3*abs(ratio,contextptr),contextptr)){
-		if (debug_infolevel)
-		  CERR << "Entering Bairstow " << j << " " << k2 << endl;
-		tmp=accurate_evalf(crystalball[j],nbits);
-		if (crystalball[j]==conj(crystalball[j+1],contextptr)) k2=j+1;
-		gen tmp2=accurate_evalf(crystalball[k2],nbits);
-		modpoly current(3,1); current[1]=-tmp-tmp2; current[2]=tmp*tmp2;
-		for (;k<SOLVER_MAX_ITERATE;++k){
-		  modpoly Q,R,dsR,dpR;
-		  DivRem(v_accurate,current,0,Q,R);
-		  dpR=Q % current;
-		  if (dpR.empty() || is_zero(dpR.back()))
-		    break;
-		  Q.push_back(0);
-		  dsR=Q % current;
-		  if (dsR.empty() || is_zero(dsR.back()))
-		    break;
-		  gen A,B,C(dsR.back()),D(dpR.back()),R0,R1;
-		  if (dpR.size()==2)
-		    B=dpR[0];
-		  if (dsR.size()==2)
-		    A=dsR[0];
-		  gen delta=A*D-B*C;
-		  if (is_zero(delta))
-		    break;
-		  if (!R.empty()){
-		    R1=R.back();
-		    if (R.size()==2)
-		      R0=R.front();
-		  }
-		  gen dc1=(D*R0-B*R1)/delta,dc2=(A*R1-C*R0)/delta;
-		  current[1] += dc1;
-		  current[2] += dc2;
-		  if (is_greater(eps*deg*10,abs(dc1/current[1],contextptr)+abs(dc2/current[2],contextptr),contextptr)){
-		    // recompute crystalball[j]/k2 and tmp/tmp2
-		    gen s=current[1],p=current[2];
-		    delta=s*s-4*p;
-		    delta=sqrt(delta,contextptr);
-		    if (is_positive(s,contextptr)){
-		      tmp=(-s-delta)/2; 
-		      tmp2=p/tmp; 
-		    }
-		    else {
-		      tmp2=(-s+delta)/2; 
-		      tmp=p/tmp2; 
-		    }
-		    decal=0;
-		    ratio=0;
-		    if (eps<1e-14){
-		      crystalball[j]=accurate_evalf(tmp,-3.2*std::log(eps));
-		      crystalball[k2]=accurate_evalf(tmp2,-3.2*std::log(eps));
-		    }
-		    else {
-		      crystalball[j]=evalf_double(tmp,1,contextptr);
-		      crystalball[k2]=evalf_double(tmp2,1,contextptr);
-		    }
-		    break;
+		  double eps1=std::pow(2.0,-nbits);
+		  roots=proot(current,eps1,nbits);
+		  for (unsigned i=0;i<positions.size();++i){
+		    // -> Set precision
+		    roots[i]=accurate_evalf(roots[i],nbits);
+		    num=horner(v_accurate,roots[i]);
+		    den=horner(dv,roots[i]);
+		    ratio=num/den;
+		    prec=abs(ratio,contextptr);
+		    int precbits=60;
+		    if (is_exactly_zero(prec))
+		      precbits=2*epsbits;
+		    else
+		      precbits=_floor(-ln(prec,contextptr)/std::log(2.0),contextptr).val;
+		    if (precbits>2*epsbits)
+		      precbits=2*epsbits;
+		    done[positions[i]]=1;
+		    if (precbits<=48)
+		      crystalball[positions[i]]=evalf_double(roots[i],1,contextptr);
+		    else
+		      crystalball[positions[i]] =accurate_evalf(roots[i],precbits);
 		  }
 		}
-	      }	    
-#endif
-	      if (is_greater(3*abs(decal,contextptr),mindist,contextptr)){
-		cache=false;
-		done[j]=false;
-		CERR << "Bad conditionned root j= " << j << " value " << crystalball[j] << " ratio " << evalf_double(abs(ratio,contextptr),1,contextptr) << " mindist " << mindist << endl;
 		break;
 	      }
 	    }
-	    tmp -= ratio;
+#else
+	    // the second one is crystalball[k2]
+	    if (is_greater(mindist2,3*abs(ratio,contextptr),contextptr)){
+	      if (debug_infolevel)
+		CERR << "Entering Bairstow " << j << " " << k2 << endl;
+	      tmp=accurate_evalf(crystalball[j],nbits);
+	      if (crystalball[j]==conj(crystalball[j+1],contextptr)) k2=j+1;
+	      gen tmp2=accurate_evalf(crystalball[k2],nbits);
+	      modpoly current(3,1); current[1]=-tmp-tmp2; current[2]=tmp*tmp2;
+	      for (;k<SOLVER_MAX_ITERATE;++k){
+		modpoly Q,R,dsR,dpR;
+		DivRem(v_accurate,current,0,Q,R);
+		dpR=Q % current;
+		if (dpR.empty() || is_zero(dpR.back()))
+		  break;
+		Q.push_back(0);
+		dsR=Q % current;
+		if (dsR.empty() || is_zero(dsR.back()))
+		  break;
+		gen A,B,C(dsR.back()),D(dpR.back()),R0,R1;
+		if (dpR.size()==2)
+		  B=dpR[0];
+		if (dsR.size()==2)
+		  A=dsR[0];
+		gen delta=A*D-B*C;
+		if (is_zero(delta))
+		  break;
+		if (!R.empty()){
+		  R1=R.back();
+		  if (R.size()==2)
+		    R0=R.front();
+		}
+		gen dc1=(D*R0-B*R1)/delta,dc2=(A*R1-C*R0)/delta;
+		current[1] += dc1;
+		current[2] += dc2;
+		if (is_greater(eps*deg*10,abs(dc1/current[1],contextptr)+abs(dc2/current[2],contextptr),contextptr)){
+		  // recompute crystalball[j]/k2 and tmp/tmp2
+		  gen s=current[1],p=current[2];
+		  delta=s*s-4*p;
+		  delta=sqrt(delta,contextptr);
+		  if (is_positive(s,contextptr)){
+		    tmp=(-s-delta)/2; 
+		    tmp2=p/tmp; 
+		  }
+		  else {
+		    tmp2=(-s+delta)/2; 
+		    tmp=p/tmp2; 
+		  }
+		  decal=0;
+		  ratio=0;
+		  if (eps<1e-14){
+		    crystalball[j]=accurate_evalf(tmp,-3.2*std::log(eps));
+		    crystalball[k2]=accurate_evalf(tmp2,-3.2*std::log(eps));
+		  }
+		  else {
+		    crystalball[j]=evalf_double(tmp,1,contextptr);
+		    crystalball[k2]=evalf_double(tmp2,1,contextptr);
+		  }
+		  break;
+		}
+	      }
+	    }	    
+#endif
+	    if (is_greater(3*abs(decal,contextptr),mindist,contextptr)){
+	      cache=false;
+	      done[j]=false;
+	      CERR << "Bad conditionned root j= " << j << " value " << crystalball[j] << " ratio " << evalf_double(abs(ratio,contextptr),1,contextptr) << " mindist " << mindist << endl;
+	      break;
+	    }
 	  }
+	  tmp -= ratio;
 	}
-	if (!cache && pari_polroots(v,crystalball,14,contextptr))
-	  cache=true;
-	if (0 && !cache){ // could be improved via Hensel lifting
-	  vecteur good;
-	  for (unsigned i=0;i<crystalball.size();++i){
-	    if (done[i]==1)
-	      good.push_back(crystalball[i]);
-	  }
-	  good=pcoeff(good);
-	  vecteur rem=operator_div(v,good,0);
-	  if (rem.size()<=crystalball.size()/2){
-	    rem=*_proot(rem,contextptr)._VECTptr;
-	    CERR << rem << endl;
-	  }
-	}
-	if (cache)
-	  proot_cache(v,eps,crystalball);
-	return crystalball;
       }
-    }
+      if (!cache && pari_polroots(v,crystalball,14,contextptr))
+	cache=true;
+      if (0 && !cache){ // could be improved via Hensel lifting
+	vecteur good;
+	for (unsigned i=0;i<crystalball.size();++i){
+	  if (done[i]==1)
+	    good.push_back(crystalball[i]);
+	}
+	good=pcoeff(good);
+	vecteur rem=operator_div(v,good,0);
+	if (rem.size()<=crystalball.size()/2){
+	  rem=*_proot(rem,contextptr)._VECTptr;
+	  CERR << rem << endl;
+	}
+      }
+      if (cache)
+	proot_cache(v,eps,crystalball);
+      return crystalball;
+    } // if rprec<50 ...
+
 #else // HAVE_LIBMPFR
     int nbits=45;
     rprec = 37;
@@ -2531,7 +2684,7 @@ namespace giac {
 	  break;
       }
       if (j==vsize)
-	return vecteur(1,gensizeerr(gettext("Proot error : no root found")));
+	return vecteur(1,gensizeerr(gettext("Proot error : no root found for ")+gen(v).print(contextptr)));
       if (debug_infolevel)
 	CERR << "Root found " << evalf_double(r,1,contextptr) << endl;
       if (add_conjugate && is_greater(abs(im(r,contextptr),contextptr),eps,contextptr) ){ // ok
@@ -2819,7 +2972,10 @@ namespace giac {
   gen dotvecteur(const vecteur & a,const vecteur & b){
     vecteur::const_iterator ita=a.begin(), itaend=a.end();
     vecteur::const_iterator itb=b.begin(), itbend=b.end();
+    if (ita==itaend || itb==itbend) return 0;
     gen res,tmp;
+    //if (ita->type==_VECT && itb->type==_VECT && dotvecteur_interp(a,b,res)) return res;
+    //if (0 && itaend-ita>10 && itbend-itb>10 && ita->type==_POLY && itb->type==_POLY && dotvecteur_interp(a,b,res)) return res;
     for (;(ita!=itaend)&&(itb!=itbend);++ita,++itb){
       type_operator_times((*ita),(*itb),tmp);
       res += tmp;
@@ -2981,27 +3137,31 @@ namespace giac {
     return res;
   }
 
-  gen ckmultmatvecteur(const vecteur & a,const vecteur & b){
+  gen ckmultmatvecteur(const vecteur & a,const vecteur & b,GIAC_CONTEXT){
     if (ckmatrix(a)){
       if (ckmatrix(b)){
 	matrice res;
 	if (!mmultck(a,b,res))
 	  return gendimerr("");
-	return _simplifier(res,context0);
+	gen tmp=_simplifier(res,contextptr);
+	// code added for e.g. matpow([[0,1],[0,0]],n)
+	if (contains(tmp,undef))
+	  return res;
+	return tmp;
       }
       // matrice * vecteur
       vecteur res;
       if (a.front()._VECTptr->size()!=b.size())
 	return gendimerr(gettext("dotvecteur"));
       multmatvecteur(a,b,res);
-      return _simplifier(res,context0);
+      return _simplifier(res,contextptr);
     }
     if (ckmatrix(b)){
       vecteur res;
       multvecteurmat(a,b,res);
-      return _simplifier(res,context0);
+      return _simplifier(res,contextptr);
     }
-    if (xcas_mode(context0)==3)
+    if (xcas_mode(contextptr)==3 || calc_mode(contextptr)==1)
       return apply(a,b,prod);
     return dotvecteur(a,b);
   }
@@ -3027,7 +3187,7 @@ namespace giac {
       else {
 	if (s!=cur_s)
 	  return false;
-	if (s && it->_VECTptr->front().type==_VECT && !allow_embedded_vect)
+	if (s && (it->_VECTptr->front().type==_VECT && it->_VECTptr->front().subtype!=_POLY1__VECT) && !allow_embedded_vect)
 	  return false;
       }
     }
@@ -3325,7 +3485,7 @@ namespace giac {
 	    continue;
 	  if (it->ref_count()!=1)
 	    *it=smod(*it,pi_p);
-	  if (mpz_cmp_ui(*it->_ZINTptr,0)==1){
+	  if (mpz_cmp_ui(*it->_ZINTptr,0)>0){
 	    mpz_sub(tmpz,*it->_ZINTptr,*pi_p._ZINTptr);
 	    mpz_neg(tmpz,tmpz);
 	    if (mpz_cmp(*it->_ZINTptr,tmpz)>0){
@@ -3361,7 +3521,7 @@ namespace giac {
     if (g.type==_INT_){
       int tmp =g.val;
 #ifdef SMARTPTR64
-      * ((longlong * ) &g) = longlong(new ref_mpz_t(prealloc)) << 16;
+      * ((ulonglong * ) &g) = ulonglong(new ref_mpz_t(prealloc)) << 16;
 #else
       g.__ZINTptr = new ref_mpz_t(prealloc);
 #endif
@@ -3374,9 +3534,20 @@ namespace giac {
     }
   }
   
-#ifndef GIAC_HAS_STO_38
+#if 1 // ndef GIAC_HAS_STO_38
   const int mmult_double_blocksize=45; // 2*45^2*sizeof(double)= a little less than 32K
-  const int mmult_int_blocksize=60; // 2*60^2*sizeof(int)= a little less than 32K
+  int mmult_int_blocksize=60; // 2*60^2*sizeof(int)= a little less than 32K
+  gen _blockmatrix_mult_size(const gen & args,GIAC_CONTEXT){
+    if (args.type==_VECT && args._VECTptr->empty())
+      return mmult_int_blocksize;
+    if (args.type!=_INT_ || args.val<1)
+      return gensizeerr(contextptr);
+    return mmult_int_blocksize=args.val;
+  }
+  static const char _blockmatrix_mult_size_s []="blockmatrix_mult_size";
+  static define_unary_function_eval (__blockmatrix_mult_size,&_blockmatrix_mult_size,_blockmatrix_mult_size_s);
+  define_unary_function_ptr5( at_blockmatrix_mult_size ,alias_at_blockmatrix_mult_size,&__blockmatrix_mult_size,0,true);
+
 
   // multiply a[a0..a1,i0+delta..i1+delta] with bloc btran[b0..b1,i0..i1] 
   // and adds or subtracts to c[a0+c0..a1+c0,b0+c1..b1+c1]  
@@ -4184,13 +4355,14 @@ namespace giac {
 	    if (it->type==_INT_){
 	      if (jt->type==_INT_){
 		longlong x=longlong(it->val)*jt->val;
-#ifdef __x86_64__
+#if defined x86_64 && !defined(WIN64) && !defined USE_GMP_REPLACEMENTS//fred
 		if (x>=0)
 		  mpz_add_ui(*tmp._ZINTptr,*tmp._ZINTptr,x);
 		else
 		  mpz_sub_ui(*tmp._ZINTptr,*tmp._ZINTptr,-x);
 #else
 		tmp += gen(x);
+		tmp.uncoerce();
 #endif
 	      }
 	      else {
@@ -4288,39 +4460,6 @@ namespace giac {
     return true;
   }
 
-  void transpose_double(const matrix_double & a,int r0,int r1,int c0,int c1,matrix_double & at){
-    int L=a.size(),C=a.front().size();
-    if (r0<0) r0=0;
-    if (r1<=r0)
-      r1=L;
-    if (c1<0) c1=0;
-    if (c1<=c0)
-      c1=C;
-    if (r1>L) r1=L;
-    if (c1>C) c1=C;
-    L=r1-r0; C=c1-c0;
-    at.resize(C);
-    for (int i=0;i<C;++i)
-      at[i].resize(L);
-    for (int i=0;i<L;++i){
-      const vector<giac_double> & ai=a[r0+i];
-      for (int j=0;j<C;++j){
-	at[j][i]=ai[c0+j];
-      }
-    }
-  }
-
-  // square matrix inplace transpose
-  void transpose_double(matrix_double &P){
-    int Ps=int(P.size());
-    for (int i=0;i<Ps;++i){
-      for (int j=0;j<i;++j){
-	giac_double t=P[i][j];
-	P[i][j]=P[j][i];
-	P[j][i]=t;
-      }
-    }
-  }
 
   // ad*b->c where b is given by it's tranposed btrand
   void mmult_double(const matrix_double & ad,const matrix_double & btrand,matrix_double & c){
@@ -4389,7 +4528,7 @@ namespace giac {
     if (matrice2std_matrix_double(a,ad,true) && matrice2std_matrix_double(btran,btrand,true)){
       int resrows=mrows(a);
       int rescols=mrows(btran);
-#ifndef GIAC_HAS_STO_38
+#if 1 // ndef GIAC_HAS_STO_38
       int n;
       if (!ad.empty() && resrows>=2*mmult_double_blocksize && rescols>=2*mmult_double_blocksize && (n=ad.front().size())>=mmult_double_blocksize){
 	if (n>=CALL_LAPACK && resrows>=CALL_LAPACK && rescols>=CALL_LAPACK){
@@ -4488,7 +4627,7 @@ namespace giac {
 	std_matrix_gen2matrice_destroy(cg,res);
 	return true;
       }
-#endif // GIAC_HAS_STO38
+#endif // GIAC_HAS_STO_38
       matrix_double::const_iterator ita=ad.begin(),itaend=ad.end();
       matrix_double::const_iterator itbbeg=btrand.begin(),itb,itbend=btrand.end();
       res.clear();
@@ -4534,11 +4673,32 @@ namespace giac {
     return true;
   }
 
+  double matrix_density(const matrice & a){
+    int z=0,c=0;
+    const_iterateur it=a.begin(),itend=a.end();
+    for (;it!=itend;++it){
+      if (it->type!=_VECT){
+	if (is_zero(*it)) ++z;
+	++c;
+	continue;
+      }
+      const_iterateur jt=it->_VECTptr->begin(),jtend=it->_VECTptr->end();
+      for (;jt!=jtend;++jt){
+	if (is_zero(*jt)) ++z;
+	++c;
+      }
+    }
+    return (c-z)/double(c);
+  }
+
   void mmult(const matrice & a_,const matrice & b,matrice & res){
     matrice btran;
     if (debug_infolevel>2)
       CERR << CLOCK() << " mmult begin" << endl;
     mtran(b,btran);
+    mmult_atranb(a_,btran,res);
+  }
+  void mmult_atranb(const matrice & a_,const matrice & btran,matrice & res){
     // now make the (dotvecteur) product of row i of a with rows of btran to get
     // row i of res
 #ifndef GIAC_HAS_STO_38
@@ -4552,9 +4712,11 @@ namespace giac {
       res=*makemod(res,p)._VECTptr;
       return;
     }
+    int at=a_.front()[0].type,bt=btran.front()[0].type;
+    // if ( ( (at==_POLY && bt==_POLY) || (at==_VECT && bt==_VECT) ) && mmult_interp(a_,btran,res) ) return ;
 #endif
-#ifndef BCD // creating a copy of the matrices take too much memory and slows down on Aspen
-    if ( (has_num_coeff(a_) || has_num_coeff(b)) && mmult_double(a_,btran,res))
+#if 1 // ndef BCD // creating a copy of the matrices take too much memory and slows down on Aspen
+    if ( (has_num_coeff(a_) || has_num_coeff(btran)) && mmult_double(a_,btran,res))
       return;
 #endif
     if (debug_infolevel>2)
@@ -4582,58 +4744,62 @@ namespace giac {
 #endif
       {
 	vecteur::const_iterator ita=a.begin(),itaend=a.end();
-	vecteur::const_iterator itbbeg=btran.begin(),itb;//itbend=btran.end(),
+	vecteur::const_iterator itbbeg=btran.begin(),itb,itbend=btran.end();
 	int resrows=mrows(a);
 	int rescols=mrows(btran);
 	res.clear();
 	res.reserve(resrows);
-	/* old code replaced to enhance product of sparse matrices
+	double a_density=matrix_density(a),b_density=matrix_density(btran);
+	if (a_density*b_density>0.1){
+	  /* code for dense matrices */
 	   vecteur cur_row;
 	   for (;ita!=itaend;++ita){
-	   cur_row.clear();
-	   cur_row.reserve(rescols);
-	   for (itb=itbbeg;itb!=itbend;++itb)
-	   cur_row.push_back(dotvecteur(*(ita->_VECTptr),*(itb->_VECTptr)));
-	   res.push_back(cur_row);
+	     cur_row.clear();
+	     cur_row.reserve(rescols);
+	     for (itb=itbbeg;itb!=itbend;++itb)
+	       cur_row.push_back(dotvecteur(*(ita->_VECTptr),*(itb->_VECTptr)));
+	     res.push_back(cur_row);
 	   }
-	*/
-	int s=int(btran.size());
-	gen tmp;
-	const_iterateur it,itend;
-	vector<const_iterateur> itbb(s);
-	iterateur itc;
-	for (;ita!=itaend;++ita){
-	  vecteur c(rescols,zero);
-	  it=ita->_VECTptr->begin();
-	  itend=ita->_VECTptr->end();
-	  itb=itbbeg;
-	  for (int i=0;i<s;++i,++itb)
-	    itbb[i]=itb->_VECTptr->begin();
-	  for (;it!=itend;++it){
-	    const gen & acur=*it;
-	    if (is_zero(acur,context0)){
-	      int p=1;
-	      ++it;
-	      for (; (it!=itend) && is_zero(*it,context0);++it,++p){
+	} // end dense matrices
+	else {
+	  int s=int(btran.size());
+	  gen tmp;
+	  const_iterateur it,itend;
+	  vector<const_iterateur> itbb(s);
+	  iterateur itc;
+	  for (;ita!=itaend;++ita){
+	    vecteur c(rescols,zero);
+	    it=ita->_VECTptr->begin();
+	    itend=ita->_VECTptr->end();
+	    itb=itbbeg;
+	    for (int i=0;i<s;++i,++itb)
+	      itbb[i]=itb->_VECTptr->begin();
+	    for (;it!=itend;++it){
+	      const gen & acur=*it;
+	      if (is_zero(acur,context0)){
+		int p=1;
+		++it;
+		for (; (it!=itend) && is_zero(*it,context0);++it,++p){
+		}
+		if (it==itend)
+		  break;
+		else
+		  --it;
+		for (int i=0;i<s;++i)
+		  itbb[i]+=p;
 	      }
-	      if (it==itend)
-		break;
-	      else
-		--it;
-	      for (int i=0;i<s;++i)
-		itbb[i]+=p;
-	    }
-	    else {
-	      itc=c.begin();
-	      gen tmp;
-	      for (int i=0;i<s;++itc,++(itbb[i]),++i){
-		type_operator_times(acur, *(itbb[i]),tmp);
-		*itc += tmp;
+	      else {
+		itc=c.begin();
+		gen tmp;
+		for (int i=0;i<s;++itc,++(itbb[i]),++i){
+		  type_operator_times(acur, *(itbb[i]),tmp);
+		  *itc += tmp;
+		}
 	      }
 	    }
+	    res.push_back(c);
 	  }
-	  res.push_back(c);
-	}
+	} // end sparse matrices
       } // end #endif else
     for (unsigned i=0;i<adeno.size();++i){
       vecteur & v=*res[i]._VECTptr;
@@ -4641,6 +4807,7 @@ namespace giac {
 	v[j] = v[j]/(adeno[i]*bdeno[j]);
       }
     }
+    // if (!res1.empty() && res1!=res) CERR << "err" << endl;
   }
 
   matrice mmult(const matrice & a,const matrice & b){
@@ -4708,7 +4875,7 @@ namespace giac {
       return a;
   }
 
-  static gen exact_div(const gen & a,const gen & b){
+  gen exact_div(const gen & a,const gen & b){
     if (a.type==_POLY && b.type==_POLY){
       polynome *quoptr=new polynome, rem;
       if (!divrem1(*a._POLYptr,*b._POLYptr,*quoptr,rem,2)) 
@@ -4729,51 +4896,68 @@ namespace giac {
 
   // v=(c1*v1+c2*v2)/c
   // Set cstart to 0, or to c+1 for lu decomposition
-  void linear_combination(const gen & c1,const vecteur & v1,const gen & c2,const vecteur & v2,const gen & c,vecteur & v,double eps,int cstart){
+  void linear_combination(const gen & c1,const vecteur & v1,const gen & c2,const vecteur & v2,const gen & c,const gen & cinv,vecteur & v,double eps,int cstart){
+    if (!is_one(cinv)){
+      if (cinv.type==_FRAC)
+	linear_combination(c1*cinv._FRACptr->num,v1,c2*cinv._FRACptr->num,v2,cinv._FRACptr->den,1,v,eps,cstart);
+      else
+	linear_combination(c1*cinv,v1,c2*cinv,v2,1,1,v,eps,cstart);
+      return;
+    }
     const_iterateur it1=v1.begin()+cstart,it1end=v1.end(),it2=v2.begin()+cstart;
     iterateur jt1=v.begin()+cstart;
 #ifdef DEBUG_SUPPORT
     if (it1end-it1!=v2.end()-it2)
       setdimerr();
 #endif
-    if (it2==jt1)
-      linear_combination(c2,v2,c1,v1,c,v,eps,cstart);
-    else {
-      if (it1==jt1){
-	if (is_one(c)){
-	  for (;jt1!=it1end;++jt1,++it2){
-	    *jt1=trim(c1*(*jt1)+c2*(*it2),c1,eps);
-	  }
-	}
-	else {
-	  polynome tmp;
-	  for (;jt1!=it1end;++jt1,++it2){
-#ifndef USE_GMP_REPLACEMENTS
-	    if (jt1->type==_ZINT && c1.type==_ZINT && c2.type==_ZINT && c.type==_ZINT && it2->type==_ZINT && jt1->ref_count()==1){
-	      mpz_mul(*jt1->_ZINTptr,*jt1->_ZINTptr,*c1._ZINTptr);
-	      mpz_addmul(*jt1->_ZINTptr,*it2->_ZINTptr,*c2._ZINTptr);
-	      mpz_divexact(*jt1->_ZINTptr,*jt1->_ZINTptr,*c._ZINTptr);
-	      if (mpz_sizeinbase(*jt1->_ZINTptr,2)<31)
-		*jt1=int(mpz_get_si(*jt1->_ZINTptr));
-	      continue;
-	    }
-#endif
-	    *jt1=trim(exact_div(c1*(*jt1)+c2*(*it2),c),c1,eps);
-	  }
+    if (it2==jt1){
+      linear_combination(c2,v2,c1,v1,c,1,v,eps,cstart);
+      return;
+    }
+    if (it1==jt1){
+      if (is_one(c)){
+	for (;jt1!=it1end;++jt1,++it2){
+	  *jt1=trim(c1*(*jt1)+c2*(*it2),c1,eps);
 	}
       }
       else {
-	v.clear();
-	v.reserve(it1end-it1);
-	if (is_one(c)){
-	  for (;it1!=it1end;++it1,++it2)
-	    v.push_back(trim(c1*(*it1)+c2*(*it2),c1,eps));
+	int t=0;
+	if (c1.type==c2.type){
+	  t=c1.type;
+	  if (t==_EXT && *(c1._EXTptr+1)!=*(c2._EXTptr+1))
+	    t=0;
 	}
-	else {
-	  for (;it1!=it1end;++it1,++it2)
-	    v.push_back(trim(exact_div(c1*(*it1)+c2*(*it2),c),c1,eps));
+	for (;jt1!=it1end;++jt1,++it2){
+#ifndef USE_GMP_REPLACEMENTS
+	  if (t==_ZINT && jt1->type==_ZINT && c.type==_ZINT && it2->type==_ZINT && jt1->ref_count()==1){
+	    mpz_mul(*jt1->_ZINTptr,*jt1->_ZINTptr,*c1._ZINTptr);
+	    mpz_addmul(*jt1->_ZINTptr,*it2->_ZINTptr,*c2._ZINTptr);
+	    mpz_divexact(*jt1->_ZINTptr,*jt1->_ZINTptr,*c._ZINTptr);
+	    if (mpz_sizeinbase(*jt1->_ZINTptr,2)<31)
+	      *jt1=int(mpz_get_si(*jt1->_ZINTptr));
+	    continue;
+	  }
+#endif
+	  if (t==_EXT && jt1->type==_EXT && it2->type==_EXT && *(jt1->_EXTptr+1)==*(c1._EXTptr+1) && *(it2->_EXTptr+1)==*(c1._EXTptr+1)){
+	    gen tmp=change_subtype(*c1._EXTptr,_POLY1__VECT)*(*jt1->_EXTptr)+change_subtype(*c2._EXTptr,_POLY1__VECT)*(*it2->_EXTptr);
+	    tmp=ext_reduce(tmp,*(c1._EXTptr+1));
+	    *jt1=exact_div(tmp,c);
+	    continue;
+	  }
+	  *jt1=trim(exact_div(c1*(*jt1)+c2*(*it2),c),c1,eps);
 	}
       }
+      return;
+    }
+    v.clear();
+    v.reserve(it1end-it1);
+    if (is_one(c)){
+      for (;it1!=it1end;++it1,++it2)
+	v.push_back(trim(c1*(*it1)+c2*(*it2),c1,eps));
+    }
+    else {
+      for (;it1!=it1end;++it1,++it2)
+	v.push_back(trim(exact_div(c1*(*it1)+c2*(*it2),c),c1,eps));
     }
   }
 
@@ -4840,8 +5024,10 @@ namespace giac {
     }
     return q;
   }
-  // find x mod p or smod p, assuming invp=2^(2*nbits)/p+1 has been precomputed
+  // find pseudo remainder of x mod p, 2^nbits>=p>2^(nbits-1)
+  // assumes invp=2^(2*nbits)/p+1 has been precomputed 
   // and abs(x)<2^(31+nbits)
+  // |remainder| <= max(2^nbits,|x|*p/2^(2nbits)), <=2*p if |x|<=p^2
   inline int pseudo_mod(longlong x,int p,unsigned invp,unsigned nbits){
 #if 1 // def INT128
     //if ( x - (((x>>nbits)*invp)>>(nbits))*p != int(x - (((x>>nbits)*invp)>>(nbits))*p)){ CERR << "erreur " << x << " " << p << endl; exit(1); }
@@ -4863,6 +5049,19 @@ namespace giac {
   // a <- (a+b*c) mod or smod p
   inline void pseudo_mod(int & a,int b,int c,int p,unsigned invp,unsigned nbits){
     a=pseudo_mod(a+((longlong)b)*c,p,invp,nbits);
+  }
+
+  // n==nbits, for |x|<=p^2, 2^n>=p>2^(n-1), returns |remainder|<=p
+  // assumes invp=floor(2^(2n)/p)+1, 2^(2n)/p < invp <= 2^(2n)/p+1
+  // for x>0, x/2^n-1 < floor(x/2^n) <= x/2^n hence we have 
+  // x/p-2^n/p < floor((x/2^n)*invp)/2^n <= x/p+x/2^(2n)
+  // therefore -x*p/2^(2n) <= x-(floor((x/2^n)*invp)/2^n)*p < 2^n
+  // the remainder is at most p*(2^n/p)< 2*p if x is positive
+  // number of operations 5+4+4 (instead of 5 for pseudomod)
+  inline int pseudo_mod_reduced(longlong x,int p,unsigned invp,unsigned nbits){
+    int y=x - (((x>>nbits)*invp)>>(nbits))*p;
+    y -= ((y-p)>>31)*p;
+    return y+((p-y)>>31)*p;
   }
 #endif // PSEUDO_MOD
 
@@ -4951,6 +5150,44 @@ namespace giac {
       }
   }
 
+  void LL_multilinear_combination(std::vector<longlong> & v1,int c1,std::vector<longlong> & v2,int c2,std::vector<longlong> & v3,int c3,std::vector<longlong> & v4,int c4,const std::vector<longlong> & w,int p,int cstart,int cend){
+    c1 %=p; c2 %=p; c3 %=p; c4 %=p;
+    longlong * it1=&*(v1.begin()+cstart),*it1end=&*(v1.end()),*it2=&*(v2.begin()+cstart),*it3=&*(v3.begin()+cstart),*it4=&*(v4.begin()+cstart),*it1_;
+    if (cend && cend>=cstart && cend<it1end-&v1.front())
+      it1end=&*(v1.begin()+cend);
+    it1_=it1-4;
+    const longlong * jt=&*(w.begin()+cstart);
+    for (;it1<=it1_;it1+=4,it2+=4,it3+=4,it4+=4,jt+=4){
+      longlong tmp=*jt;
+      *it1 += c1*tmp;
+      *it2 += c2*tmp;
+      *it3 += c3*tmp;
+      *it4 += c4*tmp;
+      tmp=jt[1];
+      it1[1] += c1*tmp;
+      it2[1] += c2*tmp;
+      it3[1] += c3*tmp;
+      it4[1] += c4*tmp;
+      tmp=jt[2];
+      it1[2] += c1*tmp;
+      it2[2] += c2*tmp;
+      it3[2] += c3*tmp;
+      it4[2] += c4*tmp;
+      tmp=jt[3];
+      it1[3] += c1*tmp;
+      it2[3] += c2*tmp;
+      it3[3] += c3*tmp;
+      it4[3] += c4*tmp;
+    }
+    for (;it1!=it1end;++jt,++it4,++it3,++it2,++it1){
+      longlong tmp=*jt;
+      *it1 += c1*tmp;
+      *it2 += c2*tmp;
+      *it3 += c3*tmp;
+      *it4 += c4*tmp;
+    }
+  }
+
   bool find_multi_linear_combination(vector< vector<int> > & N,int l0,int & l1,int &l2,int &l3,int pivotcol,int lexcluded,int lmax){
     if (l0>=lmax-3)
       return false;
@@ -4971,6 +5208,32 @@ namespace giac {
     l3=l2+1;
     for (;l3<lmax;++l3){
       if (l3!=lexcluded && !N[l3].empty() && N[l3][pivotcol])
+	break;
+    }
+    return l3<lmax;
+  }
+
+  bool find_multi_linear_combination(vector< vector<longlong> > & N,int l0,int & l1,int &l2,int &l3,int pivotcol,int lexcluded,int lmax){
+    if (l0>=lmax-3)
+      return false;
+    vector<longlong> * ptr;
+    l1=l0+1;
+    for (;l1<lmax;++l1){
+      if (l1!=lexcluded && !(ptr=&N[l1])->empty() && (*ptr)[pivotcol])
+	break;
+    }
+    if (l1>=lmax-2)
+      return false;
+    l2=l1+1;
+    for (;l2<lmax;++l2){
+      if (l2!=lexcluded && !(ptr=&N[l2])->empty() && (*ptr)[pivotcol])
+	break;
+    }
+    if (l2>=lmax-1)
+      return false;
+    l3=l2+1;
+    for (;l3<lmax;++l3){
+      if (l3!=lexcluded && !(ptr=&N[l3])->empty() && (*ptr)[pivotcol])
 	break;
     }
     return l3<lmax;
@@ -5767,7 +6030,7 @@ namespace giac {
 	it1end=v1.begin()+cend;
       it1_=it1end-4;
       vector<int>::const_iterator it2=v2.begin()+cstart;
-#if defined(PSEUDO_MOD) && !(defined(VISUALC) || defined (BESTA_OS) || defined(OSX))
+#if defined(PSEUDO_MOD) && !(defined(VISUALC) || defined (BESTA_OS) || defined(OSX) || defined(OSXIOS) || defined(FIR_LINUX) || defined(FIR_ANDROID) || defined(ANDROID))
       c2 %= modulo;
       if (pseudo && (modulo<(1<<29) 
 		     // && modulo>=(1<<16)
@@ -5823,6 +6086,26 @@ namespace giac {
     }
   }
 
+  // v1=v1+c2*v2
+  void modlinear_combination(vector<longlong> & v1,int c2,const vector<longlong> & v2,int modulo,int cstart,int cend){
+    if (c2){
+      longlong * it1=&v1.front()+cstart,*it1end=&v1.front()+v1.size(),*it1_;
+      if (cend && cend>=cstart && cend<it1end-&v1.front())
+	it1end=&v1.front()+cend;
+      it1_=it1end-4;
+      const longlong * it2=&v2.front()+cstart;
+      for (;it1<=it1_;it1+=4,it2+=4){
+	*it1 += c2*(*it2);
+	it1[1] += c2*it2[1];
+	it1[2] += c2*it2[2];
+	it1[3] += c2*it2[3];
+      }
+      for (;it1!=it1end;++it1,++it2){
+	*it1 += c2*(*it2);
+      }
+    }
+  }
+
   void matrice2std_matrix_gen(const matrice & m,std_matrix<gen> & M){
     int n=int(m.size());
     M.clear();
@@ -5870,6 +6153,17 @@ namespace giac {
 	v.push_back(it->_MODptr->val);
 	continue;
       }
+      if (it->is_symb_of_sommet(at_normalmod)){
+	const gen & f=it->_SYMBptr->feuille;
+	if (f.type!=_VECT || f._VECTptr->size()!=2 || f._VECTptr->front().type!=_INT_ || f._VECTptr->back().type!=_INT_)
+	  return false;
+	if (!p)
+	  p=f._VECTptr->back().val;
+	if (f._VECTptr->back().val!=p)
+	  return false;
+	v.push_back(f._VECTptr->front().val);
+	continue;
+      }
       if (it->type!=_INT_) return false;
       v.push_back(it->val);
     }
@@ -5894,7 +6188,7 @@ namespace giac {
       if (it->type==_INT_) continue;
       if (intonly) return false;
       if (it->type==_ZINT) continue;
-      if (it->type==_CPLX && is_exactly_zero(*(it->_CPLXptr+1))) continue;
+      if (it->type==_CPLX && is_integer(*it->_CPLXptr) && is_exactly_zero(*(it->_CPLXptr+1))) continue;
       return false;
       // if (!is_integer(*it)) return false;
     }
@@ -5966,15 +6260,19 @@ namespace giac {
     vecteur * pivotsptr;
     smallmodrref_temp_t * workptr;
     gen det,mult_by_det_mod_p;
-    int l,lmax,c,cmax,fullreduction,dont_swap_below,Modulo,rref_or_det_or_lu;
+    int l,lmax,c,cmax,fullreduction,dont_swap_below,Modulo,carac,rref_or_det_or_lu;
     bool inverting,no_initial_mod,success;
   };
 
   void * thread_modrref(void * ptr_){
     thread_modrref_t * ptr = (thread_modrref_t *)(ptr_);
-    ptr->success=in_modrref(*ptr->aptr, *ptr->Nptr,*ptr->resptr, *ptr->pivotsptr, ptr->det,ptr->l, ptr->lmax, ptr->c,ptr->cmax,ptr->fullreduction,ptr->dont_swap_below,ptr->Modulo,ptr->rref_or_det_or_lu,ptr->mult_by_det_mod_p,ptr->inverting,ptr->no_initial_mod,ptr->workptr);
+    ptr->success=in_modrref(*ptr->aptr, *ptr->Nptr,*ptr->resptr, *ptr->pivotsptr, ptr->det,ptr->l, ptr->lmax, ptr->c,ptr->cmax,ptr->fullreduction,ptr->dont_swap_below,ptr->Modulo,ptr->carac,ptr->rref_or_det_or_lu,ptr->mult_by_det_mod_p,ptr->inverting,ptr->no_initial_mod,ptr->workptr);
     return ptr;
   }
+
+#ifndef CLOCKS_PER_SEC
+#define CLOCKS_PER_SEC 1e6
+#endif
   
 #ifndef GIAC_HAS_STO_38
   static int mrref_int(const matrice & a, matrice & res, vecteur & pivots, gen & det,int l, int lmax, int c,int cmax,
@@ -6046,7 +6344,7 @@ namespace giac {
 	  return 1;
 	}
 	lcmdeno(resb,factdet,contextptr);
-	if (debug_infolevel>1)
+	if (debug_infolevel>2)
 	  CERR << "lif=" << factdet << endl;
 	h2=iquo(h2,factdet*factdet)+1;
 	det=smod(det*invmod(factdet,p),p);
@@ -6094,7 +6392,7 @@ namespace giac {
 	resptr[i][j]=vecteur(cmax);
       pivotsptr[i]=pivots;
       pivotsptr[i].reserve(a.size());
-      thread_modrref_t tmp={&a,&Nptr[i],&resptr[i],&pivotsptr[i],&work[i],0,1,l,lmax,c,cmax,fullreduction,dont_swap_below,0,rref_or_det_or_lu,inverting,false,false};
+      thread_modrref_t tmp={&a,&Nptr[i],&resptr[i],&pivotsptr[i],&work[i],0,1,l,lmax,c,cmax,fullreduction,dont_swap_below,0,-1,rref_or_det_or_lu,inverting,false,false};
       modrrefparam[i]=tmp;
     }
 #endif
@@ -6103,15 +6401,19 @@ namespace giac {
       if (!done){
 	pi_p=p;
 	if (!in_modrref(a,N,res,pivots,det,l,lmax,c,cmax,
-			0 /* fullreduction */,dont_swap_below,p.val,1 /* det */,1 /* mult by 1*/,false/* inverting */,true/* no initial mod */
+			0 /* fullreduction */,dont_swap_below,p.val,-1/* carac*/,1 /* det */,1 /* mult by 1*/,false/* inverting */,true/* no initial mod */,
 #ifdef HAVE_LIBPTHREAD
-			,&work[nthreads-1]
+			&work[nthreads-1]
+#else
+			0
 #endif
 			)
 	    )
 	  return 0;
       }
       // First find det to avoid bad primes
+      int initial_clock=CLOCK();
+      int dbglevel=debug_infolevel;
       for (;is_strictly_greater(h2,pi_p*pi_p,contextptr);){
 #ifdef HAVE_LIBPTHREAD
 	for (int j=0;j<nthreads-1;j++){
@@ -6129,18 +6431,27 @@ namespace giac {
 	}
 #endif
 	p=nextp(p+1,factdet);
-	if (as>10 && debug_infolevel>1)
-	  CERR << CLOCK() << " detrref, % done " << evalf_double(_evalf(gen(makevecteur(200*ln(pi_p,contextptr)/ln(h2,contextptr),20),_SEQ__VECT),contextptr),1,contextptr)<< ", prime " << p << ", det/lif=" << det << endl;
+	gen current_estimate=evalf_double(_evalf(gen(makevecteur(200*ln(pi_p,contextptr)/ln(h2,contextptr),20),_SEQ__VECT),contextptr),1,contextptr);
+	if (as>10 && dbglevel<2 && CLOCK()-initial_clock>min_proba_time*CLOCKS_PER_SEC)
+	  dbglevel=2;
+	if (as>10 && dbglevel>1){
+	  CERR << CLOCK() << " detrref, % done " << current_estimate << ", prime " << p << (proba<1e-10?" stable":" unstable");
+	  if (dbglevel>3)
+	    CERR << ", det/lif=" << det ;
+	  CERR << endl;
+	}
 	if (!in_modrref(a,N,res,pivots,det_mod_p,l,lmax,c,cmax,
-			0 /* fullreduction */,dont_swap_below,p.val,1 /* det */,1 /* mult by 1*/,false /* inverting */,true/* no initial mod */
+			0 /* fullreduction */,dont_swap_below,p.val,-1/*carac*/,1 /* det */,1 /* mult by 1*/,false /* inverting */,true/* no initial mod */,
 #ifdef HAVE_LIBPTHREAD
-			,&work[nthreads-1]
+			&work[nthreads-1]
+#else
+			0
 #endif
 			)){
 	  // FIXME clean launched threads
 	  return 0;
 	}
-	if (debug_infolevel>1)
+	if (dbglevel>2)
 	  CERR << CLOCK() << " end rref " << endl;
 #ifdef HAVE_LIBPTHREAD
 	// get back launched mod det
@@ -6168,12 +6479,12 @@ namespace giac {
 	  proba=proba/evalf_double(p,1,contextptr)._DOUBLE_val;
 	else
 	  proba=1.0;
-	if (proba<proba_epsilon(contextptr))
+	if (proba<proba_epsilon(contextptr) && is_greater(70,current_estimate,contextptr) && CLOCK()-initial_clock>min_proba_time*CLOCKS_PER_SEC)
 	  break;
       } // end loop h2>pi_p^2
       det=smod(det,pi_p)*factdet;
       if (rref_or_det_or_lu==1){
-	if (proba<proba_epsilon(contextptr))
+	if (is_strictly_greater(h2,pi_p*pi_p,contextptr))
 	  *logptr(contextptr) << gettext("Probabilistic algorithm for determinant\n(run proba_epsilon:=0 for a deterministic answer, this is slower).\nError probability is less than ") << proba << endl;
 	return 1;
       }
@@ -6208,7 +6519,7 @@ namespace giac {
       pi_p=p;
       gen det1;
       if (!in_modrref(a,N,res,pivots,det1,l,lmax,c,cmax,
-		      fullreduction,dont_swap_below,p.val,rref_or_det_or_lu,(inverting || rref_or_det_or_lu==0)?det:1,true /* inverting */,true/* no initial mod */))
+		      fullreduction,dont_swap_below,p.val,-1/*carac*/,rref_or_det_or_lu,(inverting || rref_or_det_or_lu==0)?det:1,true /* inverting */,true/* no initial mod */,0/*workptr*/))
 	return 0;
 #if 1
       // uncoerce elements of res and prealloc size of integers
@@ -6251,7 +6562,7 @@ namespace giac {
 	if (p.type!=_INT_)
 	  break;
 	if (!in_modrref(a,N,res_mod_p,pivots_mod_p,det_mod_p,l,lmax,c,cmax,
-			fullreduction,dont_swap_below,p.val,rref_or_det_or_lu,(inverting || rref_or_det_or_lu==0)?det:1,true /* inverting */,true/* no initial mod */))
+			fullreduction,dont_swap_below,p.val,-1/*carac*/,rref_or_det_or_lu,(inverting || rref_or_det_or_lu==0)?det:1,true /* inverting */,true/* no initial mod */,0/*workptr*/))
 	  return 0;
 #ifdef HAVE_LIBPTHREAD
 	// get back launched mod det
@@ -6295,7 +6606,7 @@ namespace giac {
 	  // early termination if abs(det*2)<pi_p and linfnorm(res)*linfnorm(original_matrix)*size*2<pi_p
 	  // smod_inplace(res,pi_p);
 	  if (is_greater(pi_p,2*abs(det,contextptr),contextptr) && is_greater(pi_p,2*linfnorm(res,contextptr)*linfa,contextptr)){
-	    if (debug_infolevel>1)
+	    if (debug_infolevel>2)
 	      *logptr(contextptr) << CLOCK() << gettext(" Early termination") << endl;
 	    break;
 	  }
@@ -6312,10 +6623,10 @@ namespace giac {
 	  // since the denominator is likely (about 6/pi^2) to be the lif
 	  // therefore we could compute divisor=det/lif and test divisibility
 	  // of res by divisor
-	  if (debug_infolevel>1)
+	  if (debug_infolevel>2)
 	    *logptr(contextptr) << CLOCK() << gettext(" dividing by determinant") << endl;
 	  divvecteur(res,det,res);
-	  if (debug_infolevel>1)
+	  if (debug_infolevel>2)
 	    *logptr(contextptr) << CLOCK() << gettext(" end dividing by determinant") << endl;
 	}
 	else
@@ -6334,6 +6645,224 @@ namespace giac {
   } // end modular/padic algorithm
 #endif // GIAC_HAS_STO_38
 
+  // find lvar after doing halftan/tsimplify
+  void alg_lvar_halftan_tsimplify(vecteur & res,vecteur & lv,GIAC_CONTEXT){
+    lv=alg_lvar(res);
+    if (!lv.empty() && lv.front().type==_VECT && lv.front()._VECTptr->size()>1){
+      vecteur lw=*halftan(lv.front(),contextptr)._VECTptr;
+      if (lvar(lw).size()<lv.front()._VECTptr->size()){
+	res=*subst(gen(res),lv.front(),lw,false,contextptr)._VECTptr;
+	lv=alg_lvar(res);
+      }
+      if (!lv.empty() && lv.front().type==_VECT && lv.front()._VECTptr->size()>1){
+	lw=*tsimplify(lv.front(),contextptr)._VECTptr;
+	if (lvar(lw).size()<lv.front()._VECTptr->size()){
+	  res=*subst(gen(res),lv.front(),lw,false,contextptr)._VECTptr;
+	  lv=alg_lvar(res);
+	}
+      }
+    }
+  }
+
+  int rref_reduce(std_matrix<gen> &M,vecteur & pivots,vector<int> & permutation,gen & det,gen &detnum,int algorithm,int l,int lmax,int c,int cmax,int dont_swap_below,int rref_or_det_or_lu,int fullreduction,double eps,bool step_rref,const vecteur &lv,bool convert_internal,GIAC_CONTEXT){
+    int linit=l;
+    gen bareiss (1),invbareiss(1),pivot,temp;
+    int pivotline,pivotcol;
+    matrice res;
+    int status=2;
+    for (;(l<lmax) && (c<cmax);){
+#ifdef TIMEOUT
+      control_c();
+#endif
+      if (ctrl_c || interrupted)
+	return 0;
+      if ( (!fullreduction) && (l==lmax-1) )
+	break;
+      if (debug_infolevel>2)
+	CERR <<  "// mrref line " << l << ":" << CLOCK() <<endl;
+      pivot=M[l][c];
+      if (debug_infolevel>2){
+	CERR << "// ";
+	print_debug_info(pivot);
+      }
+      pivotline=l;
+      pivotcol=c;
+      if (l<dont_swap_below){ // scan current line for the best pivot available
+	for (int ctemp=c+1;ctemp<cmax;++ctemp){
+	  temp=M[l][ctemp];
+	  if (debug_infolevel>2)
+	    print_debug_info(temp);
+	  if (!is_zero(temp,contextptr) && temp.islesscomplexthan(pivot)){
+	    pivot=temp;
+	    pivotcol=ctemp;
+	  }
+	}	
+      }
+      else {      // scan M current column for the best pivot available
+	if (rref_or_det_or_lu == 3){ // LU without line permutation
+	  if (is_zero(pivot,contextptr)){
+	    det = 0;
+	    vecteur P;
+	    vector_int2vecteur(permutation,P);
+	    pivots.push_back(P);
+	    return 1;
+	  }
+	}
+	else {
+	  for (int ltemp=l+1;ltemp<lmax;++ltemp){
+	    temp=M[ltemp][c];
+	    if (debug_infolevel>2)
+	      print_debug_info(temp);
+	    if (!is_zero(temp,contextptr) && (is_zero(pivot) || temp.islesscomplexthan(pivot))){
+	      pivot=temp;
+	      pivotline=ltemp;
+	    }
+	  }
+	}
+      }
+      if (debug_infolevel>2)
+	CERR << endl;
+      //COUT << M << endl << pivot << endl;
+      if (!is_zero(pivot,contextptr)){
+	if (step_rref){
+	  std_matrix_gen2matrice(M,res);
+	  gen pivot1=pivot;
+	  if (convert_internal){
+	    res = *r2sym(res,lv,contextptr)._VECTptr;
+	    pivot1 = r2sym(pivot1,lv,contextptr);
+	  }
+	  gprintf(step_rrefpivot,gettext("%gen\nReduce column %gen with pivot %gen at row %gen"),makevecteur(res,c+1,pivot1,pivotline+1),contextptr);
+	}
+	// exchange lines if needed
+	if (l!=pivotline){
+	  if (step_rref){
+	    std_matrix_gen2matrice(M,res);
+	    if (convert_internal)
+	      res = *r2sym(res,lv,contextptr)._VECTptr;
+	    gprintf(step_rrefexchange,gettext("Exchange row %gen and row %gen"),makevecteur(l+1,pivotline+1),contextptr);
+	  }
+	  swap(M[l],M[pivotline]);
+	  swap(permutation[l],permutation[pivotline]);
+	  // temp = M[l];
+	  // M[l] = M[pivotline];
+	  // M[pivotline] = temp;
+	  detnum = -detnum;
+	}
+	// make the reduction
+	if (fullreduction){ // should be done after for efficiency
+	  for (int ltemp=linit;ltemp<lmax;++ltemp){
+	    if (debug_infolevel>=2)
+	      CERR << "// " << l << "," << ltemp << " "<< endl;
+	    if (step_rref && l!=ltemp){
+	      std_matrix_gen2matrice(M,res);
+	      gen coeff1=pivot,coeff2=M[ltemp][pivotcol];
+	      if (algorithm==RREF_GAUSS_JORDAN){
+		coeff1=1; coeff2=coeff2/pivot;
+	      }
+	      if (convert_internal){
+		res = *r2sym(res,lv,contextptr)._VECTptr;
+		coeff1=r2sym(coeff1,lv,contextptr);
+		coeff2=r2sym(coeff2,lv,contextptr);
+	      }
+	      gprintf(step_rrefpivot0,gettext("L%gen <- (%gen)*L%gen-(%gen)*L%gen on %gen"),makevecteur(ltemp+1,coeff1,ltemp+1,coeff2,l+1,res),contextptr);
+	    }
+	    if (ltemp!=l){
+	      if (algorithm!=RREF_GAUSS_JORDAN) // M[ltemp] = rdiv( pivot * M[ltemp] - M[ltemp][pivotcol]* M[l], bareiss);
+		linear_combination(pivot,M[ltemp],-M[ltemp][pivotcol],M[l],bareiss,invbareiss,M[ltemp],eps,0);
+	      else // M[ltemp]=M[ltemp]-rdiv(M[ltemp][pivotcol],pivot)*M[l];
+		linear_combination(plus_one,M[ltemp],-rdiv(M[ltemp][pivotcol],pivot,contextptr),M[l],plus_one,plus_one,M[ltemp],eps,0);
+	    }
+	  }
+	}
+	else { // subdiagonal reduction
+	  for (int ltemp=l+1;ltemp<lmax;++ltemp){
+	    if (debug_infolevel>=2)
+	      CERR << "// " << l << "," << ltemp << " "<< endl;
+	    if (step_rref){
+	      std_matrix_gen2matrice(M,res);
+	      gen coeff1=pivot,coeff2=M[ltemp][pivotcol];
+	      if (algorithm==RREF_GAUSS_JORDAN){
+		coeff1=1; coeff2=coeff2/pivot;
+	      }
+	      if (convert_internal){
+		res = *r2sym(res,lv,contextptr)._VECTptr;
+		coeff1=r2sym(coeff1,lv,contextptr);
+		coeff2=r2sym(coeff2,lv,contextptr);
+	      }
+	      gprintf(step_rrefpivot0,gettext("L%gen <- (%gen)*L%gen-(%gen)*L%gen on %gen"),makevecteur(ltemp+1,coeff1,ltemp+1,coeff2,l+1,res),contextptr);
+	    }
+	    if (algorithm!=RREF_GAUSS_JORDAN)
+	      linear_combination(pivot,M[ltemp],-M[ltemp][pivotcol],M[l],bareiss,invbareiss,M[ltemp],eps,(c+1)*(rref_or_det_or_lu>0));
+	    else {
+	      gen coeff=M[ltemp][pivotcol]/pivot;
+	      linear_combination(plus_one,M[ltemp],-coeff,M[l],plus_one,plus_one,M[ltemp],eps,(c+1)*(rref_or_det_or_lu>0));
+	      if (rref_or_det_or_lu==2 || rref_or_det_or_lu == 3){
+		M[ltemp][pivotcol]=0;
+		M[ltemp][l]=coeff; // pivotcol replaced by l
+	      }
+	    }
+	  }
+	  if (rref_or_det_or_lu==1 && algorithm!=RREF_GAUSS_JORDAN) {
+	    if (debug_infolevel>2)
+	      CERR << "//mrref clear line " << l << endl;
+	    // clear pivot line to save memory
+	    M[l].clear();
+	  }
+	} // end else
+	// COUT << M << endl;
+	// increment column number if swap was allowed
+	if (l>=dont_swap_below)
+	  ++c;
+	// increment line number since reduction has been done
+	++l;	  
+	// multiply det
+	// set new bareiss for next reduction round
+	if (algorithm!=RREF_GAUSS_JORDAN){
+	  bareiss=pivot;
+	  if (bareiss.type==_EXT || bareiss.type==_USER)
+	    invbareiss=inv(bareiss,contextptr);
+	  else
+	    invbareiss=1;
+	}
+	// save pivot for annulation test purposes
+	if (rref_or_det_or_lu!=1){
+	  if (convert_internal)
+	    pivots.push_back(r2sym(pivot,lv,contextptr));
+	  else
+	    pivots.push_back(pivot);
+	  if (debug_infolevel>2)
+	    CERR << pivots.back() << endl;
+	}
+      }
+      else { // if pivot is 0 increment either the line or the col
+	status=3;
+	if (rref_or_det_or_lu==1){
+	  det=0;
+	  return 1;
+	}
+	if (l>=dont_swap_below)
+	  c++;
+	else
+	  l++;
+      }
+    } // end for reduction loop
+    return status;
+  }
+
+  bool remove_identity(matrice & res,GIAC_CONTEXT){
+    int s=int(res.size());
+    // "shrink" res
+    for (int i=0;i<s;++i){
+      vecteur v = *res[i]._VECTptr;
+      if (is_zero(v[i],context0))
+	return false;
+      gen tmp=new ref_vecteur(v.begin()+s,v.end());
+      divvecteur(*tmp._VECTptr,v[i],*tmp._VECTptr);
+      res[i] = normal(tmp,contextptr);
+    }
+    return true;
+  }
+
   // row reduction from line l and column c to line lmax and column cmax
   // lmax and cmax are not included
   // line are numbered starting from 0
@@ -6346,13 +6875,20 @@ namespace giac {
   // rref_or_det_or_lu = 0 for rref, 1 for det, 2 for lu, 
   // 3 for lu without pemutation
   int mrref(const matrice & a, matrice & res, vecteur & pivots, gen & det,int l, int lmax, int c,int cmax,
-	    int fullreduction,int dont_swap_below,bool convert_internal,int algorithm,int rref_or_det_or_lu,
+	    int fullreduction_,int dont_swap_below,bool convert_internal,int algorithm_,int rref_or_det_or_lu,
 	    GIAC_CONTEXT){
     if (!ckmatrix(a))
       return 0;
     double eps=epsilon(contextptr);
     unsigned as=unsigned(a.size()),a0s=unsigned(a.front()._VECTptr->size());
     bool step_rref=false;
+    int algorithm=algorithm_;
+    bool rm_idn_after=absint(fullreduction_)>=256;
+    if (rm_idn_after)
+      fullreduction_/=256;
+    int fullreduction=fullreduction_;
+    if (fullreduction<0)
+      fullreduction=-fullreduction_;
     if (algorithm==RREF_GUESS && step_infolevel(contextptr) && as<5 && a0s<7){
       algorithm=RREF_GAUSS_JORDAN;
       step_rref=true;
@@ -6364,7 +6900,7 @@ namespace giac {
     // Bareiss is in n^3*M(n*log(nA)) where M is multiplication time
     // => for small A and large n p-adic,
     // but for large A and small n, Bareiss is faster
-    if (algorithm==RREF_GUESS && rref_or_det_or_lu==0 && as>10 && as==a0s-1 && int(as)==lmax && int(a0s)==cmax)
+    if (fullreduction_>=0 && algorithm==RREF_GUESS && rref_or_det_or_lu==0 && as>10 && as==a0s-1 && int(as)==lmax && int(a0s)==cmax)
       modular=2;
     if (algorithm==RREF_GUESS && rref_or_det_or_lu<0){
       modular=1;
@@ -6424,12 +6960,21 @@ namespace giac {
       tmp=tmp._VECTptr->front();
       if (tmp.type==_MOD){
 	gen modulo=*(tmp._MODptr+1);
-	if (!modrref(*unmod(a)._VECTptr,res,pivots,det,l,lmax,c,cmax,
-		     fullreduction,dont_swap_below,modulo,rref_or_det_or_lu))
-	  return 0;
-	// FIXME lu should not makemod the permutation
+	vecteur unmoda=*unmod(a)._VECTptr;
+	if (!modrref(unmoda,res,pivots,det,l,lmax,c,cmax,
+		     fullreduction,dont_swap_below,modulo,true/*ckprime*/,rref_or_det_or_lu)){
+	  if (!mrref(unmoda,res,pivots,det,l,lmax,c,cmax,
+		     fullreduction,dont_swap_below,convert_internal,algorithm,rref_or_det_or_lu,contextptr))
+	    return 0;
+	}
 	res=*makemod(res,modulo)._VECTptr;
-	pivots=*makemod(pivots,modulo)._VECTptr;
+	// keep the permutation without makemod
+	if (!pivots.empty()){
+	  gen last=pivots.back();
+	  pivots.pop_back();
+	  pivots=*makemod(pivots,modulo)._VECTptr;
+	  pivots.push_back(last);
+	}
 	det=makemod(det,modulo);
 	return 1;
       }
@@ -6474,25 +7019,58 @@ namespace giac {
     }
     else
       res=a;
+    //if (debug_infolevel) CERR << CLOCK()*1e-6 << " convert internal" << endl;
     if (convert_internal){
       // convert a to internal form
-      lv=alg_lvar(res);
-      if (!lv.empty() && lv.front().type==_VECT && lv.front()._VECTptr->size()>1){
-	vecteur lw=*halftan(lv.front(),contextptr)._VECTptr;
-	if (lvar(lw).size()<lv.front()._VECTptr->size()){
-	  res=*subst(gen(res),lv.front(),lw,false,contextptr)._VECTptr;
-	  lv=alg_lvar(res);
+      alg_lvar_halftan_tsimplify(res,lv,contextptr);
+      res = *(e2r(res,lv,contextptr)._VECTptr);
+      if (lv.size()==1 && lv.front().type==_VECT && lv.front()._VECTptr->empty()){
+	// cleanup res
+	int i=0;
+	for (;i<res.size();++i){
+	  if (res[i].type==_VECT && res[i].ref_count()==1){
+	    vecteur & resi=*res[i]._VECTptr;
+	    int j=0;
+	    for (;j<resi.size();++j){
+	      gen resij=resi[j];
+	      if (resij.type<_POLY)
+		continue;
+	      if (resij.type==_FRAC && resij._FRACptr->den.type<=_ZINT)
+		resij=resij._FRACptr->num;
+	      if (resij.type==_POLY && resij._POLYptr->dim==0 && resij._POLYptr->coord.size()==1){
+		gen tmp=resij._POLYptr->coord.front().value;
+		if (tmp.type<_POLY)
+		  continue;
+		if (tmp.type==_EXT && tmp._EXTptr->type==_VECT && (tmp._EXTptr+1)->type==_VECT && is_integer_vecteur(*tmp._EXTptr->_VECTptr) && is_integer_vecteur(*(tmp._EXTptr+1)->_VECTptr))
+		  continue;
+	      }
+	      break;
+	    }
+	    if (j!=resi.size())
+	      break;
+	  }
+	  else break;
 	}
-	if (!lv.empty() && lv.front().type==_VECT && lv.front()._VECTptr->size()>1){
-	  lw=*tsimplify(lv.front(),contextptr)._VECTptr;
-	  if (lvar(lw).size()<lv.front()._VECTptr->size()){
-	    res=*subst(gen(res),lv.front(),lw,false,contextptr)._VECTptr;
-	    lv=alg_lvar(res);
+	if (i==res.size()){
+	  for (i=0;i<res.size();++i){
+	    if (res[i].type==_VECT && res[i].ref_count()==1){
+	      vecteur & resi=*res[i]._VECTptr;
+	      for (int j=0;j<resi.size();++j){
+		gen & resij=resi[j];
+		if (resij.type==_FRAC && resij._FRACptr->den.type<=_ZINT){
+		  gen tmp=resij._FRACptr->num;
+		  if (tmp.type==_POLY && tmp._POLYptr->dim==0 && tmp._POLYptr->coord.size()==1)
+		    resij=fraction(tmp._POLYptr->coord.front().value,resij._FRACptr->den);
+		}
+		if (resij.type==_POLY && resij._POLYptr->dim==0 && resij._POLYptr->coord.size()==1)
+		  resij=resij._POLYptr->coord.front().value;
+	      }
+	    }
 	  }
 	}
       }
-      res = *(e2r(res,lv,contextptr)._VECTptr);
     }
+    //if (debug_infolevel) CERR << CLOCK()*1e-6 << " end convert internal" << endl;
     int lvs=int(lv.size());
     // COUT << res << endl;
     gen lcm_deno,gcd_num;
@@ -6509,28 +7087,30 @@ namespace giac {
 	}
 	else { // non num mat
 	  lcm_deno=common_deno(*it->_VECTptr);
-	  iterateur jt=it->_VECTptr->begin(),jtend=it->_VECTptr->end();
-	  for (;jt!=jtend;++jt){
-	    if (jt->type==_FRAC){
-	      gen nm(jt->_FRACptr->num);
-	      gen dn(jt->_FRACptr->den);
-	      // *jt -> lcmdeno* (nm/dn) = nm * tmp/dn
-	      gen tmp(lcm_deno);
-	      simplify(tmp,dn);
-	      if (dn.type<=_CPLX){
-		*jt=nm*tmp/dn;
-		continue;
+	  if (!is_one(lcm_deno)){
+	    iterateur jt=it->_VECTptr->begin(),jtend=it->_VECTptr->end();
+	    for (;jt!=jtend;++jt){
+	      if (jt->type==_FRAC){
+		gen nm(jt->_FRACptr->num);
+		gen dn(jt->_FRACptr->den);
+		// *jt -> lcmdeno* (nm/dn) = nm * tmp/dn
+		gen tmp(lcm_deno);
+		simplify(tmp,dn);
+		if (dn.type<=_CPLX){
+		  *jt=nm*tmp/dn;
+		  continue;
+		}
+		if (dn.type==_POLY){
+		  *jt=nm*tmp/dn._POLYptr->coord.front().value;
+		  continue;
+		}
+		return 0; // settypeerr();
 	      }
-	      if (dn.type==_POLY){
-		*jt=nm*tmp/dn._POLYptr->coord.front().value;
-		continue;
-	      }
-	      return 0; // settypeerr();
+	      else
+		*jt=(*jt) * lcm_deno;
 	    }
-	    else
-	      *jt=(*jt) * lcm_deno;
+	    detden = detden * lcm_deno;
 	  }
-	  detden = detden * lcm_deno;
 	  gcd_num=common_num(*it->_VECTptr);
 	  if (!is_zero(gcd_num,contextptr))
 	    *it=rdiv(*it,gcd_num,contextptr);
@@ -6544,6 +7124,8 @@ namespace giac {
 	  return 0;
 	res=res1;
 	det=detnum*det/detden;
+	if (convert_internal)
+	  det=r2sym(det,lv,contextptr);
 	if (rref_or_det_or_lu==2 || rref_or_det_or_lu == 3){
 	  vecteur P;
 	  vector_int2vecteur(permutation,P);
@@ -6551,11 +7133,14 @@ namespace giac {
 	}
 	return 1;
       }
-      if (rref_or_det_or_lu==1 && as==a0s && as>4 && algorithm==RREF_GUESS && convert_internal && lvs==1 && lv.front().type==_VECT){
+      bool fullreductionafter=rref_or_det_or_lu==0 && dont_swap_below==0 && c==0 && linit==0 && cmax>=lmax && step_infolevel(contextptr)==0 && fullreduction && algorithm!=RREF_GAUSS_JORDAN; // insure all pivots are normalized to be = to the determinant
+      if ( ( (rref_or_det_or_lu==1 && as==a0s ) || fullreductionafter) 
+	   && as>4 
+	   && algorithm==RREF_GUESS && ( (convert_internal && lvs==1 && lv.front().type==_VECT) || res.front()._VECTptr->front().type==_POLY) ){
 	// guess if Bareiss or Lagrange interpolation is faster
 	// Bareiss depends on the total degree, Lagrange on partial degrees
 	// gather line/columns statistics
-	int polydim=int(lv.front()._VECTptr->size());
+	int polydim=res.front()._VECTptr->front().type==_POLY?res.front()._VECTptr->front()._POLYptr->dim:int(lv.front()._VECTptr->size());
 	index_t col_totaldeg(as);
 	vector< index_t > col_partialdeg(as,index_t(polydim));
 	int maxtotaldeg=0,summaxtotaldeg=0;
@@ -6586,7 +7171,7 @@ namespace giac {
 	  for (int i=0;i<polydim;++i){
 	    summaxdeg[i]=std::min(summaxdeg[i],col_sumpartialdeg[i]);
 	  }
-	  if (debug_infolevel>1)
+	  if (debug_infolevel>2)
 	    CERR << "Total degree " << maxtotaldeg << ", partial degrees " << summaxdeg << endl;
 	  // Now modify algorithm to RREF_LAGRANGE if it's faster
 	  double lagrange_time=std::pow(double(as),2)*(as*10+160); 
@@ -6600,28 +7185,31 @@ namespace giac {
 	    int tmpdeg=int(double(maxtotaldeg*j)/as+.5);
 	    double tmp = evalf_double(comb(tmpdeg+polydim,polydim),1,contextptr)._DOUBLE_val;
 	    tmp = tmp*tmp*std::log(tmp)*(as-j);
-	    bareiss_time += tmp;
+	    bareiss_time += 4*tmp; // 1 for *, 1 for /
 	  }
 	  bareiss_time *= as; // take account of the size of the coefficients
-	  if (debug_infolevel>1)
+	  if (debug_infolevel>2)
 	    CERR << "lagrange " << lagrange_time << " bareiss " << bareiss_time << endl;
 	  if (lagrange_time<bareiss_time){
 	    algorithm=RREF_LAGRANGE;
 	  }
 	} // end if (polydim)
       }
-      if ( algorithm==RREF_LAGRANGE && rref_or_det_or_lu==1 && as==a0s){
+      if ( algorithm==RREF_LAGRANGE && ( (rref_or_det_or_lu==1 && as==a0s) || fullreductionafter ) ){
 	vecteur lva=lvar(a);
 	if ( (!convert_internal && lva.empty()) || (lvs==1 && lv.front()==lva) ){
 	  // find degrees wrt main variable
 	  int polydim=0;
 	  int totaldeg=0;
-	  vector<int> maxdegj(as);
+	  gen coeffp; int tt=0;
+	  vector<int> maxdegj(a0s);
 	  for (unsigned int i=0;i<as;++i){
 	    int maxdegi=0;
 	    for (unsigned int j=0;j<a0s;++j){
 	      gen & tmp = (*res[i]._VECTptr)[j];
 	      if (tmp.type==_POLY){
+		if (tt!=_USER)
+		  tt=coefftype(*tmp._POLYptr,coeffp);
 		polydim=tmp._POLYptr->dim;
 		const int & curdeg=tmp._POLYptr->lexsorted_degree();
 		if (curdeg>maxdegi)
@@ -6634,45 +7222,110 @@ namespace giac {
 	    totaldeg+=maxdegi;
 	  }
 	  if (polydim){
+	    if (debug_infolevel)
+	      CERR << CLOCK()*1e-6 << " det: begin interp" << endl;
 	    totaldeg=std::min(totaldeg,total_degree(maxdegj));
+	    if (!interpolable(totaldeg+1,coeffp,true,contextptr))
+	      return 0;
+	    int shift=coeffp.type?0:totaldeg/2;
 	    proba_epsilon(contextptr) /= totaldeg;
-	    vecteur X(totaldeg+1),Y(totaldeg+1);
-	    for (int x=0;x<=totaldeg;++x){
-	      X[x]=x;
+	    vecteur X(totaldeg+1),Y(totaldeg+1),Z(totaldeg+1);
+	    int x=0;
+	    for (;x<=totaldeg;++x){
+	      gen realx=interpolate_xi(x-shift,coeffp);
+	      X[x]=realx;
 	      vecteur resx;
 	      resx.reserve(totaldeg+1);
+	      if (debug_infolevel)
+		CERR << CLOCK()*1e-6 << " det: begin horner" << endl;
 	      for (unsigned int i=0;i<as;++i){
 		vecteur resxi;
-		resxi.reserve(totaldeg+1);
+		resxi.reserve(a0s); // was (totaldeg+1);
 		for (unsigned int j=0;j<a0s;++j){
 		  const gen & tmp = (*res[i]._VECTptr)[j];
-		  resxi.push_back(horner(tmp,x));
+		  resxi.push_back(horner(tmp,realx));
 		}
 		resx.push_back(resxi);
 	      }
+	      if (debug_infolevel)
+		CERR << CLOCK()*1e-6 << " det: end horner" << endl;
 	      matrice res1;
-	      if (!mrref(resx,res1,pivots,det,l,lmax,c,cmax,fullreduction,dont_swap_below,false,algorithm,1,contextptr))
+	      if (!mrref(resx,res1,pivots,det,l,lmax,c,cmax,-fullreduction,dont_swap_below,false,algorithm_,rref_or_det_or_lu,contextptr))
 		return 0;
 	      Y[x]=det;
+	      if (fullreduction){
+		if (is_zero(det) )
+		  break;
+		// check diagonal coefficients of res1, they must be == det
+		for (int i=0;i<res1.size();++i){
+		  vecteur & res1i=*res1[i]._VECTptr;
+		  if (res1i[i]==det)
+		    continue;
+		  if (res1i[i]==-det)
+		    res1[i]=-res1[i];
+		  else
+		    res1[i]=(det/res1i[i])*res1[i];
+		}
+		// extract right submatrix
+		res1=mtran(res1);
+		Z[x]=vecteur(res1.begin()+lmax,res1.end());
+	      } // if (fullreduction)
 	    } // end for x
-	    proba_epsilon(contextptr) *= totaldeg;
-	    // Lagrange interpolation
-	    vecteur L=divided_differences(X,Y);
-	    det=untrunc1(L[totaldeg]);
-	    monomial<gen> mtmp(1,1,polydim);
-	    gen xpoly=polynome(mtmp);
-	    for (int i=totaldeg-1;i>=0;--i){
-	      det = det*(xpoly-untrunc1(X[i]))+untrunc1(L[i]);
+	    if (x==totaldeg+1){
+	      proba_epsilon(contextptr) *= totaldeg;
+	      if (debug_infolevel)
+		CERR << CLOCK()*1e-6 << " det: divided diff" << endl;
+	      // Lagrange interpolation
+	      vecteur L=divided_differences(X,Y);
+	      if (debug_infolevel)
+		CERR << CLOCK()*1e-6 << " det: end divided diff" << endl;
+	      det=untrunc1(L[totaldeg]);
+	      monomial<gen> mtmp(1,1,polydim);
+	      gen xpoly=polynome(mtmp);
+	      for (int i=totaldeg-1;i>=0;--i){
+		det = det*(xpoly-untrunc1(X[i]))+untrunc1(L[i]);
+	      }
+	      det=det*detnum/detden;
+	      if (convert_internal)
+		det=r2sym(det,lva,contextptr);
+	      if (debug_infolevel)
+		CERR << CLOCK()*1e-6 << " det: end interp" << endl;
+	      if (fullreduction){
+		vecteur R,RR;
+		interpolate(X,Z,R,0);
+		polymat2matpoly(R,RR);
+		// apply poly12polynome in elements of R
+		for (int i=0;i<RR.size();++i){
+		  if (RR[i].type!=_VECT)
+		    continue;
+		  vecteur & w=*RR[i]._VECTptr;
+		  for (int j=0;j<w.size();++j){
+		    if (w[j].type==_VECT){
+		      w[j]=poly12polynome(*w[j]._VECTptr,1,polydim);
+		    }
+		    if (convert_internal)
+		      w[j]=r2sym(w[j],lva,contextptr);
+		  }
+		}
+		vecteur R0=midn(lmax);
+		for (int i=0;i<R0.size();++i){
+		  (*R0[i]._VECTptr)[i]=det;
+		}
+		R=mergevecteur(R0,RR);
+		res=mtran(R);
+	      }
+	      return 1;
+	    } // if interpolation ok (x==totaldeg+1)
+	    else { // back convert from poly1 to polynome
+	      for (unsigned int i=0;i<as;++i){
+		for (unsigned int j=0;j<a0s;++j){
+		  gen & tmp = (*res[i]._VECTptr)[j];
+		  if (tmp.type==_VECT){
+		    tmp=poly12polynome(*tmp._VECTptr,1,polydim);
+		  }
+		}
+	      }
 	    }
-	    det=det*detnum/detden;
-	    if (convert_internal)
-	      det=r2sym(det,lva,contextptr);
-	    if (rref_or_det_or_lu==2 || rref_or_det_or_lu == 3){
-	      vecteur P;
-	      vector_int2vecteur(permutation,P);
-	      pivots.push_back(P);
-	    }
-	    return 1;
 	  } // end if polydim
 	}
       }
@@ -6680,182 +7333,50 @@ namespace giac {
 
     std_matrix<gen> M;
     matrice2std_matrix_gen(res,M);
-    gen bareiss (1),pivot,temp;
     // vecteur vtemp;
-    int pivotline,pivotcol;
     pivots.clear();
     pivots.reserve(cmax-c);
-    for (;(l<lmax) && (c<cmax);){
-#ifdef TIMEOUT
-      control_c();
-#endif
-      if (ctrl_c || interrupted)
-	return 0;
-      if ( (!fullreduction) && (l==lmax-1) )
-	break;
-      if (debug_infolevel>1)
-	CERR <<  "// mrref line " << l << ":" << CLOCK() <<endl;
-      pivot=M[l][c];
-      if (debug_infolevel>1){
-	CERR << "// ";
-	print_debug_info(pivot);
+    bool fullreductionafter=rref_or_det_or_lu==0 && dont_swap_below==0 && cmax-c>=lmax-linit && step_infolevel(contextptr)==0 && fullreduction && algorithm!=RREF_GAUSS_JORDAN;
+    gen detnumsave=detnum;
+    int status=rref_reduce(M,pivots,permutation,det,detnum,algorithm,l,lmax,c,cmax,dont_swap_below,rref_or_det_or_lu,(fullreductionafter?0:fullreduction),eps,step_rref,lv,convert_internal,contextptr);
+    if (status!=2 && status!=3)
+      return status;
+    if (fullreductionafter){ 
+      det=M[lmax-1][c-linit+lmax-1];
+      if (status==3 || is_exactly_zero(det)){
+      //if (status==3 || is_zero(det,contextptr) ){ 
+	// not Cramer like, re-reduce, 
+	pivots.clear();
+	matrice2std_matrix_gen(res,M); det=detnum=detnumsave;// this should be commented but some outputs are more complicated
+	rref_reduce(M,pivots,permutation,det,detnum,algorithm,l,lmax,c,cmax,dont_swap_below,rref_or_det_or_lu,fullreduction,eps,step_rref,lv,convert_internal,contextptr);
       }
-      pivotline=l;
-      pivotcol=c;
-      if (l<dont_swap_below){ // scan current line for the best pivot available
-	for (int ctemp=c+1;ctemp<cmax;++ctemp){
-	  temp=M[l][ctemp];
-	  if (debug_infolevel>1)
-	    print_debug_info(temp);
-	  if (!is_zero(temp,contextptr) && temp.islesscomplexthan(pivot)){
-	    pivot=temp;
-	    pivotcol=ctemp;
+      else {
+	// back row reduction to echelon form for Cramer like system
+	vecteur & Mlast=M[lmax-1];
+	int shift=c-linit;
+	gen d=Mlast[shift+lmax-1];
+	for (l=lmax-2;l>=linit;--l){
+	  vecteur Mlcopy(M[l]);
+	  vecteur & Ml=M[l];
+	  // Ll <- a_{n-1,n-1}*Ll-(a_{l,n-1}*L_{n-1}-a_{l,n-2}*L_{n-2}...)
+	  // multvecteur(d,Ml,Ml); // should be done from shift+lmax
+	  for (int j=shift+lmax;j<cmax;++j){
+	    gen & Mlj=Ml[j];
+	    Mlj = d*Mlj;
 	  }
-	}	
-      }
-      else {      // scan M current column for the best pivot available
-	if (rref_or_det_or_lu == 3){ // LU without line permutation
-	  if (is_zero(pivot,contextptr)){
-	    det = 0;
-	    vecteur P;
-	    vector_int2vecteur(permutation,P);
-	    pivots.push_back(P);
-	    return 1;
+	  for (int j=lmax-1;j>=l+1;--j){
+	    linear_combination(plus_one,Ml,-Mlcopy[shift+j],M[j],plus_one,1,Ml,eps,shift+lmax);
 	  }
-	}
-	else {
-	  for (int ltemp=l+1;ltemp<lmax;++ltemp){
-	    temp=M[ltemp][c];
-	    if (debug_infolevel>1)
-	      print_debug_info(temp);
-	    if (!is_zero(temp,contextptr) && temp.islesscomplexthan(pivot)){
-	      pivot=temp;
-	      pivotline=ltemp;
-	    }
+	  for (int j=shift+l+1;j<shift+lmax;++j)
+	    Ml[j]=0;
+	  Ml[shift+l]=d;
+	  for (int j=shift+lmax;j<cmax;++j){
+	    Ml[j]=exact_div(Ml[j],Mlcopy[shift+l]);
 	  }
 	}
       }
-      if (debug_infolevel>1)
-	CERR << endl;
-      //COUT << M << endl << pivot << endl;
-      if (!is_zero(pivot,contextptr)){
-	if (step_rref){
-	  std_matrix_gen2matrice(M,res);
-	  gen pivot1=pivot;
-	  if (convert_internal){
-	    res = *r2sym(res,lv,contextptr)._VECTptr;
-	    pivot1 = r2sym(pivot1,lv,contextptr);
-	  }
-	  gprintf(step_rrefpivot,gettext("%gen\nReduce column %gen with pivot %gen at row %gen"),makevecteur(res,c+1,pivot1,pivotline+1),contextptr);
-	}
-	// exchange lines if needed
-	if (l!=pivotline){
-	  if (step_rref){
-	    std_matrix_gen2matrice(M,res);
-	    if (convert_internal)
-	      res = *r2sym(res,lv,contextptr)._VECTptr;
-	    gprintf(step_rrefexchange,gettext("Exchange row %gen and row %gen"),makevecteur(l+1,pivotline+1),contextptr);
-	  }
-	  swap(M[l],M[pivotline]);
-	  swap(permutation[l],permutation[pivotline]);
-	  // temp = M[l];
-	  // M[l] = M[pivotline];
-	  // M[pivotline] = temp;
-	  detnum = -detnum;
-	}
-	// make the reduction
-	if (fullreduction){
-	  for (int ltemp=linit;ltemp<lmax;++ltemp){
-	    if (debug_infolevel>=2)
-	      CERR << "// " << l << "," << ltemp << " "<< endl;
-	    if (step_rref && l!=ltemp){
-	      std_matrix_gen2matrice(M,res);
-	      gen coeff1=pivot,coeff2=M[ltemp][pivotcol];
-	      if (algorithm==RREF_GAUSS_JORDAN){
-		coeff1=1; coeff2=coeff2/pivot;
-	      }
-	      if (convert_internal){
-		res = *r2sym(res,lv,contextptr)._VECTptr;
-		coeff1=r2sym(coeff1,lv,contextptr);
-		coeff2=r2sym(coeff2,lv,contextptr);
-	      }
-	      gprintf(step_rrefpivot0,gettext("L%gen <- (%gen)*L%gen-(%gen)*L%gen on %gen"),makevecteur(ltemp+1,coeff1,ltemp+1,coeff2,l+1,res),contextptr);
-	    }
-	    if (ltemp!=l){
-	      if (algorithm!=RREF_GAUSS_JORDAN) // M[ltemp] = rdiv( pivot * M[ltemp] - M[ltemp][pivotcol]* M[l], bareiss);
-		linear_combination(pivot,M[ltemp],-M[ltemp][pivotcol],M[l],bareiss,M[ltemp],eps,0);
-	      else // M[ltemp]=M[ltemp]-rdiv(M[ltemp][pivotcol],pivot)*M[l];
-		linear_combination(plus_one,M[ltemp],-rdiv(M[ltemp][pivotcol],pivot,contextptr),M[l],plus_one,M[ltemp],eps,0);
-	    }
-	  }
-	}
-	else { // subdiagonal reduction
-	  for (int ltemp=l+1;ltemp<lmax;++ltemp){
-	    if (debug_infolevel>=2)
-	      CERR << "// " << l << "," << ltemp << " "<< endl;
-	    if (step_rref){
-	      std_matrix_gen2matrice(M,res);
-	      gen coeff1=pivot,coeff2=M[ltemp][pivotcol];
-	      if (algorithm==RREF_GAUSS_JORDAN){
-		coeff1=1; coeff2=coeff2/pivot;
-	      }
-	      if (convert_internal){
-		res = *r2sym(res,lv,contextptr)._VECTptr;
-		coeff1=r2sym(coeff1,lv,contextptr);
-		coeff2=r2sym(coeff2,lv,contextptr);
-	      }
-	      gprintf(step_rrefpivot0,gettext("L%gen <- (%gen)*L%gen-(%gen)*L%gen on %gen"),makevecteur(ltemp+1,coeff1,ltemp+1,coeff2,l+1,res),contextptr);
-	    }
-	    if (algorithm!=RREF_GAUSS_JORDAN)
-	      linear_combination(pivot,M[ltemp],-M[ltemp][pivotcol],M[l],bareiss,M[ltemp],eps,(c+1)*(rref_or_det_or_lu>0));
-	    else {
-	      gen coeff=M[ltemp][pivotcol]/pivot;
-	      linear_combination(plus_one,M[ltemp],-coeff,M[l],plus_one,M[ltemp],eps,(c+1)*(rref_or_det_or_lu>0));
-	      if (rref_or_det_or_lu==2 || rref_or_det_or_lu == 3){
-		M[ltemp][pivotcol]=0;
-		M[ltemp][l]=coeff; // pivotcol replaced by l
-	      }
-	    }
-	  }
-	  if (rref_or_det_or_lu==1 && algorithm!=RREF_GAUSS_JORDAN) {
-	    if (debug_infolevel>1)
-	      CERR << "//mrref clear line " << l << endl;
-	    // clear pivot line to save memory
-	    M[l].clear();
-	  }
-	} // end else
-	// COUT << M << endl;
-	// increment column number if swap was allowed
-	if (l>=dont_swap_below)
-	  ++c;
-	// increment line number since reduction has been done
-	++l;	  
-	// multiply det
-	// set new bareiss for next reduction round
-	if (algorithm!=RREF_GAUSS_JORDAN)
-	  bareiss=pivot;
-	// save pivot for annulation test purposes
-	if (rref_or_det_or_lu!=1){
-	  if (convert_internal)
-	    pivots.push_back(r2sym(pivot,lv,contextptr));
-	  else
-	    pivots.push_back(pivot);
-	  if (debug_infolevel>1)
-	    CERR << pivots.back() << endl;
-	}
-      }
-      else { // if pivot is 0 increment either the line or the col
-	if (rref_or_det_or_lu==1){
-	  det=0;
-	  return 1;
-	}
-	if (l>=dont_swap_below)
-	  c++;
-	else
-	  l++;
-      }
-    } // end for reduction loop
-    if (debug_infolevel>1)
+    } // end if fullreductionafter
+    if (debug_infolevel>2)
       CERR << "// mrref reduction end:" << CLOCK() << endl;
     if (step_rref){
       std_matrix_gen2matrice(M,res);
@@ -6866,7 +7387,7 @@ namespace giac {
     if (algorithm!=RREF_GAUSS_JORDAN){
       int last=giacmin(lmax,cmax);
       det=M[last-1][last-1];
-      if ( (debug_infolevel>1) && (det.type==_POLY) )
+      if ( (debug_infolevel>2) && (det.type==_POLY) )
 	CERR << "// polynomial size " << det._POLYptr->coord.size() << endl;
       if (rref_or_det_or_lu==1) // erase last line of the matrix
 	M[lmax-1].clear();
@@ -6884,16 +7405,26 @@ namespace giac {
 	det = r2sym(det,lv,contextptr);
     }
     std_matrix_gen2matrice_destroy(M,res);
-    if (convert_internal)
-      res = *(r2sym (res,lv,contextptr)._VECTptr);
+    int ok=1;
+    if (convert_internal){
+      if (rm_idn_after){
+	if (!remove_identity(res,contextptr))
+	  return 0;
+	res = *(r2sym (res,lv,contextptr)._VECTptr);
+	res =*normal(res,contextptr)._VECTptr;
+	ok=2;
+      }
+      else
+	res = *(r2sym (res,lv,contextptr)._VECTptr);
+    }
     if (rref_or_det_or_lu==2 || rref_or_det_or_lu == 3){
       vecteur P;
       vector_int2vecteur(permutation,P);
       pivots.push_back(P);
     }
-    if (debug_infolevel>1)
+    if (debug_infolevel>2)
       CERR << "// mrref end:" << CLOCK() << " " << M << endl;
-    return 1;
+    return ok;
   }
 
   // convert a to vector< vector<int> > with modular reduction (if modulo!=0)
@@ -6933,18 +7464,36 @@ namespace giac {
   }
 
   //transforme un vecteur en vector<int>  
-  void vecteur2vector_int(const vecteur & v,int modulo,vector<int> & res){
+  void vecteur2vector_int(const vecteur & v,int m,vector<int> & res){
     vecteur::const_iterator it=v.begin(),itend=v.end();
     res.clear();
+    if (m==0) {
+      res.resize(itend-it);
+      int * jt=&res.front();
+      for (;it!=itend;++it,++jt){
+	int t=it->type;
+	if (t==0)
+	  *jt=it->val; 
+	else {
+	  if (t==_MOD)
+	    *jt=it->_MODptr->val;
+	  else
+	    *jt=it->to_int(); 
+	}
+      }
+      return;
+    }
     res.reserve(itend-it);
+    if (m<0)
+      m=-m;
     for (;it!=itend;++it){
       if (it->type==_MOD)
 	res.push_back(it->_MODptr->val);
       else {
-	if (modulo) 
-	  res.push_back(smod((*it),modulo).val); 
-	else
-	  res.push_back(it->val); 
+	int r=it->type==_ZINT?modulo(*it->_ZINTptr,m):(it->val % m);
+	r += (unsigned(r)>>31)*m; // make positive
+	r -= (unsigned((m>>1)-r)>>31)*m;
+	res.push_back(r);// res.push_back(smod((*it),m).val); 
       }
     }
   } 
@@ -7011,6 +7560,27 @@ namespace giac {
     return smod(res,modulo) ;
   }
 
+  void dotvector_int(const vector<int> & v0,const vector<int> & v1,const vector<int> & v2,const vector<int> & v3,const vector<int> & w,longlong &res0,longlong & res1,longlong & res2,longlong & res3){
+    vector<int>::const_iterator it=w.begin(),itend=w.end(),it1,jt0=v0.begin(),jt1=v1.begin(),jt2=v2.begin(),jt3=v3.begin();
+    unsigned n=unsigned(itend-it);
+    res0=res1=res2=res3=0;
+    it1 = itend -4;
+    for (;it<=it1;jt0+=4,jt1+=4,jt2+=4,jt3+=4,it+=4){
+      longlong tmp0=it[0],tmp1=it[1],tmp2=it[2],tmp3=it[3];
+      res0 += tmp0*jt0[0]+tmp1*jt0[1]+tmp2*jt0[2]+tmp3*jt0[3];
+      res1 += tmp0*jt1[0]+tmp1*jt1[1]+tmp2*jt1[2]+tmp3*jt1[3];
+      res2 += tmp0*jt2[0]+tmp1*jt2[1]+tmp2*jt2[2]+tmp3*jt2[3];
+      res3 += tmp0*jt3[0]+tmp1*jt3[1]+tmp2*jt3[2]+tmp3*jt3[3];
+    }
+    for (;it!=itend;++jt0,++jt1,++jt2,++jt3,++it){
+      longlong tmp=*it;
+      res0 += tmp*(*jt0);
+      res1 += tmp*(*jt1);
+      res2 += tmp*(*jt2);
+      res3 += tmp*(*jt3);
+    }
+  }
+
   bool multvectvector_int_vector_int(const vector< vector<int> > & M,const vector<int> & v,int modulo,vector<int> & Mv){
     unsigned n=unsigned(M.size());
     Mv.clear();
@@ -7020,6 +7590,20 @@ namespace giac {
       return false; 
     Mv.reserve(n);
     vector< vector<int> >::const_iterator it=M.begin(),itend=M.end();
+#if 1
+    if ( ((longlong(modulo)*modulo)/RAND_MAX)*n<=RAND_MAX){
+      itend-=4;
+      longlong l0,l1,l2,l3;
+      for (;it<=itend;it+=4){
+	dotvector_int(it[0],it[1],it[2],it[3],v,l0,l1,l2,l3);
+	Mv.push_back(smod(l0,modulo));
+	Mv.push_back(smod(l1,modulo));
+	Mv.push_back(smod(l2,modulo));
+	Mv.push_back(smod(l3,modulo));
+      }
+      itend+=4;
+    }
+#endif    
     for (;it!=itend;++it){
       Mv.push_back(dotvector_int(*it,v,modulo));
     }
@@ -7147,7 +7731,7 @@ namespace giac {
 	    x=buf[6]; x -= coeff*nline[6]; x -= (x>>63)*modulo2; buf[6]=x; 
 	    y=buf[7]; y -= coeff*nline[7]; y -= (y>>63)*modulo2; buf[7]=y; 
 	  }
-	  for (C+=(buf-&buffer[C]);C<cmax;++C){
+	  for (C+=int(buf-&buffer[C]);C<cmax;++C){
 	    longlong & b=buffer[C] ;
 	    longlong x = b;
 	    x -= coeff*Nline[C];   
@@ -7170,7 +7754,7 @@ namespace giac {
 	    buf[6] -= coeff*nline[6];
 	    buf[7] -= coeff*nline[7];
 	  }
-	  for (C+=(buf-&buffer[C]);C<cmax;++C){
+	  for (C+=int(buf-&buffer[C]);C<cmax;++C){
 	    buffer[C] -= coeff*Nline[C];   
 	  }
 	}
@@ -7481,6 +8065,45 @@ namespace giac {
     }
   }
 
+  void LL_modular_reduction(vector< vector<longlong> > & N,int l,int pivotcol,int pivotval,int linit,int lmax,int c,int effcmax,int rref_or_det_or_lu,int modulo){
+#ifndef GIAC_HAS_STO_38
+    int l1,l2,l3;
+#endif
+    bool ludecomp=rref_or_det_or_lu>=2;
+    for (int ltemp=linit;ltemp<lmax;++ltemp){
+      if (ltemp==l || N[ltemp].empty() || !N[ltemp][pivotcol])
+	continue;
+#ifndef GIAC_HAS_STO_38
+      if (!ludecomp && find_multi_linear_combination(N,ltemp,l1,l2,l3,pivotcol,l,lmax)){
+	int coeff0=(N[ltemp][pivotcol] %= modulo);
+	int coeff1=(N[l1][pivotcol] %= modulo);
+	int coeff2=(N[l2][pivotcol] %= modulo);
+	int coeff3=(N[l3][pivotcol] %= modulo);
+	if (rref_or_det_or_lu==1){
+	  coeff0 = (coeff0*longlong(pivotval)) % modulo;
+	  coeff1 = (coeff1*longlong(pivotval)) % modulo;
+	  coeff2 = (coeff2*longlong(pivotval)) % modulo;
+	  coeff3 = (coeff3*longlong(pivotval)) % modulo;
+	}
+	LL_multilinear_combination(N[ltemp],-coeff0,N[l1],-coeff1,N[l2],-coeff2,N[l3],-coeff3,N[l],modulo,c,effcmax);
+	ltemp = l3;
+	continue;
+      }
+#endif
+      int coeff;
+      if (ludecomp) {
+	int tmp=N[ltemp][pivotcol] % modulo;
+	coeff = int(N[ltemp][pivotcol] = (longlong(tmp)*pivotval) % modulo);
+      }
+      else {
+	coeff = (N[ltemp][pivotcol] %= modulo);
+	if (rref_or_det_or_lu==1)
+	  coeff = (coeff * longlong(pivotval))%modulo;
+      }
+      modlinear_combination(N[ltemp],-coeff,N[l],modulo,(rref_or_det_or_lu>0)?(c+1):c,effcmax);
+    }
+  }
+
   struct thread_modular_reduction_t {
     vector< vector<int> > * Nptr;
     vector<int> * pivotcols;
@@ -7499,6 +8122,162 @@ namespace giac {
     smallmodrref_lower(*ptr->Nptr,ptr->linit,ptr->l,ptr->lmax,ptr->c,ptr->effcmax,*ptr->pivotcols,ptr->modulo,ptr->debuginfo);
     return ptr;
   }
+
+  // attempt to speedup smallmodrref by using longlong intermediate matrix
+  // modulo is assumed prime if carac==-1 
+  // or compute det (rref_or_det_or_lu==1) and modulo==carac^k with carac prime
+  bool LLsmallmodrref(vector< vector<int> > & Nint,int l_,int lmax_,int c_,int cmax_,vecteur & pivots,vector<int> & permutation,vector<int> & maxrankcols,longlong & idet,int fullreduction,int dont_swap_below,int modulo,int carac,int rref_or_det_or_lu){
+    // return false;
+    bool inverting=fullreduction==2;
+    int L=lmax_-l_,C=cmax_-c_;
+    // copy Nint matrix
+    vector< vector<longlong> > N(L);
+    for (int i=0;i<L;++i){
+      const vector<int> & source=Nint[l_+i];
+      if (source.empty()) continue;
+      vector<longlong> & target=N[i];
+      target.resize(C);
+      for (int j=0;j<C;++j)
+	target[j]=source[c_+j];
+    }
+    // reduce N, reflect line permutations for empty lines in Nint
+    int l=0,lmax=L,c=0,cmax=C,pivotline,pivotcol,pivot,temp;
+    bool noswap;
+    for (;l<lmax && c<cmax;){
+      pivot = N[l].empty()?0:(N[l][c] %= modulo);
+      if (rref_or_det_or_lu==3 && !pivot){
+	idet=0;
+	return true;
+      }
+      if ( rref_or_det_or_lu==1 && l==lmax-1 ){
+	idet = (idet * pivot) % modulo ;
+	break;
+      }
+      pivotline=l;
+      pivotcol=c;
+      if ( (carac==-1?pivot:(pivot % carac))==0 ){ // scan current line
+	noswap=false;
+	if (l<dont_swap_below){ 
+	  for (int ctemp=c+1;ctemp<cmax;++ctemp){
+	    temp = N[l].empty()?0:(N[l][ctemp] %= modulo);
+	    if (carac==-1?temp:(temp % carac)){
+	      pivot=smod(temp,modulo);
+	      pivotcol=ctemp;
+	      break;
+	    }
+	  }
+	}
+	else {      // scan N current column for the best pivot available
+	  for (int ltemp=l+1;ltemp<lmax;++ltemp){
+	    temp = N[ltemp].empty()?0:(N[ltemp][c] %= modulo);
+	    if (carac==-1?temp:(temp % carac)){
+	      pivot=smod(temp,modulo);
+	      pivotline=ltemp;
+	      break;
+	    }
+	  }
+	}
+      } // end if is_zero(pivot), 
+      if ( (carac==-1?pivot:(pivot % carac))==0 ){
+	if (carac>0){
+	  if (rref_or_det_or_lu!=1)
+	    return false;
+	  bool not0=false;
+	  // divide column by carac, multiply det by carac and retry
+	  idet = (longlong(idet)*carac) % modulo;
+	  for (int L=l;L<lmax;++L){
+	    if (!N[L].empty()){ 
+	      if (N[L][c] /= carac)
+		not0=true;
+	    }
+	  }
+	  if (not0)
+	    continue;
+	}
+	idet = 0;
+	if (rref_or_det_or_lu==1)
+	  break;
+	if (l>=dont_swap_below)
+	  c++;
+	else
+	  l++;
+	continue;
+      }
+      // true pivot found on line or column
+      if (debug_infolevel>1){
+	if (l%10==9){ CERR << "+"; CERR.flush();}
+	if (l%500==499){ CERR << CLOCK() << " remaining " << lmax-l << endl; }
+      }
+      maxrankcols.push_back(c_+c);
+      if (l!=pivotline){
+	swap(N[l],N[pivotline]);
+	swap(Nint[l_+l],Nint[l_+pivotline]);
+	swap(permutation[l_+l],permutation[l_+pivotline]);
+	pivotline=l;
+	idet = -idet;
+      }
+      // save pivot for annulation test purposes
+      if (rref_or_det_or_lu!=1)
+	pivots.push_back(pivot);
+      // invert pivot. If pivot==1 we might optimize but only if allow_bloc is true
+      temp=invmod(pivot,modulo);
+      // multiply det
+      idet = (idet * pivot) % modulo ;
+      if (fullreduction || rref_or_det_or_lu<1){ // not LU decomp
+	vector<longlong>::iterator it=N[pivotline].begin()+c,itend=N[pivotline].end();
+	for (;it!=itend;++it){
+	  longlong tmp=*it;
+	  if (!tmp) continue;
+	  tmp %= modulo;
+	  tmp=(temp * tmp)%modulo;
+	  *it=tmp; // *it=smod_adjust(tmp,modulo);
+	}
+      }
+      else {
+	// reduce remainder of line pivotline
+	vector<longlong>::iterator it=N[pivotline].begin()+c,itend=N[pivotline].end();
+	for (;it!=itend;++it){
+	  longlong tmp=*it;
+	  if (!tmp) continue;
+	  *it=tmp%modulo;
+	}
+      }
+      // if there are 0 at the end, ignore them in linear combination
+      int effcmax=(fullreduction && inverting && noswap)?c+lmax:cmax-1;
+      const std::vector<longlong> & Npiv=N[l];
+      for (;effcmax>=c;--effcmax){
+	if (Npiv[effcmax])
+	  break;
+      }
+      ++effcmax;
+      int effl=fullreduction?0:l+1;
+      LL_modular_reduction(N,l,pivotcol,temp,effl,lmax,c,effcmax,rref_or_det_or_lu,modulo);
+      // increment column number if swap was allowed
+      if (l>=dont_swap_below)
+	++c;
+      // increment line number since reduction has been done
+      ++l;	  	
+    } // for (l<lmax && c<cmax)
+    // back copy into Nint
+    if (rref_or_det_or_lu!=1){
+      for (int i=0;i<L;++i){
+	const vector<longlong> & source=N[i];
+	vector<int> & target=Nint[l_+i];
+	if (source.empty()){ 
+	  if (!target.empty())
+	    CERR << "inconsistency" << endl;
+	  continue;
+	}
+	else {
+	  if (target.empty())
+	    CERR << "inconsistency" << endl;
+	}
+	for (int j=0;j<C;++j)
+	  target[c_+j]=smod(source[j],modulo);
+      }
+    }
+    return true;
+  }
     
   // if dont_swap_below !=0, for line numers < dont_swap_below
   // the pivot is searched in the line instead of the column
@@ -7506,7 +8285,7 @@ namespace giac {
   // rref_or_det_or_lu = 0 for rref, 1 for det, 2 for lu, 
   // 3 for lu without permutation
   // fullreduction=0 or 1, use 2 if the right part of a is idn
-  void smallmodrref(int nthreads,vector< vector<int> > & N,vecteur & pivots,vector<int> & permutation,vector<int> & maxrankcols,longlong & idet,int l, int lmax, int c,int cmax,int fullreduction,int dont_swap_below,int modulo,int rref_or_det_or_lu,bool reset,smallmodrref_temp_t * workptr,bool allow_block){
+  void smallmodrref(int nthreads,vector< vector<int> > & N,vecteur & pivots,vector<int> & permutation,vector<int> & maxrankcols,longlong & idet,int l, int lmax, int c,int cmax,int fullreduction,int dont_swap_below,int modulo,int rref_or_det_or_lu,bool reset,smallmodrref_temp_t * workptr,bool allow_block,int carac){
     bool inverting=fullreduction==2;
     int linit=l;//,previous_l=l;
     // Reduction
@@ -7542,16 +8321,20 @@ namespace giac {
     bool noswap=true;
     smallmodrref_temp_t * tmpptr = workptr;
 #ifndef GIAC_HAS_STO_38 
-    if (allow_block && rref_or_det_or_lu==0 && dont_swap_below==0 ){ 
+    if (allow_block && (rref_or_det_or_lu==0 
+			//|| rref_or_det_or_lu==1
+			) && dont_swap_below==0 ){ 
       if (
-	  //lmax-l>=4 && cmax-c>=4
-	  lmax-l>=3*mmult_int_blocksize && cmax-c>=3*mmult_int_blocksize
+	  //lmax-l>=4 && cmax-c>=4 
+	  lmax-l>=2.5*mmult_int_blocksize && cmax-c>=2.5*mmult_int_blocksize
 	){
+	// this is not as fast as block reduction for dense matrices
+	// a sparsness test could be useful
 	// reduce first half
 	int halfl=(lmax-l)/2,effl=l+halfl;
 	if (debug_infolevel>2)
 	  CERR << CLOCK() << " rref begin " << lmax-l << "x" << cmax-c << endl;
-	smallmodrref(nthreads,N,pivots,permutation,maxrankcols,idet,l,l+halfl,c,cmax,0/*fullreduction*/,0,modulo,0,false,workptr);
+	smallmodrref(nthreads,N,pivots,permutation,maxrankcols,idet,l,l+halfl,c,cmax,0/*fullreduction*/,0,modulo,0,false,workptr,true,carac);
 	// use first half for second half
 	vector<int> pivotcols;
 	smallmodrref_lower_pivots(N,l,effl,c,cmax,pivotcols,modulo);
@@ -7565,7 +8348,7 @@ namespace giac {
 	  thread_modular_reduction_t redparam[64];
 	  if (nthreads>64) nthreads=64;
 	  for (int j=0;j<nthreads;++j){
-	    thread_modular_reduction_t tmp={&N,&pivotcols,effl,pivotcol,temp,l,lmax,c,cmax,rref_or_det_or_lu,modulo,j==0 && debug_infolevel>1};
+	    thread_modular_reduction_t tmp={&N,&pivotcols,effl,pivotcol,temp,l,lmax,c,cmax,rref_or_det_or_lu,modulo,j==0 && debug_infolevel>2};
 	    redparam[j]=tmp;
 	  }
 	  int kstep=int(std::ceil((lmax-effl)/double(nthreads))),k=effl;
@@ -7590,12 +8373,12 @@ namespace giac {
 	}
 #endif
 	if (!reduction_done)
-	  smallmodrref_lower(N,l,effl,lmax,c,cmax,pivotcols,modulo,debug_infolevel>1);
+	  smallmodrref_lower(N,l,effl,lmax,c,cmax,pivotcols,modulo,debug_infolevel>2);
 	if (debug_infolevel>2)
 	  CERR << CLOCK() << " rref_lower end " << effl << ".." << lmax << "/" << c << ".." << cmax << endl;
 	// reduce second half
 	//cerr << N <<endl;
-	smallmodrref(nthreads,N,pivots,permutation,maxrankcols,idet,l+halfl,lmax,c,cmax,0/*fullreduction*/,0,modulo,0,false,workptr);
+	smallmodrref(nthreads,N,pivots,permutation,maxrankcols,idet,l+halfl,lmax,c+(idet && rref_or_det_or_lu==1?halfl:0),cmax,0/*fullreduction*/,0,modulo,0,false,workptr,true,carac);
 	if (debug_infolevel>2)
 	  CERR << CLOCK() << " rref end " << lmax-l << "x" << cmax-c << endl;
 	//cerr << N <<endl;
@@ -7615,6 +8398,7 @@ namespace giac {
 	      COUT << "erreur" << N[r][C] << endl;
 	    swap(N[r],N[L]);
 	    swap(permutation[r],permutation[L]);
+	    idet=-idet;
 	    // swap(pivots[r],pivots[L]);
 	  }
 	  ++L; ++C;
@@ -7664,7 +8448,7 @@ namespace giac {
       // substract P2^-1*L3*U3 from D and recursive call to lu will determine P2, L2 and U2
       // (line swaps will replace inplace P2^-1*L3 by L3)
       int taille=giacmin(lmax-l,cmax-c)/2;
-      if (debug_infolevel>1)
+      if (debug_infolevel>2)
 	CERR << CLOCK() << " recursive call mod " << modulo << " size " << taille << endl;
       tmpptr->Ainv.resize(cmax-c-taille);
       tmpptr->y.resize(taille);
@@ -7682,7 +8466,7 @@ namespace giac {
 	for (;it!=itend;++source,++it)
 	  *it=*source;
       }
-      smallmodrref(nthreads,N,pivots,permutation,maxrankcols,idet,l,l+taille,c,c+taille,false,false,modulo,2,false);
+      smallmodrref(nthreads,N,pivots,permutation,maxrankcols,idet,l,l+taille,c,c+taille,false,false,modulo,2,false,0,true,carac);
       if (!idet){
 	// restore N from tmpptr->Ainv
 	for (int i=0;i<taille;++i){
@@ -7748,8 +8532,8 @@ namespace giac {
 	// substract L3*U3 from D
 	in_mmult_mod(N,tmpptr->Ainv,N,l+taille,c+taille,modulo,l+taille,lmax,c,c+taille,false);
 	// final lu decomposition
-	smallmodrref(nthreads,N,pivots,permutation,maxrankcols,idet,l+taille,lmax,c+taille,cmax,false,false,modulo,2,false);
-	if (debug_infolevel>1)
+	smallmodrref(nthreads,N,pivots,permutation,maxrankcols,idet,l+taille,lmax,c+taille,cmax,false,false,modulo,2,false,0,true,carac);
+	if (debug_infolevel>2)
 	  CERR << CLOCK() << " end recursive call mod " << modulo << " size " << taille << endl;
 	// matrice dbg;
 	// vectvector_int2vecteur(N,dbg);
@@ -7785,9 +8569,9 @@ namespace giac {
 	// lu
 	tmpptr->permblock.clear(); tmpptr->maxrankblock.clear(); tmpptr->pivblock.clear();
 	longlong idetblock;
-	if (debug_infolevel>1)
+	if (debug_infolevel>2)
 	  CERR << CLOCK() << "block reduction mod " << modulo << " size " << det_blocksize << " " << workptr << endl;
-	smallmodrref(nthreads,tmpptr->Ainv,tmpptr->pivblock,tmpptr->permblock,tmpptr->maxrankblock,idetblock,0,det_blocksize,0,det_blocksize,0,false,modulo,2,true);
+	smallmodrref(nthreads,tmpptr->Ainv,tmpptr->pivblock,tmpptr->permblock,tmpptr->maxrankblock,idetblock,0,det_blocksize,0,det_blocksize,0,false,modulo,2,true,0,true,carac);
 	if (idetblock){
 	  idet = ((idetblock % modulo)*idet)%modulo;
 	  int_lu2inv(tmpptr->Ainv,modulo,tmpptr->permblock);
@@ -7811,6 +8595,13 @@ namespace giac {
 	}
       } // end tryblock
 #endif // GIAC_DETBLOCK
+      // normal Gauss reduction
+      if (
+	  (carac>0 || (lmax-l>=32 && cmax-c>=32) ) && (lmax-l)*double(modulo)*double(modulo)<(1ULL<<63) &&
+	  //double(lmax-l)*(cmax-c)*sizeof(longlong)<128e3 &&
+	  LLsmallmodrref(N,l,lmax,c,cmax,pivots,permutation,maxrankcols,idet,fullreduction,dont_swap_below,modulo,carac,rref_or_det_or_lu)){
+	break;
+      }
       pivot = N[l].empty()?0:(N[l][c] %= modulo);
       if (rref_or_det_or_lu==3 && !pivot){
 	idet=0;
@@ -7865,7 +8656,6 @@ namespace giac {
 	if (rref_or_det_or_lu!=1)
 	  pivots.push_back(pivot);
 	// invert pivot. If pivot==1 we might optimize but only if allow_bloc is true
-#if 1
 	if (0 && pivot==1 && allow_block)
 	  temp=1; // can not be activated because pseudo-mod expect reducing line to be smaller than p
 	else {
@@ -7873,41 +8663,15 @@ namespace giac {
 	  // multiply det
 	  idet = (idet * pivot) % modulo ;
 	  if (fullreduction || rref_or_det_or_lu<2){ // not LU decomp
-	    vector<int>::iterator it=N[pivotline].begin(),itend=N[pivotline].end();
+	    vector<int>::iterator it=N[pivotline].begin()+c,itend=N[pivotline].end();
 	    for (;it!=itend;++it){
-	      if (!*it) continue;
-	      *it=(longlong(temp) * *it)%modulo;
-	      if (*it>0){
-		if (2* *it>modulo)
-		  *it -= modulo;
-	      }
-	      else {
-		if (2* *it<-modulo)
-		  *it += modulo;
-	      }
+	      int tmp=*it;
+	      if (!tmp) continue;
+	      tmp=(longlong(temp) * tmp)%modulo;
+	      *it=smod_adjust(tmp,modulo);
 	    }
 	  }
 	}
-#else
-	temp=invmod(pivot,modulo);
-	// multiply det
-	idet = (idet * pivot) % modulo ;
-	if (fullreduction || rref_or_det_or_lu<2){ // not LU decomp
-	  vector<int>::iterator it=N[pivotline].begin(),itend=N[pivotline].end();
-	  for (;it!=itend;++it){
-	    if (!*it) continue;
-	    *it=(longlong(temp) * *it)%modulo;
-	    if (*it>0){
-	      if (2* *it>modulo)
-		*it -= modulo;
-	    }
-	    else {
-	      if (2* *it<-modulo)
-		*it += modulo;
-	    }
-	  }
-	}
-#endif
 	// if there are 0 at the end, ignore them in linear combination
 	int effcmax=(fullreduction && inverting && noswap)?c+lmax:cmax-1;
 	const std::vector<int> & Npiv=N[l];
@@ -7925,7 +8689,7 @@ namespace giac {
 	  thread_modular_reduction_t redparam[64];
 	  if (nthreads>64) nthreads=64;
 	  for (int j=0;j<nthreads;++j){
-	    thread_modular_reduction_t tmp={&N,0,l,pivotcol,temp,linit,lmax,c,effcmax,rref_or_det_or_lu,modulo,j==0 && debug_infolevel>1};
+	    thread_modular_reduction_t tmp={&N,0,l,pivotcol,temp,linit,lmax,c,effcmax,rref_or_det_or_lu,modulo,j==0 && debug_infolevel>2};
 	    redparam[j]=tmp;
 	  }
 	  int kstep=int(std::ceil((lmax-effl)/double(nthreads))),k=effl;
@@ -8091,7 +8855,7 @@ namespace giac {
       // substract P2^-1*L3*U3 from D and recursive call to lu will determine P2, L2 and U2
       // (line swaps will replace inplace P2^-1*L3 by L3)
       int taille=mmult_double_blocksize;
-      if (debug_infolevel>1)
+      if (debug_infolevel>2)
 	CERR << CLOCK() << " recursive call double size " << taille << endl;
       tmpptr->y.resize(taille);
       tmpptr->y1.resize(taille);
@@ -8141,7 +8905,7 @@ namespace giac {
       in_mmult_double(N,tmpptr->Ainv,N,l+taille,c+taille,l+taille,lmax,c,c+taille,false);
       // final lu decomposition
       in_doublerref(N,pivots,permutation,maxrankcols,idet,l+taille,lmax,c+taille,cmax,false,false,eps,2,false,0);
-      if (debug_infolevel>1)
+      if (debug_infolevel>2)
 	CERR << CLOCK() << " end recursive call double size " << taille << endl;
       // matrice dbg;
       // vectvector_int2vecteur(N,dbg);
@@ -8288,13 +9052,16 @@ namespace giac {
     in_doublerref(N,pivots,permutation,maxrankcols,idet,l,lmax,c,cmax,fullreduction,dont_swap_below,eps,rref_or_det_or_lu,true,0);
   }
 
-  bool in_modrref(const matrice & a, vector< vector<int> > & N,matrice & res, vecteur & pivots, gen & det,int l, int lmax, int c,int cmax,int fullreduction,int dont_swap_below,int Modulo,int rref_or_det_or_lu,const gen & mult_by_det_mod_p,bool inverting,bool no_initial_mod,smallmodrref_temp_t * workptr){
+  bool in_modrref(const matrice & a, vector< vector<int> > & N,matrice & res, vecteur & pivots, gen & det,int l, int lmax, int c,int cmax,int fullreduction,int dont_swap_below,int Modulo,int carac,int rref_or_det_or_lu,const gen & mult_by_det_mod_p,bool inverting,bool no_initial_mod,smallmodrref_temp_t * workptr){
 #ifndef GIAC_HAS_STO_38
     if (no_initial_mod){
       const_iterateur it=a.begin(),itend=a.end();
       N.resize(itend-it);
       vector< vector<int> >::iterator kt=N.begin();
       for (;it!=itend;++kt,++it){
+#if 1
+	vecteur2vector_int(*it->_VECTptr,Modulo,*kt);
+#else
 	const_iterateur jt=it->_VECTptr->begin(),jtend=it->_VECTptr->end();
 	kt->resize(jtend-jt);
 	vector<int>::iterator lt=kt->begin();
@@ -8304,6 +9071,7 @@ namespace giac {
 	  else
 	    *lt=smod(*jt,Modulo).val;
 	}
+#endif
       }
     }
     else 
@@ -8314,9 +9082,9 @@ namespace giac {
       }
     longlong idet=1;
     vector<int> permutation,maxrankcol;
-    if (debug_infolevel>1)
+    if (debug_infolevel>2)
       CERR << CLOCK() << " begin smallmodrref " << endl;
-    smallmodrref(1,N,pivots,permutation,maxrankcol,idet,l,lmax,c,cmax,fullreduction,dont_swap_below,Modulo,rref_or_det_or_lu,true,workptr);
+    smallmodrref(1,N,pivots,permutation,maxrankcol,idet,l,lmax,c,cmax,fullreduction,dont_swap_below,Modulo,rref_or_det_or_lu,true,workptr,true,carac);
 #ifndef GIAC_HAS_STO_38
     if (inverting){
       int_lu2inv(N,Modulo,permutation);
@@ -8325,7 +9093,7 @@ namespace giac {
       // CERR << a << "*" << smod(dbg,Modulo) << " % " << Modulo << endl;
     }
 #endif
-    if (debug_infolevel>1)
+    if (debug_infolevel>2)
       CERR << CLOCK() << " rref done smallmodrref " << endl;
     det = smod(longlong(idet),Modulo);
     if (!is_one(mult_by_det_mod_p)){
@@ -8339,7 +9107,7 @@ namespace giac {
     }
     if (rref_or_det_or_lu!=1)
       vectvector_int2vecteur(N,res);
-    if (debug_infolevel>1)
+    if (debug_infolevel>2)
       CERR << CLOCK() << " end smallmodrref " << endl;
     if (rref_or_det_or_lu==2 && !inverting){
       vecteur P;
@@ -8355,7 +9123,45 @@ namespace giac {
   // rref_or_det_or_lu = 0 for rref, 1 for det, 2 for lu, 
   // 3 for lu without permutation
   // fullreduction=0 or 1, use 2 if the right part of a is idn
-  bool modrref(const matrice & a, matrice & res, vecteur & pivots, gen & det,int l, int lmax, int c,int cmax,int fullreduction,int dont_swap_below,const gen & modulo,int rref_or_det_or_lu){
+  bool modrref(const matrice & a, matrice & res, vecteur & pivots, gen & det,int l, int lmax, int c,int cmax,int fullreduction,int dont_swap_below,const gen & modulo,bool ckprime,int rref_or_det_or_lu){
+    if (ckprime && !is_probab_prime_p(modulo)){
+      if (rref_or_det_or_lu==1){ 
+	vecteur v=ifactors(modulo,context0);
+	if (v.size()<2)
+	  return false;
+	gen currentp=pow(v[0],v[1],context0);
+	vector< vector<int> > N;
+	if (currentp.type==_INT_){
+	  res.clear(); N.clear();
+	  if (!in_modrref(a,N,res,pivots,det,l,lmax,c,cmax,fullreduction,dont_swap_below,currentp.val,v[0].val /* carac */,rref_or_det_or_lu,1,false /* inverting */,false/* no initial mod */,0/*workptr*/))
+	    return false;
+	}
+	else {
+	  if ( v[1]!=1 || !modrref(a,res,pivots,det,l,lmax,c,cmax,fullreduction,dont_swap_below,v[0],false,rref_or_det_or_lu))
+	    return false;
+	}
+	gen pip=currentp;
+	for (int i=2;i<v.size();i+=2){
+	  currentp=pow(v[i],v[i+1],context0);
+	  gen curdet;
+	  if (currentp.type==_INT_){
+	    res.clear(); N.clear();
+	    if (!in_modrref(a,N,res,pivots,curdet,l,lmax,c,cmax,fullreduction,dont_swap_below,currentp.val,v[i].val /* carac */,rref_or_det_or_lu,1,false /* inverting */,false/* no initial mod */,0/*workptr*/))
+	      return false;
+	  }
+	  else {
+	    if (v[i+1]!=1)
+	      return false;
+	    if (!modrref(a,res,pivots,curdet,l,lmax,c,cmax,fullreduction,dont_swap_below,v[i],false,rref_or_det_or_lu))
+	      return false;
+	  }
+	  det=ichinrem(det,curdet,pip,v[i]);
+	  pip=pip*v[i];
+	}
+	return true;
+      }
+      CERR << "Non prime modulo. Reduction mail fail" << endl;
+    }
     if (modulo.type==_INT_ && 
 #if 0 // ndef _I386_
 	modulo.val<46340 &&
@@ -8363,7 +9169,7 @@ namespace giac {
 	is_fraction_matrice(a) ){ // Small mod reduction
       res.clear();
       vector< vector<int> > N;
-      return in_modrref(a,N,res,pivots,det,l,lmax,c,cmax,fullreduction,dont_swap_below,modulo.val,rref_or_det_or_lu,1,false /* inverting */,false/* no initial mod */);
+      return in_modrref(a,N,res,pivots,det,l,lmax,c,cmax,fullreduction,dont_swap_below,modulo.val,-1/*carac*/,rref_or_det_or_lu,1,false /* inverting */,false/* no initial mod */,0/*workptr*/);
     }
     // bool use_cstart=!c;
     // bool inverting=fullreduction==2;
@@ -8406,7 +9212,7 @@ namespace giac {
 	else {      // scan M current column for the best pivot available
 	  for (int ltemp=l+1;ltemp<lmax;++ltemp){
 	    temp=M[ltemp][c];
-	    if (debug_infolevel>1)
+	    if (debug_infolevel>2)
 	      print_debug_info(temp);
 	    if (!is_exactly_zero(temp)){
 	      pivot=temp;
@@ -8474,7 +9280,7 @@ namespace giac {
 
   bool modrref(const matrice & a, matrice & res, vecteur & pivots, gen & det,const gen& modulo){
     return modrref(a,res,pivots,det,0,int(a.size()),0,int(a.front()._VECTptr->size()),
-	    true /* full reduction */,0 /* dont_swap_below*/,modulo,0 /* rref */);
+		   true /* full reduction */,0 /* dont_swap_below*/,modulo,true /*ckprime*/,0 /* rref */);
   }
 
   // add identity matrix, modifies arref in place
@@ -8509,20 +9315,6 @@ namespace giac {
       for (int j=0;j<s;++j)
 	v.push_back(i==j);
     }
-  }
-
-  bool remove_identity(matrice & res,GIAC_CONTEXT){
-    int s=int(res.size());
-    // "shrink" res
-    for (int i=0;i<s;++i){
-      vecteur v = *res[i]._VECTptr;
-      if (is_zero(v[i],context0))
-	return false;
-      gen tmp=new ref_vecteur(v.begin()+s,v.end());
-      divvecteur(*tmp._VECTptr,v[i],*tmp._VECTptr);
-      res[i] = normal(tmp,contextptr);
-    }
-    return true;
   }
 
   bool remove_identity(matrice & res){
@@ -8562,7 +9354,7 @@ namespace giac {
     int s=int(a.size());
     vecteur pivots;
     if (!modrref(arref,res,pivots,det_mod_p,0,s,0,2*s,
-		 2/* full reduction*/,0/*dont_swap_below*/,modulo,0/* rref */))
+		 2/* full reduction*/,0/*dont_swap_below*/,modulo,true/*ckprime*/,0/* rref */))
       return false;
     return remove_identity(res);
   }
@@ -8575,14 +9367,14 @@ namespace giac {
     vector<int> permutation,rankcols;
 #ifndef GIAC_HAS_STO_38
     smallmodrref(1,res,pivots,permutation,rankcols,det_mod_p,0,s,0,s,
-		 0,false,modulo,2,true);
+		 0,false,modulo,2,true,0,true,-1);
     if (det_mod_p==0)
       return false;
     int_lu2inv(res,modulo,permutation);
     return true;
 #else
     smallmodrref(1,res,pivots,permutation,rankcols,det_mod_p,0,s,0,2*s,
-		 2/* full reduction*/,0/*dont_swap_below*/,modulo,0/* rref */,true);
+		 2/* full reduction*/,0/*dont_swap_below*/,modulo,0/* rref */,true,0,false,-1);
     return remove_identity(res,modulo);
 #endif
   }
@@ -8631,7 +9423,7 @@ namespace giac {
 	    mpz_submul_ui(e->z,*itb->_ZINTptr,-ita->val);
 	}
 	else {
-#ifdef INT128
+#if defined INT128 && !defined USE_GMP_REPLACEMENTS
 	  longlong tmp=longlong(ita->val)*(itb->val);
 	  if (tmp>0)
 	    mpz_add_ui(e->z,e->z,tmp);
@@ -9155,7 +9947,7 @@ namespace giac {
       int nstep=int(giacmin(nrows,ncols)*std::log(evalf_double(h2,1,context0)._DOUBLE_val)/2/std::log(double(p.val)))+1;
       vecteur pivots;
       longlong idet;
-      smallmodrref(1,Nsub,pivots,ranklines,rankcols,idet,0,nrows,0,ncols,0 /* fullreduction*/,0 /* dont_swap_below */,p.val,0 /* rref_or_det_or_lu */,true);
+      smallmodrref(1,Nsub,pivots,ranklines,rankcols,idet,0,nrows,0,ncols,0 /* fullreduction*/,0 /* dont_swap_below */,p.val,0 /* rref_or_det_or_lu */,true,0,true,-1);
       int rang=int(rankcols.size());
       /* extract maxrank submatrix */
       extract(N,ranklines,rang,Ntmp,Nexcluded);
@@ -9297,6 +10089,9 @@ namespace giac {
   // least divisor element of A if b is random
   // returns 0 if no invertible found, -1 if det==0, 1 otherwise
   int padic_linsolve(const matrice & A,const vecteur & b,vecteur & res,gen & p,gen & det_mod_p,gen & h2,unsigned reconstruct,int maxtry){
+#ifdef GIAC_HAS_STO_38
+    return 0;
+#endif
     // first find p such that a mod p is invertible
     // find a bound on the num/den of x
     // let c=(a mod p)^(-1)
@@ -9314,7 +10109,7 @@ namespace giac {
     if (is_zero(h2))
       h2=4*square_hadamard_bound(ab);
     gen pip(1);
-    if (debug_infolevel>1)
+    if (debug_infolevel>2)
       CERR << "Modinv begin " << CLOCK() << endl;
     for (int tryinv=0;;++tryinv){
       if (modinv(a,c,p,det_mod_p))
@@ -9326,7 +10121,7 @@ namespace giac {
 	return -1;
       p=nextprime(p+1);
     }
-    if (debug_infolevel>1)
+    if (debug_infolevel>2)
       CERR << "Modinv end " << CLOCK() << endl;
     unsigned n=1;
     gen pn=p;
@@ -9334,8 +10129,9 @@ namespace giac {
       ++n;
       pn = pn * p;
     }
+    gen sqrtpn=isqrt(pn); // (pow(gen(p),int(n/2),context0)-1)/2;
     vecteur resp=padic_linsolve_c(a,b,c,n,p,reconstruct);
-    if (debug_infolevel>1)
+    if (debug_infolevel>2)
       CERR << "Padic end " << CLOCK() << endl;
     // rational reconstruction
     unsigned s=unsigned(resp.size());
@@ -9343,8 +10139,30 @@ namespace giac {
       s=std::min(s,reconstruct);
     res.clear();
     res.reserve(s);
+    gen lcmdeno(1);
     for (unsigned j=0;j<s;++j){
+      if (j){
+	gen tmp=smod(lcmdeno*resp[j],pn);
+	if (is_strictly_positive(sqrtpn+tmp,context0) && is_strictly_positive(sqrtpn-tmp,context0)){
+	  if (0){ // debug
+	    gen tmp1=tmp/lcmdeno,tmp2=fracmod(resp[j],pn);
+	    if (tmp1!=tmp2)
+	      CERR << "err" << endl;
+	  }
+	  res.push_back(tmp/lcmdeno);
+	  continue;
+	}
+      }
       res.push_back(fracmod(resp[j],pn));
+      if (res.back().type==_FRAC)
+	lcmdeno=lcm(lcmdeno,res.back()._FRACptr->den);
+    }
+    if (debug_infolevel>2)
+      CERR << "Padic end rational reconstruction " << CLOCK() << endl;
+    if (0 && A.size()==res.size()){ // debug
+      vecteur tmp(multvecteur(lcmdeno,res));
+      tmp=multmatvecteur(A,tmp);
+      CERR << tmp << multvecteur(lcmdeno,b) << endl;
     }
     return 1;    
   }
@@ -9444,29 +10262,47 @@ namespace giac {
 	       contextptr))
       return gendimerr(contextptr);
     if (!keep_pivot){
-      mdividebypivot(res,ncols);
+      mdividebypivot(res,ncols,contextptr);
     }
     if (res.front().type==_VECT && res.front()._VECTptr->front().type==_MOD)
       return res;
-    return ratnormal(res);
+    return ratnormal(res,contextptr);
   }
   static const char _rref_s []="rref";
   static define_unary_function_eval (__rref,&giac::_rref,_rref_s);
   define_unary_function_ptr5( at_rref ,alias_at_rref,&__rref,0,true);
 
   // returns 0 if all elements are 0
-  static gen first_non_zero(const vecteur & v,int lastcol){
+  static gen first_non_zero(const vecteur & v,int lastcol,GIAC_CONTEXT){
     vecteur::const_iterator it=v.begin(),itend=v.end();
     if (itend-it>lastcol)
       itend=it+lastcol;
-    for (;it!=itend;++it){
-      if (!is_zero(*it,context0))
-	return *it;
+    if (has_num_coeff(v)){
+      gen vmax=0,tmp; 
+      // in approx mode, we want to make a relative comparison with 0
+      // find the largest value of the row in absolute value
+      for (;it!=itend;++it){
+	if (has_evalf(*it,tmp,1,contextptr) && is_greater((tmp=abs(tmp,contextptr)),vmax,contextptr))
+	  vmax=tmp;
+      }
+      it=v.begin();
+      vmax=inv(vmax,contextptr);
+      for (;it!=itend;++it){
+	if (!is_zero(*it*vmax,contextptr))
+	  //if (!is_exactly_zero(*it))
+	  return *it;
+      }
+    }
+    else {
+      for (;it!=itend;++it){
+	if (!is_zero(*it,contextptr))
+	  return *it;
+      }
     }
     return 0;
   }
 
-  void mdividebypivot(matrice & a,int lastcol){
+  void mdividebypivot(matrice & a,int lastcol,GIAC_CONTEXT){
     if (lastcol==-1)
       lastcol=int(a.front()._VECTptr->size());
     if (lastcol==-2)
@@ -9476,10 +10312,14 @@ namespace giac {
     vecteur::const_iterator ita=a.begin(),itaend=a.end();
     gen pivot;
     for (;ita!=itaend;++ita){
-      pivot=first_non_zero(*(ita->_VECTptr),lastcol);
-      if (!is_zero(pivot,context0))
+      pivot=first_non_zero(*(ita->_VECTptr),lastcol,contextptr);
+      if (!is_exactly_zero(pivot))
 	divvecteur(*(ita->_VECTptr),pivot,*(ita->_VECTptr));
     }
+  }
+
+  void mdividebypivot(matrice & a,int lastcol){
+    mdividebypivot(a,lastcol,context0);
   }
 
   void midn(int n,matrice & res){
@@ -9557,8 +10397,29 @@ namespace giac {
       return;
     }
     if (is_integer(f)){
+      if (f.type==_INT_){
+	int t=f.val;
+	if (t<0){
+	  for (int i=0;i<n;++i)
+	    res.push_back((int) (2*t*(giac_rand(contextptr)/(rand_max2+1.0))-t)	);
+	  return;
+	}
+#if 0
+	int add=(xcas_mode(contextptr)==3 || abs_calc_mode(contextptr)==38);
+	for (int i=0;i<n;++i)
+	  res.push_back(add+(int) t*(giac_rand(contextptr)/(rand_max2+1.0)));
+	return;
+#endif
+      }
       for (int i=0;i<n;++i)
 	res.push_back(_rand(f,contextptr));
+      return;
+    }
+    if (f.type==_MOD){
+      gen fm=*(f._MODptr+1);
+      vranm(n,fm,res,contextptr);
+      for (int i=0;i<n;++i)
+	res[i]=makemod(res[i],fm);
       return;
     }
     if (f.type==_VECT){
@@ -9837,6 +10698,20 @@ namespace giac {
       for (int i=0;i<n;++i)
 	res.push_back(f(vecteur(0),contextptr));
       return;
+    }
+    if (f.is_symb_of_sommet(at_rootof)){
+      gen ff=f._SYMBptr->feuille;
+      if (ff.type==_VECT && !ff._VECTptr->empty()){
+	ff=ff._VECTptr->back();
+	if (ff.type==_VECT && !ff._VECTptr->empty()){
+	  int d=int(ff._VECTptr->size())-1;
+	  for (int i=0;i<n;++i){
+	    gen g=vranm(d,0,contextptr);
+	    res.push_back(symb_rootof(g,ff,contextptr));
+	  }
+	  return;
+	}
+      }
     }
     for (int i=0;i<n;++i)
       res.push_back(eval(f,eval_level(contextptr),contextptr));
@@ -10138,7 +11013,7 @@ namespace giac {
     gen det;
     vecteur pivots;
     int ok=mrref(arref,res,pivots,det,0,s,0,2*s,
-		 /* fullreduction */2,0,convert_internal,algorithm,0,
+		 /* fullreduction */2*256,0,convert_internal,algorithm,0,
 		 contextptr);
     if (!ok)
       return false;
@@ -10158,7 +11033,7 @@ namespace giac {
     return res;
   }
 
-  static gen det_minor(const matrice & a,vecteur lv,bool convert_internal,GIAC_CONTEXT){
+  gen det_minor(const matrice & a,vecteur lv,bool convert_internal,GIAC_CONTEXT){
     int n=int(a.size());
     if (n==1)
       return a.front()._VECTptr->front();
@@ -10198,7 +11073,7 @@ namespace giac {
     }
     // compute all possibles i*i det with columns 0..i using (i-1)*(i-1) det
     for (int i=2;i<n;++i){
-      if (debug_infolevel>1)
+      if (debug_infolevel>2)
 	CERR << "// Computing " << i+1 << "*" << i+1 << "minors " << CLOCK() << endl;
       swap(old_tab,tab_mineurs);
       tab_mineurs.clear();
@@ -10237,7 +11112,7 @@ namespace giac {
 	  index[j+1]=index[j]+1;
       }
     }
-    if (debug_infolevel>1)
+    if (debug_infolevel>2)
       CERR << "// Computation done " << CLOCK() << endl;
     res = res/deno;
     if (convert_internal)
@@ -10336,7 +11211,7 @@ namespace giac {
 	temp.push_back(v[0]);
       }
       w=reverse_rsolve(temp,false);
-      // End new algorith�
+      // End new algorithù
       */
       if (signed(w.size())!=n+1 && !p.empty())
 	w=lcm(w,p,0);
@@ -10387,17 +11262,22 @@ namespace giac {
       for (i=m+2;i<n;++i){
 	// line operation
 	vector<int> & Hi=H[i];
-	u=( (longlong) t*Hi[m]) % modulo;
-	if (debug_infolevel>=2)
+	u=((longlong) t*Hi[m])%modulo;
+	if (!u){ 
+	  //CERR << "zero " << m << " " << i << endl;
+	  continue;
+	}
+	if (debug_infolevel>3)
 	  CERR << "// i=" << i << " " << u <<endl;
-	modlinear_combination(Hi,-u,Hmp1,modulo,0,0,false); // H[i]=H[i]-u*H[m+1]; COULD START at m
+	modlinear_combination(Hi,-u,Hmp1,modulo,m,0,false); // H[i]=H[i]-u*H[m+1]; COULD START at m
 	// column operation
 	for (int j=0;j<n;++j){
 	  vector<int> & Hj=H[j];
 #ifdef _I386_
 	  mod(Hj[m+1],u,Hj[i],modulo);
 #else
-	  Hj[m+1]=(Hj[m+1]+longlong(u)*Hj[i])%modulo;
+	  int * ptr=&Hj[m+1];
+	  *ptr=(*ptr+longlong(u)*Hj[i])%modulo;
 #endif
 	}
 	if (compute_P)
@@ -10459,11 +11339,11 @@ namespace giac {
       for (i=m+2;i<n;++i){
 	// line operation
 	u=rdiv(H[i][m],t,contextptr);
-	if (debug_infolevel>=2)
+	if (debug_infolevel>2)
 	  CERR << "// i=" << i << " " << u <<endl;
-	linear_combination(plus_one,H[i],-u,H[m+1],plus_one,vtemp,1e-12,0); // H[i]=H[i]-u*H[m+1];
+	linear_combination(plus_one,H[i],-u,H[m+1],plus_one,1,vtemp,1e-12,0); // H[i]=H[i]-u*H[m+1];
 	swap(H[i],vtemp);
-	linear_combination(plus_one,P[i],-u,P[m+1],plus_one,vtemp,1e-12,0); // H[i]=H[i]-u*H[m+1];
+	linear_combination(plus_one,P[i],-u,P[m+1],plus_one,1,vtemp,1e-12,0); // H[i]=H[i]-u*H[m+1];
 	swap(P[i],vtemp);
 	// column operation
 	for (int j=0;j<n;++j){
@@ -10639,7 +11519,7 @@ namespace giac {
   }
 
   void double_idn(matrix_double & P){
-    int cP=P.size();
+    int cP=int(P.size());
     for (int i=0;i<cP;++i){
       vector<giac_double> & Pi=P[i];
       if (Pi.size()!=cP) Pi.resize(cP);
@@ -10699,6 +11579,7 @@ namespace giac {
     int n=int(H.size())-rstart,c=int(H.front().size()),cP=int(P.front().size());
     if (cstart>=c) return;
     if (cend<=0) cend=c;
+#ifndef GIAC_HAS_STO_38
     if (recurse && n>=c && cend-cstart>200){
       // if cstart, cend !=0, block-recursive version 
       // H n rows, c1+c2 cols, n>=c1+c2, H=[A1|A2]=Q*[[R11,R12],[0,R22]]
@@ -10758,8 +11639,9 @@ namespace giac {
 #endif
       return;
     }
+#endif // GIAC_HAS_STO_38
     int lastcol=std::min(n,cend);
-    double t,tn,tabs,u,un,norme;
+    double t,tn,u,un,norme;
     vector<double> coeffs; coeffs.reserve(lastcol*(2*n-lastcol));
     if (debug_infolevel)
       CERR << CLOCK() << " givens start" << endl;
@@ -10925,12 +11807,12 @@ namespace giac {
       un=u/norme; tn=t/norme; uc=conj(un,contextptr);	tc=conj(tn,contextptr); 
       // line operation
       // H[m]=uc*H[i]+tc*H[m] and H[i]=tn*H[i]-un*H[m];
-      linear_combination(uc,H[i],tc,H[m],plus_one,v1,1e-12,0); 
-      linear_combination(tn,H[i],-un,H[m],plus_one,v2,1e-12,0); 
+      linear_combination(uc,H[i],tc,H[m],plus_one,1,v1,1e-12,0); 
+      linear_combination(tn,H[i],-un,H[m],plus_one,1,v2,1e-12,0); 
       swap(H[m],v1);
       swap(H[i],v2);
-      linear_combination(uc,P[i],tc,P[m],plus_one,v1,1e-12,0); 
-      linear_combination(tn,P[i],-un,P[m],plus_one,v2,1e-12,0); 
+      linear_combination(uc,P[i],tc,P[m],plus_one,1,v1,1e-12,0); 
+      linear_combination(tn,P[i],-un,P[m],plus_one,1,v2,1e-12,0); 
       swap(P[m],v1);
       swap(P[i],v2);
       TN[m]=tn;
@@ -11225,7 +12107,7 @@ namespace giac {
 	  UN[i]=0;
 	  continue;
 	}
-	if (debug_infolevel>=2)
+	if (debug_infolevel>=3)
 	  CERR << "// i=" << i << " " << u <<endl;
 	// H[m+1]=tc*H[m+1]+uc*H[i] and H[i]=tn*H[i]-un*H[m+1];
 	linear_combination(uc,H[i],tc,H[m+1],v1,0,0.0); 
@@ -11465,10 +12347,10 @@ namespace giac {
 	  Hi[j]=0;
 	}
       }
-      if (debug_infolevel>=2){
-	CERR << "// qr iteration number " << niter << " " << endl;
+      if (debug_infolevel>=2)
+	CERR << CLOCK() << " qr iteration number " << niter << " " << endl;
+      if (debug_infolevel>=5)
 	H.dbgprint();
-      }
       // check if one subdiagonal element is sufficiently small, if so 
       // we can increase n1 or decrease n2 or split
       for (int i=n1;i<n2-1;++i){
@@ -11570,7 +12452,7 @@ namespace giac {
     vecteur SHIFT;
     for (int niter=0;n>1 && niter<maxiter;niter++){
       if (debug_infolevel>=2)
-	CERR << "// qr iteration number " << niter << endl;
+	CERR << CLOCK() << " qr iteration number " << niter << endl;
       shift=0;
       gen test=abs(H[n-1][n-2],contextptr);
       ratio=test/abs(H[n-1][n-1],contextptr);
@@ -11722,105 +12604,535 @@ namespace giac {
     if (!mhessenberg(m,h,p,modulo,maxiter,eps,contextptr))
       return gensizeerr(contextptr);
     if (modulo<0)
-      return makevecteur(_trn(p,contextptr),h); // p,h such that p*h*p^-1=orig
+      return makesequence(_trn(p,contextptr),h); // p,h such that p*h*p^-1=orig
     else
-      return makevecteur(inv(p,contextptr),h); // p,h such that p*h*p^-1=orig
+      return makesequence(inv(p,contextptr),h); // p,h such that p*h*p^-1=orig
   }
   static const char _hessenberg_s []="hessenberg";
   static define_unary_function_eval (__hessenberg,&giac::_hessenberg,_hessenberg_s);
   define_unary_function_ptr5( at_hessenberg ,alias_at_hessenberg,&__hessenberg,0,true);
 
-  dense_POLY1 mpcar_hessenberg(const matrice & A,int modulo,GIAC_CONTEXT){
-    int n=int(A.size());
-    if (modulo || is_integer_matrice(A)){
-      if (modulo){ // try Krylov pmin
-	vector< vector<int> > N,temp(n+1),ttemp;
-	if (debug_infolevel)
-	  CERR << "Charpoly mod " << modulo << " A*v" << CLOCK() << endl;
-	if (!vecteur2vectvector_int(A,modulo,N))
-	  return vecteur(1,gendimerr(contextptr));
-	vector<int> & t0=temp[0];
-	t0.reserve(n);
-	for (int i=0;i<n;++i)
-	  t0.push_back(std::rand()%modulo);
-	for (int j=0;j<n;++j){
-	  if (!multvectvector_int_vector_int(N,temp[j],modulo,temp[j+1]))
-	    return vecteur(1,gendimerr(contextptr));
-	}
-	if (debug_infolevel)
-	  CERR << "Charpoly mod " << modulo << " tran " << CLOCK() << endl;
-	tran_vect_vector_int(temp,ttemp);
-	vecteur pivots;
-	longlong det;
-	vector<int> permutation,maxrankcol;
-	if (debug_infolevel)
-	  CERR << "Charpoly mod " << modulo << " rref " << CLOCK() << endl;
-	smallmodrref(1,ttemp,pivots,permutation,maxrankcol,det,0,n,0,n+1,false/* LU decomp */,0,modulo,2/* LU */,true);
-	if (debug_infolevel)
-	  CERR << "Charpoly mod " << modulo << " det=" << det << " " << CLOCK() << endl;
-	// if det==0 we will use Hessenberg
-	// If rank==n-1 we could extract the min polynomial and find charpoly using the trace
-	if (
-	    // false 
-	    det
-	    ){ 
-	  // U*charpol=last column
-	  for (int i=n-1;i>=0;--i){
-	    // charpol[i]=LU[i,i]^(-1)*(bp[i]-sum(j>i)LU[i,j]*charpol[j])
-	    int res=0;
-	    vector<int> & li=ttemp[i];
-	    for (int j=i+1;j<n;++j)
-	      mod(res,li[j],ttemp[j][n],modulo);
-	    li[n]=(invmod(li[i],modulo)*longlong(li[n]-res))%modulo;
+  int trace(const vector< vector<int> > & N,int modulo){
+    longlong res=0;
+    int n=int(N.size());
+    for (int i=0;i<n;++i){
+      res += N[i][i];
+    }
+    return res%modulo;
+  }
+
+  // Danilevsky algorithm
+  // kind of row reduction to companion matrix
+  // returns charpoly or minpoly 
+  void mod_pcar(std_matrix<gen> & N,vecteur & res,bool compute_pmin){
+    int n=int(N.size());
+    if (n==1){
+      res.resize(2);
+      res[0]=1;
+      res[1]=-N[0][0];
+    }
+    vecteur v(n),w(n);
+    for (int k=0;k<n-1;++k){
+      // search "pivot" on line k
+      for (int j=k+1;j<n;++j){
+	if (!is_zero(N[k][j])){
+	  // swap columns and lines k+1 and j
+	  if (j>k+1){
+	    for (int i=k;i<n;++i)
+	      swapgen(N[i][k+1],N[i][j]);
+	    N[k+1].swap(N[j]);
 	  }
-	  // the last column is the min poly
-	  modpoly charpol(n+1);
-	  for (int i=0;i<n;++i)
-	    charpol[n-i]=smod(-ttemp[i][n],modulo);
-	  charpol[0]=1;
-	  return charpol;
+	  break;
+	}
+      }
+      v=N[k];
+      gen akk1=v[k+1];
+      if (is_zero(akk1)){
+	// degenerate case, split N in two parts
+	vecteur part1(k+2),part2;
+	part1[0]=1;
+	for (int i=0;i<=k;++i){
+	  part1[i+1]=-N[k][k-i];
+	}
+	std_matrix<gen> N2(n-1-k);
+	for (int i=k+1;i<n;++i)
+	  N2[i-1-k]=vecteur(N[i].begin()+k+1,N[i].end());
+	mod_pcar(N2,part2,compute_pmin);
+	if (compute_pmin && part1==part2){
+	  res.swap(part1);
+	  return;
+	}
+	if (compute_pmin)
+	  res=lcm(part1,part2,0);
+	else
+	  res=operator_times(part1,part2,0);
+	return;
+      }
+      // multiply right by identity with line k+1 replaced by 
+      // -N[k]/a_{k,k+1} except on diagonal 1/a_{k,k+1} 
+      // this will replace line k by 0...010...0 (1 at column k+1)
+      gen invakk1=inv(akk1,context0);
+      for (int i=0;i<n;++i)
+	w[i]=(-invakk1*v[i]);
+      w[k+1]=invakk1;
+      // column operations
+      for (int l=k;l<n;++l){
+	vecteur & Nl=N[l];
+	gen Nlk1=Nl[k+1];
+	for (int j=0;j<=k;++j){
+	  gen & Nlj=Nl[j];
+	  Nlj=Nlj+w[j]*Nlk1;
+	}
+	Nl[k+1]=invakk1*Nlk1;
+	for (int j=k+2;j<n;++j){
+	  gen & Nlj=Nl[j];
+	  Nlj=Nlj+w[j]*Nlk1;
+	}
+      }
+      // multiply left by identity with line k+1 replaced by original N[k]
+      // line operations L_{k+1}=sum a_{k,i} L_i
+      for (int j=0;j<n;++j){
+	gen coeff(0);
+	if (j>=1 && j<=k+1)
+	  coeff=v[j-1];
+	for (int i=k+1;i<n;++i){
+	  coeff += v[i]*N[i][j];
+	}
+	N[k+1][j]=coeff;
+      }
+    }
+    // get charpoly
+    res.resize(n+1);
+    res[0]=1;
+    for (int i=0;i<n;++i)
+      res[1+i]=-N[n-1][n-1-i];
+  }
+
+  // Danilevsky algorithm
+  // kind of row reduction to companion matrix
+  // returns charpoly or minpoly 
+  void mod_pcar(vector< vector<int> > & N,int modulo,vector<int> & res,bool compute_pmin){
+    int n=int(N.size());
+    if (n==1){
+      res.resize(2);
+      res[0]=1;
+      res[1]=-N[0][0];
+    }
+    bool pseudo=false;
+#ifdef PSEUDO_MOD
+    pseudo=(modulo<(1<<29)) && (2*modulo*double(modulo)*n<(1ULL<<63));
+    int nbits=sizeinbase2(modulo); 
+    unsigned invp=((1ULL<<(2*nbits)))/modulo+1;
+#endif
+    vector<int> v(n),w(n);
+    for (int k=0;k<n-1;++k){
+      // search "pivot" on line k
+      for (int j=k+1;j<n;++j){
+	if (N[k][j]){
+	  // swap columns and lines k+1 and j
+	  if (j>k+1){
+	    for (int i=k;i<n;++i)
+	      swapint(N[i][k+1],N[i][j]);
+	    N[k+1].swap(N[j]);
+	  }
+	  break;
+	}
+      }
+      v=N[k];
+      int akk1=v[k+1];
+      if (akk1==0){
+	// degenerate case, split N in two parts
+	vector<int> part1(k+2),part2;
+	part1[0]=1;
+	for (int i=0;i<=k;++i){
+	  part1[i+1]=smod(-N[k][k-i],modulo);
+	}
+	vector< vector<int> > N2(n-1-k);
+	for (int i=k+1;i<n;++i)
+	  N2[i-1-k]=vector<int>(N[i].begin()+k+1,N[i].end());
+	mod_pcar(N2,modulo,part2,compute_pmin);
+	if (compute_pmin && part1==part2){
+	  res.swap(part1);
+	  return;
+	}
+	if (compute_pmin){
+	  modpoly p1,p2,p12;
+	  vector_int2vecteur(part1,p1);
+	  vector_int2vecteur(part2,p2);
+	  environment env;
+	  env.modulo=modulo; env.moduloon=true;
+	  p12=lcm(p1,p2,&env);
+	  vecteur2vector_int(p12,modulo,res);
 	}
 	else
-	  if (debug_infolevel)
-	    CERR << "Singular, back to Hessenberg " << endl;
+	  mulsmall(part1.begin(),part1.end(),part2.begin(),part2.end(),modulo,res);
+	return;
+      }
+      // multiply right by identity with line k+1 replaced by 
+      // -N[k]/a_{k,k+1} except on diagonal 1/a_{k,k+1} 
+      // this will replace line k by 0...010...0 (1 at column k+1)
+      longlong invakk1=invmod(akk1,modulo);
+      for (int i=0;i<n;++i)
+	w[i]=(-invakk1*v[i])%modulo;
+      w[k+1]=int(invakk1);
+      if (debug_infolevel)
+	CERR << CLOCK()*1e-6 << " column" << k << endl;
+      // column operations
+#if 1
+      for (int l=k;l<n;++l){
+	int * Nlj=&N[l].front();
+	int * wj=&w.front();
+	int * wend=wj+k;
+	longlong Nlk1=Nlj[k+1];
+	if (pseudo){
+#ifdef PSEUDO_MOD
+	  for (;wj<=wend;++wj,++Nlj){
+	    *Nlj=pseudo_mod(*Nlj+(*wj)*Nlk1,modulo,invp,nbits);
+	  }
+#endif
+	}
+	else {
+	  for (;wj<=wend;++wj,++Nlj){
+	    *Nlj=(*Nlj+(*wj)*Nlk1)%modulo;
+	  }
+	}
+	*Nlj=(invakk1*Nlk1)%modulo;
+	++wj;++Nlj;
+	wend += (n-k);
+	if (pseudo){
+#ifdef PSEUDO_MOD
+	  for (;wj<wend;++wj,++Nlj){
+	    *Nlj=pseudo_mod(*Nlj+(*wj)*Nlk1,modulo,invp,nbits);
+	  }
+#endif
+	}
+	else {
+	  for (;wj<wend;++wj,++Nlj){
+	    *Nlj=(*Nlj+(*wj)*Nlk1)%modulo;
+	  }
+	}
+      }
+#else
+      for (int l=k;l<n;++l){
+	vector<int> & Nl=N[l];
+	longlong Nlk1=Nl[k+1];
+	for (int j=0;j<=k;++j){
+	  int & Nlj=Nl[j];
+	  Nlj=(Nlj+w[j]*Nlk1)%modulo;
+	}
+	Nl[k+1]=(invakk1*Nlk1)%modulo;
+	for (int j=k+2;j<n;++j){
+	  int & Nlj=Nl[j];
+	  Nlj=(Nlj+w[j]*Nlk1)%modulo;
+	}
+      }
+#endif
+      if (debug_infolevel)
+	CERR << CLOCK()*1e-6 << " line" << k << endl;
+#if 1
+      // multiply left by identity with line k+1 replaced by original N[k]
+      // line operations L_{k+1}=sum a_{k,i} L_i
+      int j=0;
+      for (;j<=n-4;j+=4){
+	longlong coeff0=0,coeff1=0,coeff2=0,coeff3=0;
+	if (j>=1 && j-1<=k)
+	  coeff0=v[j-1];
+	if (j<=k)
+	  coeff1=v[j];
+	if (j+1<=k)
+	  coeff2=v[j+1];
+	if (j+2<=k)
+	  coeff3=v[j+2];
+	vector<int> * Ni=&N[k+1];
+	int * vi=&v[k+1], * viend=vi+(n-k-1);
+	// NOTE: should take % for large modulo
+	for (;vi<viend;++vi,++Ni){
+	  longlong V=*vi;
+	  int * Nij=&(*Ni)[j];
+	  coeff0 += V*Nij[0];
+	  coeff1 += V*Nij[1];
+	  coeff2 += V*Nij[2];
+	  coeff3 += V*Nij[3];
+	}
+	N[k+1][j]=coeff0%modulo;
+	N[k+1][j+1]=coeff1%modulo;
+	N[k+1][j+2]=coeff2%modulo;
+	N[k+1][j+3]=coeff3%modulo;
+      }
+      for (;j<n;++j){
+	longlong coeff=0;
+	if (j>=1 && j<=k+1)
+	  coeff=v[j-1];
+	vector<int> * Ni=&N[k+1];
+	int * vi=&v[k+1], * viend=vi+(n-k-1);
+	for (;vi<viend;++vi,++Ni){
+	  coeff += longlong(*vi)*(*Ni)[j];
+	}
+	N[k+1][j]=coeff%modulo;
+      }
+#else
+      // multiply left by identity with line k+1 replaced by original N[k]
+      // line operations L_{k+1}=sum a_{k,i} L_i
+      for (int j=0;j<n;++j){
+	longlong coeff=0;
+	if (j>=1 && j<=k+1)
+	  coeff=v[j-1];
+	for (int i=k+1;i<n;++i){
+	  coeff += longlong(v[i])*N[i][j];
+	}
+	N[k+1][j]=coeff%modulo;
+      }
+#endif
+    }
+    // get charpoly
+    res.resize(n+1);
+    res[0]=1;
+    for (int i=0;i<n;++i)
+      res[1+i]=smod(-N[n-1][n-1-i],modulo);
+  }
+
+  bool mod_pcar(vector< vector<int> > & N,int modulo,bool & krylov,vector<int> & res,GIAC_CONTEXT,bool compute_pmin){
+    int n=int(N.size());
+    if (krylov){ // try Krylov pmin
+      vector< vector<int> > temp(n+1),ttemp; 
+      vector<int> & t0=temp[0];
+      t0.reserve(n);
+      for (int i=0;i<n;++i)
+	t0.push_back(std::rand()%modulo);
+      // for very very large matrices (10^7 entries?) 
+      // it might be faster to compute
+      // N, N^2, (N^2)^2, etc. and compute Nv, N^2(v,Nv), N^4(v,Nv,N^2v,N^3v)...
+      for (int j=0;j<n;++j){
+	if (!multvectvector_int_vector_int(N,temp[j],modulo,temp[j+1]))
+	  return false;
+      }
+      if (debug_infolevel>2)
+	CERR << CLOCK() << " Charpoly mod " << modulo << " tran " << endl;
+      tran_vect_vector_int(temp,ttemp);
+      vecteur pivots;
+      longlong det;
+      vector<int> permutation,maxrankcol;
+      if (debug_infolevel>2)
+	CERR << CLOCK() << " Charpoly mod " << modulo << " rref " << endl;
+      smallmodrref(1,ttemp,pivots,permutation,maxrankcol,det,0,n,0,n+1,false/*full reduction */,0,modulo,2/* LU */,true,0,true,-1);
+      if (debug_infolevel>2)
+	CERR << CLOCK() << " Charpoly mod " << modulo << " det=" << det << " " << endl;
+      // If rank==n-1 extract the min polynomial and find charpoly using the trace
+      // if det==0 && rank<n-1 we will use Hessenberg
+      // we could use recursive method
+      // permute lines and columns of N with permutation
+      // P*N*P^t =[[N11 N12]
+      //           [N21 N22]] where N11 is rank*rank
+      // where ttemp=K, P*K=L*U, L=[[L11,0],[L21,Id]] L11 rankxrank
+      // find charpoly of N22-L21*L11^-1*N12
+      int rank=det?n:(ttemp[n-2][n-2]?n-1:0);
+      if (
+	  // false 
+	  det || rank==n-1
+	  ){ 
+	// U*charpol=last column
+	for (int i=rank-1;i>=0;--i){
+	  // charpol[i]=LU[i,i]^(-1)*(bp[i]-sum(j>i)LU[i,j]*charpol[j])
+	  int res=0;
+	  vector<int> & li=ttemp[i];
+	  for (int j=i+1;j<rank;++j)
+	    mod(res,li[j],ttemp[j][rank],modulo);
+	  if (li[i]==0){ rank=0; break; }
+	  li[rank]=(invmod(li[i],modulo)*longlong(li[rank]-res))%modulo;
+	}
+	// the last column is the min poly
+	res.resize(rank+1);
+	for (int i=0;i<rank;++i)
+	  res[rank-i]=smod(-ttemp[i][rank],modulo);
+	res[0]=1;
+	if (rank==n)
+	  return true;
+	if (rank==n-1){
+	  if (compute_pmin)
+	    return true;
+	  vector<int> resx=res;
+	  resx.push_back(0);
+	  longlong t=trace(N,modulo)+res[1]; 
+	  // res[1]=-sum eigenvals, trace=sum eigenvals with multiplicities
+	  for (int i=0;i<=rank;++i)
+	    resx[i+1] = smod(resx[i+1]-t*res[i],modulo);
+	  res.swap(resx);
+	  // CERR << res << endl;
+	  return true;
+	}
       }
       else {
-	gen B=evalf_double(linfnorm(A,contextptr),0,contextptr);
-	double Bd=B._DOUBLE_val;
-	if (!Bd){
-	  modpoly charpol(n+1);
-	  charpol[0]=1;
-	  return charpol;
-	}
-	// max value of any coeff in the charpoly
-	// max eigenval is <= sqrt(n)||A|| hence bound is in n (log(B)+log(n)/2)
-	// we must add combinatorial (n k)<2^n
-	double logbound=n*(std::log10(double(n))/2+std::log10(Bd)+std::log10(2.0));
-	double proba=proba_epsilon(contextptr),currentprob=1;
-	gen currentp(init_modulo(n,logbound));
-	gen pip(currentp);
-	double pipd=std::log10(pip.val/2+1.0);
-	modpoly charpol=*makemod(mpcar_hessenberg(A,currentp.val,contextptr),0)._VECTptr;
-	if (is_undef(charpol)) return charpol;
-	for (;pipd<logbound && currentprob>proba;){
-	  currentp=nextprime(currentp.val+2);
-	  modpoly currentcharpol=*makemod(mpcar_hessenberg(A,currentp.val,contextptr),0)._VECTptr;
-	  if (is_undef(currentcharpol)) return currentcharpol;
-	  modpoly newcharpol=ichinrem(charpol,currentcharpol,pip,currentp);
-	  if (newcharpol==charpol)
-	    currentprob=currentprob/currentp.val;
-	  else {
-	    charpol=newcharpol;
-	    currentprob=1.0;
-	  }
-	  pip=pip*currentp;
-	  pipd += std::log10(double(currentp.val));
-	}
-	if (debug_infolevel && pipd<logbound)
-	  CERR << "Probabilistic answer" << endl;
-	return charpol;
+	krylov=false;
+	if (debug_infolevel>2)
+	  CERR << CLOCK() << " Singular, calling Hessenberg " << endl;
       }
-    } // end if (is_integer_matrix)
+    }
+#if 1 // Danilevsky is faster than Hessenberg but slower than Krylov
+    if (n*double(n)*modulo<double(1ULL<<63)){
+      mod_pcar(N,modulo,res,compute_pmin);
+      return true;
+    }
+#endif
+    if (compute_pmin)
+      return false;
+    mhessenberg(N,N,modulo,false); // Hessenberg reduction, don't compute P
+    if (debug_infolevel>2)
+      CERR << CLOCK() << " Hessenberg reduced" << endl;
+    vector<int> P0(1,1),P1; 
+    P0.reserve(n+1); P1.reserve(n+1);
+    vector< vector<int> > P;
+    P.reserve(n+1);
+    P.push_back(P0);
+    for (int m=1;m<=n;++m){
+      longlong n=N[m-1][m-1];
+      P1=P0;
+      P1.push_back(0);
+      for (int j=0;j<P0.size();++j){
+	P1[j+1] = (P1[j+1]-n*P0[j])%modulo;
+      }
+      P1.swap(P0);
+      longlong t=1;
+      for (int i=1;i<m;++i){
+	t=(t*N[m-i][m-i-1])%modulo;
+	longlong f=(t*N[m-i-1][m-1])%modulo;
+	const vector<int> & pmi=P[m-i-1];
+	int delta=int(P0.size()-pmi.size());
+	int * target=&P0[delta];
+	const int * ptr=&pmi[0], * ptrend=ptr+pmi.size();
+	for (;ptr!=ptrend;++target,++ptr){
+	  *target = (*target-f*(*ptr))%modulo;
+	}
+	// for (int j=0;j<pmi.size();++j) P0[j+delta]=(P0[j+delta]-f*pmi[j])%modulo;
+      }
+      P.push_back(P0);
+    }
+#if 1
+    // CERR << P0 << endl;
+    res=P0;
+#else
+    modpoly p0(1,plus_one);
+    modpoly pX(2,plus_one);
+    vector< modpoly > p(1,p0);
+    environment env;
+    env.moduloon=true; env.modulo=modulo;
+    for (int m=1;m<=n;++m){
+      pX[1]=-N[m-1][m-1];
+      p0=operator_times(pX,p0,&env);
+      longlong t=1;
+      for (int i=1;i<m;++i){
+	t=(t*N[m-i][m-i-1])%modulo;
+	p0=p0-operator_times(gen(int((t*N[m-i-1][m-1])%modulo)),p[m-i-1],&env);
+      }
+      p.push_back(p0);
+    }
+    vecteur2vector_int(p0,modulo,res);
+#endif
+    // dbgtmp=p0;
+    if (debug_infolevel>2)
+      CERR << CLOCK() <<" Hessenberg charpoly " << endl;
+    return true;
+  }
+    
+  bool mod_pcar(const matrice & A,vector< vector<int> > & N,int modulo,bool & krylov,vector<int> & res,GIAC_CONTEXT,bool compute_pmin){
+    if (debug_infolevel>2)
+      CERR << CLOCK() << " Charpoly mod " << modulo << " A*v" << endl;
+    if (!vecteur2vectvector_int(A,modulo,N))
+      return false;
+    return mod_pcar(N,modulo,krylov,res,contextptr,compute_pmin);
+  }
+
+  vecteur mpcar_int(const matrice & A,bool krylov,GIAC_CONTEXT,bool compute_pmin){
+    int n=int(A.size());
+    gen B=evalf_double(linfnorm(A,contextptr),0,contextptr);
+    double Bd=B._DOUBLE_val;
+    if (!Bd){
+      modpoly charpol(n+1);
+      charpol[0]=1;
+      return charpol;
+    }
+    if (n>20){
+      matrix_double H;
+      if (matrice2std_matrix_double(A,H)){
+	vector<double> d;
+	// improve eigenvalues estimate
+	balance_krylov(H,d,5,1e-8);
+	giac_double Hd=linfnorm(H,d);
+	if (Hd<Bd)
+	  Bd=Hd;
+      }
+    }
+    // max value of any coeff in the charpoly
+    // max eigenval is <= sqrt(n)||A|| hence bound is in n (log(B)+log(n)/2)
+    // we must add combinatorial (n k)<=2^n
+    // or optimize comb(n,k)*(sqrt(n)||A||)^n
+    // gives k<=n/(1+1/sqrt(n)B)
+    double logbound=n/(1+1.0/std::sqrt(double(n))/Bd)*(std::log10(double(n))/2+std::log10(Bd))+n*std::log10(2.0),testvalue;
+    double proba=proba_epsilon(contextptr),currentprob=1;
+    gen currentp(init_modulo(n,logbound));
+    gen pip(currentp);
+    double pipd=std::log10(pip.val/2+1.0);
+    vector<int> modpcar;
+    vector< vector<int> > N;
+    if (!mod_pcar(A,N,currentp.val,krylov,modpcar,contextptr,compute_pmin))
+      return vecteur(1,gensizeerr(contextptr));
+    modpoly charpol;
+    vector_int2vecteur(modpcar,charpol);
+    int initial_clock=CLOCK();
+    int dbglevel=debug_infolevel;
+    for (;pipd < (testvalue=logbound*charpol.size()/(n+1.0));){
+      if (currentprob < proba &&  pipd<testvalue/1.33 && CLOCK()-initial_clock>min_proba_time*CLOCKS_PER_SEC)
+	break;
+      if (n>10 && dbglevel<2 && CLOCK()-initial_clock>60*CLOCKS_PER_SEC)
+	dbglevel=2;
+      if (dbglevel>1)
+	CERR << CLOCK() << " " << 100*pipd/testvalue << " % done" << (currentprob<proba?", stable.":", unstable.")<< endl;
+      currentp=nextprime(currentp.val+2);
+      if (!mod_pcar(A,N,currentp.val,krylov,modpcar,contextptr,compute_pmin))
+	return vecteur(1,gensizeerr(contextptr));
+      if (modpcar.size()<charpol.size())
+	continue;
+      if (modpcar.size()>charpol.size()){
+	vector_int2vecteur(modpcar,charpol);
+	pip=currentp;
+	continue;
+      }
+      bool stable;
+      int tmp;
+      if (pip.type==_ZINT && (tmp=ichinrem_inplace(charpol,modpcar,pip,currentp.val)) ){
+	stable=tmp==2;
+      } else {
+	modpoly newcharpol,currentcharpol;
+	vector_int2vecteur(modpcar,currentcharpol);
+	newcharpol=ichinrem(charpol,currentcharpol,pip,currentp);
+	stable=newcharpol==charpol;
+	charpol.swap(newcharpol);
+      }
+      if (stable)
+	currentprob=currentprob/currentp.val;
+      else 
+	currentprob=1.0;
+      pip=pip*currentp;
+      pipd += std::log10(double(currentp.val));
+    }
+    if (pipd<testvalue)
+      *logptr(contextptr) << gettext("Probabilistic answer. Run proba_epsilon:=0 for a certified result. Error <") << proba << endl;
+    return charpol;
+  } // end if (is_integer_matrix)
+
+  dense_POLY1 mpcar_hessenberg(const matrice & A,int modulo,GIAC_CONTEXT){
+    int n=int(A.size());
+    modpoly dbgtmp;
+    bool krylov=true;
+    if (modulo){
+      vector<int> res; modpoly RES;
+      vector< vector<int> > N;
+      if (!mod_pcar(A,N,modulo,krylov,res,contextptr,false))
+	return vecteur(1,gensizeerr("Non integer cell in matrix"));
+      vector_int2vecteur(res,RES);
+      return RES;
+    }
+    if (is_integer_matrice(A))
+      return mpcar_int(A,krylov,contextptr,false);
     matrice H,P;
     if (!mhessenberg(A,H,P,modulo,500,1e-10,contextptr))
       return vecteur(1,gensizeerr(contextptr));
@@ -11838,6 +13150,7 @@ namespace giac {
       }
       p.push_back(p0);
     }
+    // if (!is_zero(dbgtmp-p0)) CERR << dbgtmp-p0 << endl;
     return p0;
   }
   gen _pcar_hessenberg(const gen & g,GIAC_CONTEXT){
@@ -11864,6 +13177,19 @@ namespace giac {
   // see modpoly.h for polynomial operations on vecteur
   dense_POLY1 mpcar(const matrice & a,vecteur & Bv,bool compute_Bv,bool convert_internal,GIAC_CONTEXT){
     int n=int(a.size());
+    gen modulo,fieldpmin;
+    if (n && has_gf_coeff(a,modulo,fieldpmin)){
+      gen tmp=_pcar(a,contextptr);
+      if (tmp.type!=_VECT)
+	return vecteur(1,gensizeerr(contextptr));
+      vecteur P=*tmp._VECTptr;
+      // do Horner to compute Bv
+      if (compute_Bv){
+	horner(P,a,0,Bv);
+	Bv[0]=midn(n);
+      }
+      return P;      
+    }
     if (n && a[0]._VECTptr->front().type==_MOD){
       vecteur P(mpcar_hessenberg(a,0,contextptr));
       // do Horner to compute Bv
@@ -11888,6 +13214,7 @@ namespace giac {
     gen pk;
     P.push_back(1); // p0= 1
     for (int i=1;i<=n;++i){
+      // for polynomial coefficients interpolate?
       mmult(A,Bi,Ai); // Ai = A*Bi
       pk = rdiv(-mtrace(Ai),i,contextptr); 
       P.push_back(convert_internal?r2e(pk,lv,contextptr):pk);
@@ -11906,11 +13233,18 @@ namespace giac {
   gen _lagrange(const gen & g,GIAC_CONTEXT);
 
   static gen pcar_interp(const matrice & a,gen & g,GIAC_CONTEXT){
+    vecteur res;
+    if (poly_pcar_interp(a,res,false,contextptr)){
+      if (g.type==_VECT)
+	return res;
+      return symb_horner(res,g);
+    }
     int m=int(a.size());
     vecteur v1,v2,I(midn(m));
+    int shift=-m/2;
     for (int j=0;j<=m;++j){
-      v1.push_back(j);
-      v2.push_back(mdet(addvecteur(a,multvecteur(-j,I)),contextptr));
+      v1.push_back(j-shift);
+      v2.push_back(mdet(addvecteur(a,multvecteur(shift-j,I)),contextptr));
     }
     return _lagrange(makevecteur(v1,v2,g),contextptr);
   }
@@ -11934,7 +13268,7 @@ namespace giac {
       }
       if (v.back()==at_pmin && probabilistic_pmin(m,Bv,false,contextptr))
 	return s==2?Bv:symb_horner(Bv,v[1]); 
-      if (v.back()==at_lagrange)
+      if (v.back()==at_lagrange || v.back()==at_interp)
 	return pcar_interp(m,s==2?vx_var:v[1],contextptr);
       if (v.back()==at_hessenberg || v.back()==at_pcar_hessenberg){
 	Bv=mpcar_hessenberg(m,0,contextptr);
@@ -11947,6 +13281,33 @@ namespace giac {
       M=*a._VECTptr;
     // int n=M.size();
     // search for the best algorithm
+    gen p=M[0][0];
+    if (p.type==_USER){
+      std_matrix<gen> m; vecteur w;
+      matrice2std_matrix_gen(M,m);
+      mod_pcar(m,w,true);
+      if (is_undef(b))
+	return gen(w,_POLY1__VECT);
+      return symb_horner(w,b);	
+    }
+    if (p.type==_MOD && (p._MODptr+1)->type==_INT_){
+      gen mg=unmod(M);
+      if (mg.type==_VECT){
+	matrice M1=*mg._VECTptr;
+	vector< vector<int> > N;
+	int modulo=(p._MODptr+1)->val;
+	bool krylov=true;
+	vector<int> res;
+	if (mod_pcar(M1,N,modulo,krylov,res,contextptr,false)){
+	  vecteur w;
+	  vector_int2vecteur(res,w);
+	  w=*makemod(w,modulo)._VECTptr;
+	  if (is_undef(b))
+	    return gen(w,_POLY1__VECT);
+	  return symb_horner(w,b);	
+	}
+      }
+    }
     if (is_integer_matrice(M)){
       vecteur res=mpcar_hessenberg(M,0,contextptr);
       if (is_undef(b))
@@ -11958,6 +13319,8 @@ namespace giac {
       return is_undef(b)?_e2r(res,contextptr):res;
     }
     vecteur res;
+    if (poly_pcar_interp(M,res,false,contextptr))
+      return res;
     res=mpcar(M,Bv,false,true,contextptr);
     if (is_undef(b))
       return res;
@@ -12327,6 +13690,7 @@ namespace giac {
     bool numeric_matrix=is_fully_numeric(m);
     bool sym=(m==mtran(*conj(m,contextptr)._VECTptr));
     double eps=epsilon(contextptr);
+    if (eps<1e-15) eps=1e-15;
     // check for symmetric numeric matrix
     if (numeric_matrix){
 #ifdef HAVE_LIBLAPACK
@@ -12558,7 +13922,8 @@ namespace giac {
       }
     } // end if (numeric_matrix)
     int taille=int(m.size());
-    vecteur lv(alg_lvar(m));
+    vecteur lv;
+    alg_lvar_halftan_tsimplify(m,lv,contextptr);
     numeric_matrix=has_num_coeff(m) && is_fully_numeric(evalf(m,1,contextptr));
     matrice mr=*(e2r(numeric_matrix?exact(m,contextptr):m,lv,contextptr)._VECTptr); // convert to internal form
     // vecteur lv;
@@ -12567,6 +13932,50 @@ namespace giac {
     vecteur p_car;
     p_car=mpcar(mr,m_adj,true,contextptr);
     p_car=common_deno(p_car)*p_car; // remove denominators
+    // extension handling
+    gen modulo,fieldpmin;
+    if (has_mod_coeff(p_car,modulo)){
+      modpoly pc=*unmod(p_car)._VECTptr;
+      vector< facteur<modpoly> > vpc; vector<modpoly> qmat;
+      environment env;
+      env.modulo=modulo; env.moduloon=true; env.pn=modulo;
+      if (ddf(pc,qmat,&env,vpc)){
+	int extdeg=1;
+	for (int j=0;j<int(vpc.size());++j){
+	  extdeg=lcm(extdeg,vpc[j].mult).val;
+	}
+	if (extdeg>1){
+	  *logptr(contextptr) << "Creating splitting field extension GF(" << modulo << "," << extdeg << ")" << endl;
+	  gen tmp=_galois_field(makesequence(modulo,extdeg),contextptr);
+	  tmp=tmp[plus_two];
+	  tmp=eval(tmp[2],1,contextptr); // field generator
+	  p_car=tmp*p_car;
+	}
+      }
+      else
+	*logptr(contextptr) << "Warning! Automatic extension not implemented. You can try to diagonalize the matrix * a non trivial element of GF(" << modulo << ",lcm of degrees of factor(" << symb_horner(p_car,vx_var) << "))" <<  endl;
+    }
+    if (has_gf_coeff(p_car,modulo,fieldpmin)){
+      factorization f;
+      gen res=gf_list()[pow(modulo,gfsize(fieldpmin),contextptr)].g;
+      if (galois_field * ptr=dynamic_cast<galois_field *>(res._USERptr)){
+	polynome P(1);
+	poly12polynome(p_car,1,P,1);
+	res=ptr->polyfactor(P,f);
+	int extdeg=1;
+	for (int i=0;i<int(f.size());++i){
+	  extdeg=lcm(extdeg,f[i].fact.lexsorted_degree()).val;
+	}
+	if (extdeg>1){
+	  extdeg *= gfsize(fieldpmin);
+	  *logptr(contextptr) << "Creating splitting field extension GF(" << modulo << "," << extdeg << ")" << endl;
+	  gen tmp=_galois_field(makesequence(modulo,extdeg),contextptr);
+	  tmp=tmp[plus_two];
+	  tmp=eval(tmp[2],1,contextptr); // field generator
+	  p_car=tmp*p_car;
+	}
+      }
+    }
     // factorizes p_car
     factorization f;
     polynome ppcar(poly1_2_polynome(p_car,1));
@@ -12690,11 +14099,15 @@ namespace giac {
 	vecteur ww(w.size());
 	for (unsigned i=0;i<w.size();++i)
 	  ww[i]=r2e(w[i],lv,contextptr);
-	v=solve(horner(ww,tmpx),tmpx,complex_mode(contextptr),contextptr); 
+	gen wwx=horner(ww,tmpx);
+	v=solve(wwx,tmpx,complex_mode(contextptr),contextptr); 
 	v=*apply(v,recursive_normal,contextptr)._VECTptr;
 	if (v.size()!=w.size()-1){
 	  gen m0num=evalf(m0,1,contextptr);
-	  if (m0num.type==_VECT && lidnt(m0num).empty()){
+	  if (m0num.type==_VECT 
+	      && is_numericm(*m0num._VECTptr)
+	      // && lidnt(m0num).empty()
+	      ){
 	    *logptr(contextptr) << gettext("Unable to find exact eigenvalues. Trying approx") << endl;
 	    return egv(*m0num._VECTptr,p,d,contextptr,jordan,false,eigenvalues_only);
 	  }
@@ -13038,7 +14451,7 @@ namespace giac {
 	  /* fullreduction */1,0,true,algorithm,0,
 	       contextptr))
       return false;
-    mdividebypivot(res);
+    mdividebypivot(res,-1,contextptr);
     // put zero lines in res at their proper place, so that
     // non zero pivot are on the diagonal
     int s=int(res.size()),c=int(res.front()._VECTptr->size());
@@ -13384,7 +14797,7 @@ namespace giac {
 	modular=true;
 	a=*a.front()._VECTptr;
       }
-      // if (!is_squarematrix(a)) return false; // setsizeerr(gettext("Expecting a square matrix"));
+      if (!ckmatrix(a)) return false; // setsizeerr(gettext("Expecting a square matrix"));
     }
     gen det;
     vecteur pivots;
@@ -13517,7 +14930,7 @@ namespace giac {
 	    if (IPIV[i-1]!=i)
 	      swapgen(P[i-1],P[IPIV[i-1]-1]);
 	  }
-	  if (!xcas_mode(contextptr)){
+	  if (array_start(contextptr)){
 	    for (int i=0;i<mn;++i)
 	      P[i] -= 1;
 	  }
@@ -13541,7 +14954,7 @@ namespace giac {
 	  if (IPIV[i-1]!=i)
 	    swapgen(P[i-1],P[IPIV[i-1]-1]);
 	}
-	if (!xcas_mode(contextptr)){
+	if (array_start(contextptr)){
 	  for (int i=0;i<mn;++i)
 	    P[i] -= 1;
 	}
@@ -13587,7 +15000,7 @@ namespace giac {
     // Giac LU decomposition
     if (!mlu(*args._VECTptr,P,L,U,contextptr))
       return gendimerr(contextptr);
-    if (xcas_mode(contextptr) || abs_calc_mode(contextptr)==38){
+    if (array_start(contextptr)){ //xcas_mode(contextptr) || abs_calc_mode(contextptr)==38){
       int s=int(P.size());
       for (int i=0;i<s;++i){
 	P[i]=P[i]+1;
@@ -13801,25 +15214,31 @@ namespace giac {
   static define_unary_function_eval (__basis,&giac::_basis,_basis_s);
   define_unary_function_ptr5( at_basis ,alias_at_basis,&__basis,0,true);
 
-  // Sylvester matrix, in lines line0=v1 0...0, line1=0 v1 0...0, etc.
-  matrice sylvester(const vecteur & v1,const vecteur & v2){
+  void sylvester(const vecteur & v1,const vecteur & v2,matrice & res){
     int m=int(v1.size())-1;
     int n=int(v2.size())-1;
-    if (m<0 || n<0)
-      return vecteur(0);
-    matrice res(m+n);
+    if (m<0 || n<0){
+      res.clear(); return;
+    }
+    res.resize(m+n);
     for (int i=0;i<n;++i){
-      vecteur w(m+n);
+      res[i]=new ref_vecteur(m+n);
+      vecteur & w=*res[i]._VECTptr;
       for (int j=0;j<=m;++j)
 	w[i+j]=v1[j];
-      res[i]=w;
     }
     for (int i=0;i<m;++i){
-      vecteur w(m+n);
+      res[n+i]=new ref_vecteur(m+n);
+      vecteur & w=*res[n+i]._VECTptr;
       for (int j=0;j<=n;++j)
 	w[i+j]=v2[j];
-      res[n+i]=w;
     }
+  }
+
+  // Sylvester matrix, in lines line0=v1 0...0, line1=0 v1 0...0, etc.
+  matrice sylvester(const vecteur & v1,const vecteur & v2){
+    matrice res;
+    sylvester(v1,v2,res);
     return res;
   }
 
@@ -14053,31 +15472,40 @@ namespace giac {
     int s=int(d.size());
     gen svdmax2=d[s-1][s-1];
     gen eps=epsilon(contextptr);
+    int smallsvl=0;
 #if 1
     gen smalleps=(s*s)*eps*svdmax2;
 #else
-    int small=0;
     for (int i=0;i<s-1;++i){
       if (is_greater(sqrt(eps,contextptr)*svdmax2,d[i][i],contextptr))
-	++small;
+	++smallsvl;
       else
 	break;
     }
-    gen smalleps=s*pow(eps,inv(small?small:1,contextptr),contextptr)*svdmax2;
+    gen smalleps=s*pow(eps,inv(smallsvl?smallsvl:1,contextptr),contextptr)*svdmax2;
 #endif
     for (int i=0;i<s;++i){
       vecteur vi=*d[i]._VECTptr;
       gen & di=vi[i];
       di=re(di,contextptr);
       // replace this value by 0 if it is small
-      if (is_greater(smalleps,di,contextptr)) 
-	di=0.0;
+      if (is_greater(smalleps,di,contextptr)) {
+	di=0.0; smallsvl++;
+      }
       di=sqrt(di,contextptr);
       svl.push_back(di);
       d[i]=vi;
     }
-    if (method==-2)
+     if (smallsvl)
+       *logptr(contextptr) << "Warning, ill-conditionned matrix, " << smallsvl << " small singular values were replaced by 0. Result is probably wrong." << endl;    
+    if (method==-2){
+      if (transposed){
+	int add0=int(M.size()-M.front()._VECTptr->size());
+	for (int i=0;i<add0;++i)
+	  svl.push_back(0);
+      }
       return svl;
+    }
     mmult(M,p,Mp);
 #if 0
     invs=d;
@@ -14128,7 +15556,7 @@ namespace giac {
       if (is_zero(tmp,contextptr)){ //is_greater(1e-8,tmp/(s*svdmax),contextptr)){
 	tmp=l2norm(*u[i]._VECTptr,contextptr);
       }
-      tmp=inv(tmp,contextptr);
+      if (!is_zero(tmp,contextptr)) tmp=inv(tmp,contextptr);
       u[i]=tmp*u[i];
     }
     reverse(u.begin(),u.end()); // put 0 SVD at the end
@@ -14144,6 +15572,7 @@ namespace giac {
       if (is_strictly_positive(-u[i][i],contextptr))
 	Mp[i]=-Mp[i];
     }
+    if (s<Mp.size()) Mp.erase(Mp.begin()+s,Mp.end());
     reverse(Mp.begin(),Mp.begin()+s);
     mtran(Mp,u);
 #endif
@@ -14194,7 +15623,7 @@ namespace giac {
 	  //if (is_strictly_positive(-C[k][k])) setsizeerr(gettext("Not a positive define matrice"));
 	  s=s+C[l][k]*conj(C[j][k],contextptr)/C[k][k];
 	}
-	C[l][j]=ratnormal(A[l][j]-s);
+	C[l][j]=ratnormal(A[l][j]-s,contextptr);
       }
     }
     for (k=0;k<n;k++) {
@@ -14225,7 +15654,7 @@ namespace giac {
 	w[j]=LU[i][j];
       L.push_back(w);
     }
-    return ckmultmatvecteur(L,D);
+    return ckmultmatvecteur(L,D,contextptr);
 */
     /*
     std_matrix<gen> C(n,vecteur(n));
@@ -14391,25 +15820,61 @@ namespace giac {
   static define_unary_function_eval (__lll,&_lll,_lll_s);
   define_unary_function_ptr5( at_lll ,alias_at_lll,&__lll,0,true);
 
+  static const char _lll_reduce_s []="lll_reduce";
+  static define_unary_function_eval (__lll_reduce,&_lll,_lll_reduce_s);
+  define_unary_function_ptr5( at_lll_reduce ,alias_at_lll_reduce,&__lll_reduce,0,true);
+
   // Utilities for Hermite and Smith normal forms
   static gen rem(const gen & p,const gen & q,environment * env){
+    if (is_zero(p))
+      return p;
     if (!env)
       return smod(p,q);
-    if (p.type!=_VECT)
-      return zero;
-    if (q.type!=_VECT)
-      return q;
-    return operator_mod(*p._VECTptr,*q._VECTptr,env);
+    if (p.type==_POLY || q.type==_POLY){
+      if (p.type!=_POLY)
+	return p;
+      if (q.type!=_POLY)
+	return 0;
+      return *p._POLYptr % *q._POLYptr;
+    }
+    vecteur R=operator_mod(gen2vecteur(p),gen2vecteur(q),env);
+    if (R.size()==1)
+      return R.front();
+    else
+      return gen(R,_POLY1__VECT);
   }
 
   static gen quo(const gen & p,const gen & q,environment * env){
+    if (is_zero(p))
+      return p;
     if (!env)
       return (p-smod(p,q))/q;
-    if (p.type!=_VECT)
-      return zero;
-    if (q.type!=_VECT)
-      return q;
-    return operator_div(*p._VECTptr,*q._VECTptr,env);
+    if (p.type==_POLY || q.type==_POLY){
+      if (p.type!=_POLY)
+	return zero;
+      if (q.type!=_POLY)
+	return q;
+      return *p._POLYptr % *q._POLYptr; // FIXME mod computation
+    }
+    vecteur Q=operator_div(gen2vecteur(p),gen2vecteur(q),env);
+    if (Q.size()==1)
+      return Q.front();
+    else
+      return gen(Q,_POLY1__VECT);
+  }
+
+  // w=(c1*v1+c2*v2)/c smod modulo
+  void modlinear_combination(const gen & c1,const vecteur & v1,const gen & c2,const vecteur & v2,const gen & c,vecteur & w,environment * env,int cstart,int cend){
+    const_iterateur it1=v1.begin()+cstart,it1end=v1.end();
+    if (cend && cend>=cstart && cend<it1end-v1.begin())
+      it1end=v1.begin()+cend;
+    const_iterateur it2=v2.begin()+cstart;
+    iterateur jt=w.begin()+cstart;
+    gen modulo=env->modulo;
+    for (;it1!=it1end;++it1,++it2,++jt){
+      *jt=smod(c1*(*it1)+c2*(*it2),modulo);
+      *jt=quo(*jt,c,env);
+    }
   }
 
   static void egcd(const gen & a,const gen & b,gen & u,gen & v,gen & d,environment * env){
@@ -14417,21 +15882,80 @@ namespace giac {
       egcd(a,b,u,v,d);
       return ;
     }
+    if (is_zero(a)){
+      u=0; v=1; d=b; return;
+    }
+    if (is_zero(b)){
+      u=1; v=0; d=a; return;
+    }
+    if (a.type==_POLY || b.type==_POLY){
+      if (a.type!=_POLY){
+	if (env && env->moduloon){
+	  d=1;
+	  u=invmod(a,env->modulo);
+	}
+	else {
+	  d=a;
+	  u=plus_one;
+	}
+	v=zero;
+	return;
+      }
+      if (b.type!=_POLY){
+	if (env && env->moduloon){
+	  d=1;
+	  v=invmod(b,env->modulo);
+	}
+	else {
+	  d=b;
+	  v=plus_one;
+	}
+	u=zero;
+	return;
+      }
+      polynome U,V,D;
+      egcd(*a._POLYptr,*b._POLYptr,U,V,D);
+      u=U; v=V; d=D;
+      return;
+    }
     if (a.type!=_VECT){
-      d=a;
-      u=plus_one;
+      if (env && env->moduloon){
+	d=1;
+	u=invmod(a,env->modulo);
+      }
+      else {
+	d=a;
+	u=plus_one;
+      }
       v=zero;
       return;
     }
     if (b.type!=_VECT){
-      d=b;
-      v=plus_one;
+      if (env && env->moduloon){
+	d=1;
+	v=invmod(b,env->modulo);
+      }
+      else {
+	d=b;
+	v=plus_one;
+      }
       u=zero;
       return;
     }
     modpoly U,V,D;
     egcd(*a._VECTptr,*b._VECTptr,env,U,V,D);
-    u=U; v=V; d=D;
+    if (U.size()==1)
+      u=U.front();
+    else
+      u=gen(U,_POLY1__VECT); 
+    if (V.size()==1)
+      v=V.front();
+    else
+      v=gen(V,_POLY1__VECT); 
+    if (D.size()==1)
+      d=D.front();
+    else
+      d=gen(D,_POLY1__VECT);
   }
 
   // degree + 1 for poly, abs for integer, 1 otherwise
@@ -14478,24 +16002,32 @@ namespace giac {
 	  if (i<i0){
 	    // Above diag do: L_i <- L_i - q*L_j
 	    q=quo(A[i][j],A[i0][j],env);
-	    linear_combination(plus_one,U[i],-q,U[i0],plus_one,U[i],0.0,0);
-	    linear_combination(plus_one,A[i],-q,A[i0],plus_one,A[i],0.0,0);
+	    linear_combination(plus_one,U[i],-q,U[i0],plus_one,1,U[i],0.0,0);
+	    linear_combination(plus_one,A[i],-q,A[i0],plus_one,1,A[i],0.0,0);
 	  }
 	  else {
 	    // Below diag: we use Bezout u*a+v*b=d where a=coeff, b="pivot"
 	    // L_i0 <- v*L_i0 + u*L_i
 	    // L_i <- (-a * L_i0 + b * L_i)/d
-	    // This transformation is Z-invertible since det=(U*a+b*v)/d=1
+	    // This transformation is Z-invertible since det=(u*a+b*v)/d=1
 	    // it will cancel the leading coeff of L_i
 	    // We should use the smallest possible |u| and |v|
 	    gen a = A[i][j];
 	    gen b = A[i0][j];
 	    egcd(a,b,u,v,d,env);
-	    linear_combination(v,U[i0],u,U[i],plus_one,B1,0.0,0);
-	    linear_combination(-a,U[i0],b,U[i],d,U[i],0.0,0);
+	    if (env && env->moduloon){
+	      modlinear_combination(v,U[i0],u,U[i],plus_one,B1,env,0,0);
+	      modlinear_combination(-a,U[i0],b,U[i],d,U[i],env,0,0);
+	      modlinear_combination(v,A[i0],u,A[i],plus_one,B2,env,0,0);
+	      modlinear_combination(-a,A[i0],b,A[i],d,A[i],env,0,0);
+	    }
+	    else {
+	      linear_combination(v,U[i0],u,U[i],plus_one,1,B1,0.0,0);
+	      linear_combination(-a,U[i0],b,U[i],d,1,U[i],0.0,0);
+	      linear_combination(v,A[i0],u,A[i],plus_one,1,B2,0.0,0);
+	      linear_combination(-a,A[i0],b,A[i],d,1,A[i],0.0,0);
+	    }
 	    U[i0]=B1;
-	    linear_combination(v,A[i0],u,A[i],plus_one,B2,0.0,0);
-	    linear_combination(-a,A[i0],b,A[i],d,A[i],0.0,0);
 	    A[i0]=B2;	    
 	  }
 	} // end for (column reduced)
@@ -14612,11 +16144,19 @@ namespace giac {
 	    gen a = A[i][j0];
 	    gen b = A[i0][j0];
 	    egcd(b,a,v,u,d,env);
-	    linear_combination(v,U[i0],u,U[i],plus_one,B1,0.0,0);
-	    linear_combination(-a,U[i0],b,U[i],d,U[i],0.0,0);
+	    if (env && env->moduloon){
+	      modlinear_combination(v,U[i0],u,U[i],plus_one,B1,env,0,0);
+	      modlinear_combination(-a,U[i0],b,U[i],d,U[i],env,0,0);
+	      modlinear_combination(v,A[i0],u,A[i],plus_one,B2,env,0,0);
+	      modlinear_combination(-a,A[i0],b,A[i],d,A[i],env,0,0);
+	    }
+	    else {
+	      linear_combination(v,U[i0],u,U[i],plus_one,1,B1,0.0,0);
+	      linear_combination(-a,U[i0],b,U[i],d,1,U[i],0.0,0);
+	      linear_combination(v,A[i0],u,A[i],plus_one,1,B2,0.0,0);
+	      linear_combination(-a,A[i0],b,A[i],d,1,A[i],0.0,0);
+	    }
 	    U[i0]=B1;
-	    linear_combination(v,A[i0],u,A[i],plus_one,B2,0.0,0);
-	    linear_combination(-a,A[i0],b,A[i],d,A[i],0.0,0);
 	    A[i0]=B2;	    
 	  } // end for (row reduced)
 	  if (!env && is_strictly_positive(-A[i0][j0],contextptr)){
@@ -14656,11 +16196,19 @@ namespace giac {
 	    gen a = A[i][i0];
 	    gen b = A[j0][i0];
 	    egcd(b,a,v,u,d,env);
-	    linear_combination(v,V[j0],u,V[i],plus_one,B2,0.0,0);
-	    linear_combination(-a,V[j0],b,V[i],d,V[i],0.0,0);
+	    if (env && env->moduloon){
+	      modlinear_combination(v,V[j0],u,V[i],plus_one,B2,env,0,0);
+	      modlinear_combination(-a,V[j0],b,V[i],d,V[i],env,0,0);
+	      modlinear_combination(v,A[j0],u,A[i],plus_one,B1,env,0,0);
+	      modlinear_combination(-a,A[j0],b,A[i],d,A[i],env,0,0);
+	    }
+	    else {
+	      linear_combination(v,V[j0],u,V[i],plus_one,1,B2,0.0,0);
+	      linear_combination(-a,V[j0],b,V[i],d,1,V[i],0.0,0);
+	      linear_combination(v,A[j0],u,A[i],plus_one,1,B1,0.0,0);
+	      linear_combination(-a,A[j0],b,A[i],d,1,A[i],0.0,0);
+	    }
 	    V[j0]=B2;
-	    linear_combination(v,A[j0],u,A[i],plus_one,B1,0.0,0);
-	    linear_combination(-a,A[j0],b,A[i],d,A[i],0.0,0);
 	    A[j0]=B1;	    
 	  } // end for (row reduced)
 	  if (!env && is_strictly_positive(-A[j0][i0],contextptr)){
@@ -14746,10 +16294,15 @@ namespace giac {
     size_t nrows=0,ncols=0;
     char c;
     string s;
-    for (;i;){
+    bool ok=true;
+    for (;ok && i;){
       c=i.get();
-      if (i.eof() || c==eof)
-	break;
+      if (i.eof() || c==eof){
+	if (s.empty())
+	  break;
+	ok=false;
+	c=nl;
+      }
       if (c=='%')
 	c=' ';
       if (c==sep || c==nl){
@@ -14800,6 +16353,7 @@ namespace giac {
 		line.push_back(string2gen(s,s[0]=='"'));
 	    }
 	  } catch (std::runtime_error & e){
+	    last_evaled_argptr(contextptr)=NULL;
 	    line.push_back(string2gen(e.what(),false));
 	  }
 #endif
@@ -14827,13 +16381,21 @@ namespace giac {
     return res;
   }
 
+  // csv2gen(filename,sep,nl,decsep,eof[,string])
   gen _csv2gen(const gen & g,GIAC_CONTEXT){
     if ( g.type==_STRNG && g.subtype==-1) return  g;
     char sep(';'),nl('\n'),eof(0),decsep(',');
     gen tmp,gs;
+    bool isfile=true;
+    int s=0;
     if (g.type==_VECT && !g._VECTptr->empty()){
       gs=g._VECTptr->front();
-      int s=int(g._VECTptr->size());
+      s=int(g._VECTptr->size());
+      tmp=g[s-1];
+      if (tmp==at_string){
+	isfile=false;
+	--s;
+      }
       if (s>1){
 	tmp=g[1];
 	if (tmp.type==_STRNG && !tmp._STRNGptr->empty())
@@ -14860,8 +16422,44 @@ namespace giac {
     if (gs.type!=_STRNG)
       return gensizeerr(gettext("Expecting file name to convert"));
     string file=*gs._STRNGptr;
-    ifstream i(file.c_str());
-    return csv2gen(i,sep,nl,decsep,eof,contextptr);
+    if (isfile){
+#ifdef EMCC_FETCH
+      istringstream i(fetch(file));
+      return csv2gen(i,sep,nl,decsep,eof,contextptr);
+#else
+      if (file.size()>4 && file.substr(0,4)=="http"){
+	string s=fetch(file);
+	istringstream i(s);
+	return csv2gen(i,sep,nl,decsep,eof,contextptr);
+      }
+      ifstream i(file.c_str());
+      return csv2gen(i,sep,nl,decsep,eof,contextptr);
+#endif
+    }
+    else {
+      // count [ ]
+      int open=0,close=0,sp=0;
+      for (size_t i=0;i<file.size();++i){
+	if (file[i]=='[')
+	  ++open;
+	if (file[i]==']')
+	  ++close;
+	if (file[i]==' ')
+	  ++sp;
+      }
+      if (file.size()<=20 && sp==0)
+	return eval(gen(file,contextptr),1,contextptr);
+      if (open>=2 && absint(open-close)<=1)
+	return gen(file,contextptr);
+#ifdef HAVE_SSTREAM
+      istringstream i(file.c_str());
+#else
+      istrstream i(file.c_str());
+#endif
+      if (s==1) // guess
+	csv_guess(file.c_str(),file.size(),sep,nl,decsep);
+      return csv2gen(i,sep,nl,decsep,eof,contextptr);
+    }
   }
   static const char _csv2gen_s []="csv2gen";
   static define_unary_function_eval (__csv2gen,&_csv2gen,_csv2gen_s);
@@ -15104,7 +16702,7 @@ namespace giac {
   void householder_mult(const std::vector<giac_double> & w,const matrix_double & H,vector<giac_double> & v,int k,bool is_k_hessenberg,int jstart,int jend,int deltarow=0,int cstart=0,int cend=0){
     int n=int(H.size())-deltarow;
     if (cend<=cstart)
-      cend=H.front().size();
+      cend=int(H.front().size());
     int c=cend-cstart;
     v.resize(c);
     for (int j=0;j<c;++j)
@@ -15403,6 +17001,7 @@ namespace giac {
     int lastcol=std::min(n,cend);
     if (debug_infolevel)
       CERR << CLOCK() << " Householder, computing H" << endl;
+#ifndef GIAC_HAS_STO_38
     if (recurse && n>=c && cend-cstart>200){
       if (n<2*(cend-cstart)) 
 	thin=false;
@@ -15457,6 +17056,7 @@ namespace giac {
 	CERR << CLOCK() << " Householder end" << endl;
       return;
     }
+#endif // GIAC_HAS_STO_38
     vector<giac_double> w(n),q(cend-cstart);
     // save w to compute P all at once at the end, this could also be done
     // inside the lower diagonal bloc of H
@@ -15558,7 +17158,7 @@ namespace giac {
       std_matrix_gen2std_matrix_giac_double(P,P1,true);
       // count 0 in H under the diagonal
       // if less than 20% Householder else Givens
-      int count1=0,count2=0,L=int(H.size()),C=H.front().size();
+      int count1=0,count2=0,L=int(H.size()),C=int(H.front().size());
       for (int i=1;i<L;++i){
 	const vector<giac_double> & Hi=H1[i];
 	for (int j=0;j<i && j<C;++count2,++j){
@@ -15617,15 +17217,15 @@ namespace giac {
 	tc=conj(t,contextptr);
 	norme=sqrt(u*uc+t*tc,contextptr);
 	un=u/norme; tn=t/norme; uc=conj(un,contextptr);	tc=conj(tn,contextptr); 
-	if (debug_infolevel>=2)
+	if (debug_infolevel>=3)
 	  CERR << "// i=" << i << " " << u <<endl;
 	// H[m]=un*H[i]+tn*H[m] and H[i]=tn*H[i]-un*H[m];
-	linear_combination(uc,H[i],tc,H[m],plus_one,v1,1e-12,0); 
-	linear_combination(tn,H[i],-un,H[m],plus_one,v2,1e-12,0); 
+	linear_combination(uc,H[i],tc,H[m],plus_one,1,v1,1e-12,0); 
+	linear_combination(tn,H[i],-un,H[m],plus_one,1,v2,1e-12,0); 
 	swap(H[m],v1);
 	swap(H[i],v2);
-	linear_combination(uc,P[i],tc,P[m],plus_one,v1,1e-12,0); 
-	linear_combination(tn,P[i],-un,P[m],plus_one,v2,1e-12,0); 
+	linear_combination(uc,P[i],tc,P[m],plus_one,1,v1,1e-12,0); 
+	linear_combination(tn,P[i],-un,P[m],plus_one,1,v2,1e-12,0); 
 	swap(P[m],v1);
 	swap(P[i],v2);
       }
@@ -16005,7 +17605,7 @@ namespace giac {
       if (oper.size()<1000 || oper.size()<P.size()*(P.size()/5.))
 	return;
     }
-    if (debug_infolevel>1)
+    if (debug_infolevel>2)
       CERR << CLOCK() << "hessenberg_ortho3 compute P, flush size " << oper.size() << endl;
     int nH=int(P.size());
     int cstart=0,cstep=nH;
@@ -16033,14 +17633,14 @@ namespace giac {
 	  pthread_join(tab[j],&ptr);
       }
       oper.clear();
-      if (debug_infolevel>1)
+      if (debug_infolevel>2)
 	CERR << CLOCK() << "hessenberg_ortho3 end compute P " << endl;
       return;
     }
 #endif
     thread_hessenberg_p_t tmp={&P,&oper,0,nH};
     do_hessenberg_p((void *)&tmp);
-    if (debug_infolevel>1)
+    if (debug_infolevel>2)
       CERR << CLOCK() << "hessenberg_ortho3 end compute P" << endl;
     oper.clear();
   }
@@ -16068,8 +17668,14 @@ namespace giac {
       if (nend>n) nend=n;
       for (i=m+2;i<nend;++i){
 	u=H[i][m];
-	if (u==0)
+	if (u==0){
+	  //CERR << "u=0"<<endl;
+	  if (compute_P &&already_zero==2){
+	    oper.push_back(1);
+	    oper.push_back(0);
+	  }
 	  continue;
+	}
 	// line operation
 	t=H[m+1][m];
 	norme=std::sqrt(u*u+t*t);
@@ -16366,8 +17972,7 @@ namespace giac {
     int s=int(m.size());
     os << "[";
     for (int i=0;i<s;++i){
-      os << m[i] ;
-      if (i==s
+      os << m[i] << " ";
     }
     return "]" << os;
   }
@@ -16573,7 +18178,7 @@ namespace giac {
     giac_double s,p; // s=sum of shifts, p=product
     giac_double ok=std::abs(H[n2-1][n2-2]/H[n2-1][n2-1]);
     if (
-#ifdef GIAC_HAS_STO38 // otherwise p:=48*x*(1+x)^60 -(1+x)^60 +1; proot(p) crashes
+#ifdef GIAC_HAS_STO_38 // otherwise p:=48*x*(1+x)^60 -(1+x)^60 +1; proot(p) crashes
 	0 &&
 #endif
 	!in_recursion && H.size()>=50){
@@ -16757,10 +18362,10 @@ namespace giac {
       return true;
     }
     for (int niter=0;n2-n1>2 && niter<maxiter;niter++){
-      if (debug_infolevel>=5){
-	CERR << "// qr iteration number " << niter << " " << endl;
+      if (debug_infolevel>=2)
+	CERR << CLOCK() << " qr iteration number " << niter << " " << endl;
+      if (debug_infolevel>=5)
 	H.dbgprint();
-      }
       // check if one subdiagonal element is sufficiently small, if so 
       // we can increase n1 or decrease n2 or split
       giac_double ratio,coeff=1;
@@ -16809,6 +18414,28 @@ namespace giac {
       francis_iterate2(H,n1,n2,P,eps,compute_P,Haux,T,in_recursion,oper);
     } // end for loop on niter
     return false;
+  }
+
+  // Francis algo on H after balance
+  bool balanced_eigenvalues(matrix_double & H,vecteur & res,int maxiter,double eps,bool is_hessenberg,GIAC_CONTEXT){
+    vector<giac_double> d;
+    if (!balance_krylov(H,d,5,1e-8))
+      return false;
+    int n1=0,n2=int(H.size());
+    // compute d*H*d^-1: H_jk <- d_jj*H_jk/d_kk
+    for (int j=n1;j<n2;++j){
+      vector<giac_double> & Hj=H[j];
+      for (int k=n1;k<n2;++k){
+	Hj[k]=d[j]*Hj[k]/d[k];
+      }
+    }
+    // schur on d*H*d^-1
+    matrix_double P;
+    if (!francis_schur(H,n1,n2,P,maxiter,eps,is_hessenberg,false))
+      return false;
+    // Invariant if compute_P was true trn(P)*d*H*d^-1*P=orig matrix
+    // same eigenvalues, but different eigenvectors
+    return schur_eigenvalues(H,res,eps,contextptr);
   }
 
   // Francis algorithm on submatrix rows and columns n1..n2-1
@@ -17029,7 +18656,12 @@ namespace giac {
       CERR << CLOCK() << " iterate2 " << n1 << " " << n2 << endl;
     complex_double s=H[n2-1][n2-1]; 
     double ok=complex_abs(H[n2-1][n2-2])/complex_abs(H[n2-1][n2-1]);
-    if (!only_one && H.size()>=50){
+    if (
+#ifdef GIAC_HAS_STO_38
+	0 &&
+#endif
+	!only_one && H.size()>=50
+	){
       // search for a small coeff on the subdiagonal in the last elements
       int k=-1;
       if (ok<0.5)

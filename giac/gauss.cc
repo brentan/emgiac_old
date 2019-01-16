@@ -337,6 +337,7 @@ namespace giac {
       return gendimerr(contextptr);
     if (args._VECTptr->back().type==_VECT)
       return _plus(gauss(args._VECTptr->front(),*(args._VECTptr->back()._VECTptr),contextptr),contextptr);
+    return _randNorm(args,contextptr);
     return symb_gauss(args);
   }
   static const char _gauss_s []="gauss";
@@ -419,10 +420,31 @@ namespace giac {
     ck_parameter_t(contextptr);
     reim(M,Mx,My,contextptr);
     gen eqM=_quo(makesequence(subst(eq,makevecteur(x,y),makevecteur(Mx+x,My+t*x),false,contextptr),x),contextptr);
+    gen a,b;
+    if (!is_linear_wrt(eqM,x,a,b,contextptr))
+      return undef;
+    return M+(-b/a)*(1+cst_i*t);
     vecteur res=solve(eqM,x,0,contextptr); // x in terms of t
     if (res.size()!=1)
       return undef;
     return M+res[0]*(1+cst_i*t);
+  }
+
+  // return a,b,c,d,e such that the parametric equation of the conic
+  // is M+(1+i*t)*(d*t+e)/(a*t^2+b*t+c)
+  vecteur conique_ratparams(const gen & eq,const gen & M,GIAC_CONTEXT){
+    if (is_undef(M))
+      return vecteur(1,undef);
+    gen Mx,My,x(x__IDNT_e),y(y__IDNT_e),t(t__IDNT_e);
+    ck_parameter_x(contextptr);
+    ck_parameter_y(contextptr);
+    ck_parameter_t(contextptr);
+    reim(M,Mx,My,contextptr);
+    gen eqM=_quo(makesequence(subst(eq,makevecteur(x,y),makevecteur(Mx+x,My+t*x),false,contextptr),x),contextptr);
+    gen num,deno,a,b,c,d,e;
+    if (!is_linear_wrt(eqM,x,deno,num,contextptr) || !is_linear_wrt(num,t,d,e,contextptr) || !is_quadratic_wrt(deno,t,a,b,c,contextptr))
+      return vecteur(1,undef);
+    return makevecteur(at_ellipse,M,a,b,c,-d,-e);
   }
 
   bool conique_reduite(const gen & equation_conique,const gen & pointsurconique,const vecteur & nom_des_variables,gen & x0, gen & y0, vecteur & V0, vecteur &V1, gen & propre,gen & equation_reduite, vecteur & param_curves,gen & ratparam,bool numeric,GIAC_CONTEXT){
@@ -572,8 +594,8 @@ namespace giac {
 	gen delta;
 	delta=(a-c)*(a-c)+4*b*b;
 	delta=normalize_sqrt(sqrt(delta,contextptr),contextptr);
-	vp0=ratnormal((a+c+delta)/2);
-	vp1=ratnormal((a+c-delta)/2);
+	vp0=ratnormal((a+c+delta)/2,contextptr);
+	vp1=ratnormal((a+c-delta)/2,contextptr);
 	gen normv1(normalize_sqrt(sqrt(b*b+(vp0-a)*(vp0-a),contextptr),contextptr));
 	V0[0]=normal(b/normv1,contextptr); 
 	V0[1]=normal((vp0-a)/normv1,contextptr);
@@ -635,7 +657,7 @@ namespace giac {
 	    tmp=z0+zV0*tmp;
 	  }
 	  if (is_undef(ratparam))
-	    ratparam=z0+zV0*(vp0*(1-pow(t,2))+cst_i*vp1*2*t)/(1+pow(t,2));
+	    ratparam=z0+zV0*(vp0*(1-pow(t,2))+cst_i*vp1*plus_two*t)/(1+pow(t,2));
 
     bool rad = angle_radian(contextptr), deg = angle_degree(contextptr);
 	  param_curves.push_back(makevecteur(tmp,t,0, rad?cst_two_pi:(deg ? 360 : 400), rad?cst_two_pi/60:(deg?6:rdiv(20,3)),q,ratparam)); //grad
@@ -679,7 +701,7 @@ namespace giac {
 	  }
 	  bool noratparam=is_undef(ratparam);
 	  if (noratparam){
-	    ratparam=vp0*((sprodcoeff<0)?(t+1/t)/2:(t-1/t)/2)+cst_i*vp1*((sprodcoeff<0)?(t-1/t)/2:(t+1/t)/2);
+	    ratparam=vp0*gen((sprodcoeff<0)?(t+plus_one/t)/2:(t-plus_one/t)/2)+cst_i*vp1*((sprodcoeff<0)?(t-plus_one/t)/2:(t+plus_one/t)/2);
 	    ratparam=z0+zV0*ratparam;
 	  }
 	  param_curves.push_back(makevecteur(tmp,t,-3.14,3.14,0.0314,q,ratparam));

@@ -31,6 +31,10 @@ namespace giac {
   gen _scalar_product(const gen & args,GIAC_CONTEXT);
   gen _compare(const gen & args,GIAC_CONTEXT);
   gen _preval(const gen & args,GIAC_CONTEXT);
+  bool interpolable_resultant(const polynome & P,int d1,gen &coefft,bool extend,GIAC_CONTEXT);
+  bool interpolable(int d1,gen & coefft,bool extend,GIAC_CONTEXT);
+  // if possible return j, if j is too large, return a GF element
+  gen interpolate_xi(int j,const gen &coeff);
   vecteur divided_differences(const vecteur & x,const vecteur & y);
   gen _lagrange(const gen & args,GIAC_CONTEXT);
   gen _reorder(const gen & args,GIAC_CONTEXT);
@@ -52,6 +56,7 @@ namespace giac {
   extern const unary_function_ptr * const  at_lcoeff ;
   extern const unary_function_ptr * const  at_set_language ;
   extern const unary_function_ptr * const  at_float ;
+  extern const unary_function_ptr * const  at_complex ;
 
   gen _tcoeff(const gen & args,GIAC_CONTEXT);
   gen _sqrfree(const gen & args,GIAC_CONTEXT);
@@ -167,6 +172,7 @@ namespace giac {
   vecteur gen2continued_fraction(const gen & g,int n,GIAC_CONTEXT);
   gen float2rational(double d_orig,double eps,GIAC_CONTEXT);
 
+  extern const unary_function_ptr * const  at_ggbalt;
   extern const unary_function_ptr * const  at_preval;
   extern const unary_function_ptr * const  at_dotprod;
   extern const unary_function_ptr * const  at_mean;
@@ -174,6 +180,7 @@ namespace giac {
   extern const unary_function_ptr * const  at_stddev;
   extern const unary_function_ptr * const  at_variance;
   extern const unary_function_ptr * const  at_lagrange;
+  extern const unary_function_ptr * const  at_interp;
   extern const unary_function_ptr * const  at_reorder;
   extern const unary_function_ptr * const  at_adjoint_matrix;
   extern const unary_function_ptr * const  at_equal2diff;
@@ -188,6 +195,7 @@ namespace giac {
   extern const unary_function_ptr * const  at_frobenius_norm;
   extern const unary_function_ptr * const  at_linfnorm;
   extern const unary_function_ptr * const  at_matrixnorm;
+  extern const unary_function_ptr * const  at_insert;
 
   gen _sec(const gen & args,GIAC_CONTEXT);
   gen _asec(const gen & args,GIAC_CONTEXT);
@@ -200,6 +208,7 @@ namespace giac {
   extern const unary_function_ptr * const  at_changebase;
   extern const unary_function_ptr * const  at_epsilon2zero;
   extern const unary_function_ptr * const  at_suppress;
+  extern const unary_function_ptr * const  at_clear;
   extern const unary_function_ptr * const  at_froot;
   extern const unary_function_ptr * const  at_fcoeff;
   extern const unary_function_ptr * const  at_truncate;
@@ -238,7 +247,41 @@ namespace giac {
 
   bool has_undef_stringerr(const gen & g,std::string & err);
 
+  // step by step utilities
+  // poi=point of interest, tvi=table of variation
+  // asym=list of asymptotes, crit=critical points, inflex=inflection points
+  int step_func(const gen & f,const gen & x,gen & xmin,gen&xmax,vecteur & poig,vecteur & tvi,gen & periode,vecteur & asym,vecteur & parab,vecteur & crit,vecteur & inflex,bool printtvi,bool exactlegende,GIAC_CONTEXT,bool do_inflex=true);
+  extern const unary_function_ptr * const  at_tabvar;
+  int step_param(const gen & f,const gen & g,const gen & t,gen & tmin,gen&tmax,vecteur & poi,vecteur & tvi,bool printtvi,bool exactlegende,GIAC_CONTEXT);
+  // translate HTML Xcas for Firefox link to a giac list of commands
+  std::string link2giac(const std::string & s,GIAC_CONTEXT);
+  // parse %ab to char from html link, e.g. %20 to space
+  std::string html_filter(const std::string & s);
 
+  extern const unary_function_ptr * const  at_range ;
+  gen _range(const gen & args,GIAC_CONTEXT);
+
+  extern const unary_function_ptr * const  at_find ;
+  gen _find(const gen & args,GIAC_CONTEXT);
+  extern const unary_function_ptr * const  at_add_autosimplify;
+  extern const unary_function_ptr * const  at_python_list;
+  extern const unary_function_ptr * const  at_show;
+  extern const unary_function_ptr * const  at_diagrammebatons ;
+  extern const unary_function_ptr * const  at_pop;
+  extern const unary_function_ptr * const  at_coth ;
+  extern const unary_function_ptr * const  at_atan2 ;
+  extern const unary_function_ptr * const  at_get_pixel ;
+  extern const unary_function_ptr * const  at_set_pixel ;
+  extern const unary_function_ptr * const  at_strip ;
+  extern const unary_function_ptr * const  at_lower ;
+  extern const unary_function_ptr * const  at_upper ;
+  extern const unary_function_ptr * const  at_isinf ;
+  extern const unary_function_ptr * const  at_isfinite ;
+  extern const unary_function_ptr * const  at_isnan ;
+  extern const unary_function_ptr * const  at_draw_string ;
+  extern const unary_function_ptr * const  at_dtype ;
+
+  std::string fetch(const std::string & url);
 #ifndef NO_NAMESPACE_GIAC
 } // namespace giac
 #endif // NO_NAMESPACE_GIAC

@@ -29,7 +29,6 @@ using namespace std;
 #ifdef GIAC_HAS_STO_38
 //#undef clock
 //#undef clock_t
-#include "PrimePCH.h"
 #else
 #include <fstream>
 //#include <unistd.h> // For reading arguments from file
@@ -270,7 +269,7 @@ namespace giac {
     ptr2=tmp;
   }
 
-#ifdef __x86_64__
+#ifdef x86_64
 #define GIAC_RREF_UNROLL 4
 #else
 #define GIAC_RREF_UNROLL 4
@@ -329,7 +328,7 @@ namespace giac {
       if (i!=l) 
 	swap(m[i].tab,m[l].tab); // don't care about count...
       int start=mode==1?l+1:0, end=mode==2?l:L;
-#ifdef __x86_64__
+#ifdef x86_64
       ulonglong * pivend, * pivbeg;
       pivbeg = (ulonglong *) (m[l].tab+(c1/GIAC_RREF_UNROLL)*GIAC_RREF_UNROLL);
       pivend = (ulonglong *) (m[l].tab+C32);
@@ -340,7 +339,7 @@ namespace giac {
 	if (i==l || ( (m[i].tab[c1] >> c2) & 1)!=1) 
 	  continue;
 	// line combination l and i
-#ifdef __x86_64__
+#ifdef x86_64
 	ulonglong * curptr=(ulonglong *) (m[i].tab+(c1/GIAC_RREF_UNROLL)*GIAC_RREF_UNROLL);
 	for (ulonglong * pivptr=pivbeg;pivptr!=pivend;curptr += GIAC_RREF_UNROLL/2,pivptr += GIAC_RREF_UNROLL/2){
 	  // small optimization (loop unroll), assumes mult of 4(*32) columns
@@ -384,7 +383,7 @@ namespace giac {
 
 #ifdef USE_GMP_REPLACEMENTS
   int modulo(const mpz_t & a,unsigned b){
-    if (mpz_cmp_ui(a,0)==-1){
+    if (mpz_cmp_ui(a,0)<0){
       mpz_neg(*(mpz_t *)&a,a);
       int res=modulo(a,b);
       mpz_neg(*(mpz_t *)&a,a);
@@ -465,7 +464,7 @@ namespace giac {
 
 #if !defined(RTOS_THREADX) && !defined(BESTA_OS) && !defined NSPIRE
   // #define WITH_INVA
-#if defined(__APPLE__) || defined(__x86_64__)
+#if defined(__APPLE__) || defined(x86_64)
 #define LP_TAB_SIZE 15 // slice size will be 2^LP_TAB_SIZE
   //  #define LP_SMALL_PRIMES
 #define LP_TAB_TOGETHER
@@ -705,7 +704,7 @@ namespace giac {
     if (debug_infolevel>6)
       *logptr(contextptr) << CLOCK() << gettext(" reset") << endl;
     // assumes slice type is size 1 byte and multiple of 32
-#ifdef __x86_64__
+#ifdef x86_64
     ulonglong * ptr=(ulonglong *) &slice[0];
     ulonglong * ptrend=ptr+ss/8;
     ulonglong pattern=(logB <<24)|(logB<<16)|(logB<<8) | logB;
@@ -823,20 +822,20 @@ namespace giac {
       *logptr(contextptr) << cl << gettext("relations ") << endl;
     // now find relations
     st=slice; stend=slice+ss;
-#ifdef __x86_64__
+#ifdef x86_64
     ulonglong * st8=(ulonglong *) &slice[0],*st8end=st8+ss/8;
 #else
     unsigned * st4=(unsigned *) &slice[0],*st4end=st4+ss/4;
 #endif
     for (
-#ifdef __x86_64__
+#ifdef x86_64
 	 ;st8!=st8end;st8+=4
 #else
 	 ;st4<st4end;st4+=8
 #endif
 	 ){
       // compare slice[pos] to boundary
-#ifdef __x86_64__
+#ifdef x86_64
       if ( !( (*st8  | st8[1] | st8[2] | st8[3] ) & 0x8080808080808080) )
 	continue;
       int pos=int(((slicetype*)st8)-slice);
@@ -1029,7 +1028,7 @@ namespace giac {
 #else
 	  param2=maxadditional;
 #endif
-	  if (mpz_cmp_ui(z1,param2)==1){
+	  if (mpz_cmp_ui(z1,param2)>0){
 	    if (debug_infolevel>6)
 	      *logptr(contextptr) << gen(z1) << gettext(" Sieve large remainder:") << endl;
 	  }
@@ -1156,7 +1155,7 @@ namespace giac {
   }
 #endif
 
-#if (defined __i386__ || defined __x86_64__) && !defined PIC && !defined _I386_ && !defined __APPLE__ && !defined VISUALC && !defined(FIR_LINUX)
+#if (defined __i386__ || defined __x86_64__) && !defined PIC && !defined _I386_ && !defined __APPLE__ && !defined VISUALC && !defined(FIR_LINUX) && !defined(FIR_ANDROID)
   #define _I386_
 #endif
 
@@ -3493,8 +3492,18 @@ namespace giac {
       }
     }
     if (add_last && i==1229 && !is_one(n)){
-      u.push_back(n);
-      u.push_back(1);
+      // hack: check if n is a perfect square
+      double nf=evalf_double(n,1,contextptr)._DOUBLE_val;
+      nf=std::sqrt(nf);
+      gen n2=_round(nf,contextptr);
+      if (n2*n2==n){
+	u.push_back(n2);
+	u.push_back(2);	
+      }
+      else {
+	u.push_back(n);
+	u.push_back(1);
+      }
       n=1;
     }
     //v[0]=n;
@@ -4020,6 +4029,8 @@ namespace giac {
     gen n=args;
     if (n.type==_VECT && n._VECTptr->size()==1 && is_integer(n._VECTptr->front()))
       return ifactor(n,contextptr);
+    if (n.type==_VECT)
+      return apply(n,_ifactor,contextptr);
     if (!is_integral(n))
       return gensizeerr(contextptr);
     if (is_strictly_positive(-n,0))
@@ -4267,12 +4278,38 @@ namespace giac {
   static const char _propfrac_s []="propfrac";
   static define_unary_function_eval (__propfrac,&_propfrac,_propfrac_s);
   define_unary_function_ptr5( at_propfrac ,alias_at_propfrac,&__propfrac,0,true);
+  
+  void step_egcd(int a,int b,GIAC_CONTEXT){
+    gprintf("===============",vecteur(0),1,contextptr);
+    gprintf("Extended Euclide algorithm for a=%gen and b=%gen",makevecteur(a,b),1,contextptr);
+    gprintf("L%gen: 1*a+0*b=%gen",makevecteur(1,a),1,contextptr);
+    gprintf("L%gen: 0*a+1*b=%gen",makevecteur(2,b),1,contextptr);
+    int i=3;
+    int u0=1,v0=0,u1=0,v1=1,u2,v2;
+    for (;b;++i){
+      int q=a/b;
+      u2=u0-q*u1;
+      v2=v0-q*v1;
+      int r=a-q*b;
+      gprintf("iquo(%gen,%gen)=%gen",makevecteur(a,b,q),1,contextptr);
+      gprintf("L%gen=L%gen-%gen*L%gen: %gen*a+%gen*b=%gen",makevecteur(i,i-2,q,i-1,u2,v2,r),1,contextptr);
+      u0=u1;
+      u1=u2;
+      v0=v1;
+      v1=v2;
+      a=b;
+      b=r;
+    }
+    gprintf("Bezout identity %gen*a+%gen*b=%gen",makevecteur(u0,v0,a),1,contextptr);
+  }
 
-  gen iabcuv(const gen & a,const gen & b,const gen & c){
+  gen iabcuv(const gen & a,const gen & b,const gen & c,GIAC_CONTEXT){
     gen d=gcd(a,b);
     if (c%d!=0)  return gensizeerr(gettext("No solution in ring"));
     gen a1=a/d,b1=b/d,c1=c/d;
     gen u,v,w;
+    if (a1.type==_INT_ && b1.type==_INT_ && step_infolevel(contextptr))
+      step_egcd(a1.val,b1.val,contextptr);
     egcd(a1,b1,u,v,w);
     vecteur r(2);
     r[0]=smod(u*c1,b);
@@ -4284,7 +4321,7 @@ namespace giac {
     if ( (args.type!=_VECT) || (args._VECTptr->size()!=3) )
       return gensizeerr(contextptr);
     gen a=args[0],b=args[1],c=args[2];
-    return iabcuv(a,b,c);
+    return iabcuv(a,b,c,contextptr);
   }
   static const char _iabcuv_s []="iabcuv";
   static define_unary_function_eval (__iabcuv,&_iabcuv,_iabcuv_s);

@@ -1,4 +1,7 @@
 #! /bin/bash
+#
+# Compiling with pari support requires adding #define HAVE_LIBPARI in giac/config.h
+#
 #cd libtommath
 #make
 #make -f Makefile.llvm

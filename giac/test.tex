@@ -87,13 +87,15 @@ for this file and check your installation by compiling it\\
 \section{Commands}
 You must first enter the command \verb|\input{giac.tex}| in the
 preamble of your \LaTeX\ source file
-and add one of the commands \verb|\begin{giacjs}|\index{giacjs} or 
+and add one of the commands \verb|\begin{giacjshere}|\index{giacjshere}
+\verb|\begin{giacjs}|\index{giacjs} or 
 \verb|\begin{giacjsonline}|\index{giacjsonline}
 just after \verb|\begin{document}|: the difference is that the javascript
 kernel \verb|giac.js|
-will either be found on the hard disk (assuming that Giac/Xcas is
-installed on the target computer) or downloaded from Internet.
-You must also add the command \verb|\end{giacjs}| or
+will either be found from the same place where the file was downloaded
+or on the hard disk (assuming that Giac/Xcas is
+installed on the target computer) or downloaded from Giac Internet website.
+You must also add the corresponding  command \verb|\end{giacjs}| or
 \verb|\end{giacjsonline}| just before \verb|\end{document}|.
 You should add the command \verb|\tableofcontents|\index{table} then
 \verb|\printindex|\index{index} just after
@@ -139,6 +141,9 @@ with optional style argument\\
 \verb|\giaccmd[style="width:200px;height:20px;font-size:large"]{factor}{x^4-1}|\\
 \giaccmd[style="width:200px;height:20px;font-size:large"]{factor}{x^4-1}
 
+{\bf Warning}, you must replace \verb|<| by \verb|&lt;| and \verb|>|
+by \verb|&gt;|, otherwise they will be interpreted as HTML delimiters.
+
 For a program\index{giacprog} or multi-line commands\\
 \verb|\begin{giacprog}...\end{giacprog}|, example homemade absolute value\\
 \begin{giacprog}
@@ -148,6 +153,8 @@ f(x):={
   return y;
 }
 \end{giacprog}
+Inside this environment, you can keep \verb|<| and \verb|>|.
+Do not use this environment in another environment (like itemize or enumerate).
 
 A link\index{giaclink} to Xcas offline with a few commands\\
 \verb|\giaclink{http://www-fourier.ujf-grenoble.fr/\%7eparisse/xcasen.html#+factor(x^4-1)&+a:=idn(3)&}|\\

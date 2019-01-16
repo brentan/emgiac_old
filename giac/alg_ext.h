@@ -20,6 +20,7 @@
 #include "first.h"
 
 #include <string>
+#include <map>
 #include "global.h"
 
 #ifndef NO_NAMESPACE_GIAC
@@ -40,7 +41,7 @@ namespace giac {
   bool islesscomplex(const gen & a,const gen & b);
   bool is_sqrt(const gen & a,gen & arg);
   gen select_root(const vecteur & v,GIAC_CONTEXT);
-  gen in_select_root(const vecteur & a,bool reel,GIAC_CONTEXT);
+  gen in_select_root(const vecteur & a,bool reel,GIAC_CONTEXT,double eps=1e-14);
   bool is_known_rootof(const vecteur & v,gen & symroot,GIAC_CONTEXT);
   gen horner_rootof(const vecteur & p,const gen & g,GIAC_CONTEXT);
   bool has_rootof_value(const gen & Pmin,gen & value,GIAC_CONTEXT);
@@ -91,6 +92,10 @@ namespace giac {
   // minmax=-1 min 0 both 1 max
   gen fminmax(const gen & g,int minmax,GIAC_CONTEXT);
   bool find_good_eval(const polynome & F,polynome & Fb,vecteur & b);
+  typedef std::map<gen,gen,comparegen > rootmap;
+  rootmap & symbolic_rootof_list();
+  rootmap & proot_list();
+  rootmap & galoisconj_list();
 
 #ifndef NO_NAMESPACE_GIAC
 } // namespace giac

@@ -218,6 +218,12 @@ namespace giac {
     return true;
   }
 
+  void add_print_INT_(string & s,int i){
+    char c[256];
+    my_sprintf(c,"%d",i);
+    s += c;
+  }
+
   string print_INT_(int i){
     char c[256];
     my_sprintf(c,"%d",i);
@@ -460,7 +466,7 @@ namespace giac {
     if (((i1.taille % 2))==0){
       if (i1.riptr==i2.riptr)
 	return true;
-#if 0 // def __x86_64__
+#if 0 // def x86_64
       const index_t & i1t=i1.riptr->i;
       const index_t & i2t=i2.riptr->i;
       int n=i1t.size();
@@ -537,7 +543,7 @@ namespace giac {
 #endif // DEBUG_SUPPORT
     index_m res(s);
     deg_t * it=(deg_t*)&*res.begin();
-#if 0 // def __x86_64__
+#if 0 // def x86_64
     ulonglong * target=(ulonglong *) &*it;
     const ulonglong * ptr1=(const ulonglong *) &*ita,* ptr1end=ptr1+s/(sizeof(ulonglong)/sizeof(deg_t));
     const ulonglong * ptr2=(const ulonglong *) &*itb;
@@ -851,7 +857,7 @@ namespace giac {
 
   int nvar_total_degree(const index_m & v1,int n){
     index_t::const_iterator it1=v1.begin(),it1l=it1+n;
-    int d1,d2;
+    int d1;
     for (d1=0;it1<it1l;++it1){
       d1 += *it1;
     }

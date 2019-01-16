@@ -315,6 +315,8 @@ namespace giac {
   extern const unary_function_ptr * const  at_decrement;
   extern const unary_function_ptr * const  at_multcrement;
   extern const unary_function_ptr * const  at_divcrement;
+  extern const unary_function_ptr * const  at_iquosto;
+  extern const unary_function_ptr * const  at_iremsto;
   gen sto(const gen & a,const gen & b,GIAC_CONTEXT);
   gen sto(const gen & a,const gen & b,bool in_place,GIAC_CONTEXT);  
   gen _sto(const gen & g,const context * contextptr);
@@ -417,6 +419,12 @@ namespace giac {
   gen _prod(const gen & args,GIAC_CONTEXT);
   extern const unary_function_ptr * const  at_prod ;
 
+  std::string printasand(const gen & feuille,const char * sommetstr,GIAC_CONTEXT);
+  std::string texprintasand(const gen & g,const char * s,GIAC_CONTEXT);
+
+  std::string printasor(const gen & feuille,const char * sommetstr,GIAC_CONTEXT);
+  std::string texprintasor(const gen & g,const char * s,GIAC_CONTEXT);
+
   symbolic symb_pow(const gen & a,const gen & b);
   std::string cprintaspow(const gen & feuille,const char * sommetstr_orig,GIAC_CONTEXT);
 #ifndef GIAC_HAS_STO_38
@@ -515,7 +523,7 @@ namespace giac {
   gen _Heaviside(const gen & args,GIAC_CONTEXT);
   gen _Dirac(const gen & args,GIAC_CONTEXT);
 
-#if defined(GIAC_GENERIC_CONSTANTS) // || (defined(VISUALC) && !defined(RTOS_THREADX)) || defined(__x86_64__)
+#if defined(GIAC_GENERIC_CONSTANTS) // || (defined(VISUALC) && !defined(RTOS_THREADX)) || defined(x86_64)
   extern const gen zero;
   extern const gen plus_one;
   extern const gen minus_one;
@@ -549,7 +557,7 @@ namespace giac {
   extern const gen & rad2grad_g;
   extern const gen & grad2rad_g;
 
-#if defined(GIAC_GENERIC_CONSTANTS) // || (defined(VISUALC) && !defined(RTOS_THREADX)) || defined(__x86_64__)
+#if defined(GIAC_GENERIC_CONSTANTS) // || (defined(VISUALC) && !defined(RTOS_THREADX)) || defined(x86_64)
   extern gen cst_two_pi;
   extern gen cst_pi_over_2;
   extern gen plus_inf;
@@ -906,6 +914,12 @@ namespace giac {
   extern const alias_unary_function_eval __sto;
 #else
   extern const unary_function_eval __sto;
+#endif
+
+  extern const unary_function_ptr * const  at_step_infolevel;
+#ifndef VISUALC
+  gen * normal_sin_pi_12_ptr_();
+  gen * normal_cos_pi_12_ptr_();
 #endif
 
 #ifndef NO_NAMESPACE_GIAC

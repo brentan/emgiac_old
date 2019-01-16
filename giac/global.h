@@ -22,16 +22,19 @@
 #include "config.h"
 #endif
 #include "first.h"
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
 #define GIAC_CONTEXT const context * contextptr
 #define GIAC_CONTEXT0 const context * contextptr=0
 
 #if !defined(HAVE_NO_SYS_TIMES_H) && !defined(BESTA_OS) && !defined(__MINGW_H) && !defined(NSPIRE)
 #include <sys/times.h>
 #else
-#if defined VISUALC || defined BESTA_OS 
+#if defined VISUALC || defined BESTA_OS || defined FREERTOS
 typedef long pid_t;
 #else // VISUALC
-#if !defined(__MINGW_H) && !defined(NSPIRE) && !defined(__ANDROID__) && !defined(NSPIRE_NEWLIB) && !defined(OSX) && !defined(IOS) && !defined(FIR_LINUX)
+#if !defined(__MINGW_H) && !defined(NSPIRE) && !defined(__ANDROID__) && !defined(NSPIRE_NEWLIB) && !defined(OSX) && !defined(IOS) && !defined(OSXIOS) && !defined(FIR_LINUX)
 #include "wince_replacements.h"
 #endif
 #ifdef __MINGW_H
@@ -94,7 +97,7 @@ inline double giac_log(double d){
 
 #include <stdexcept>
 #include "help.h"
-#if !defined(GIAC_HAS_STO_38) // && !defined(ConnectivityKit) && !defined(BESTA_OS)
+#if 1 // !defined(GIAC_HAS_STO_38) // && !defined(ConnectivityKit) && !defined(BESTA_OS)
 #include "tinymt32.h"
 #endif
 
@@ -130,6 +133,8 @@ typedef unsigned short UTF16; /* at least 16 bits */
 typedef unsigned char UTF8; /* typically 8 bits */
 typedef unsigned char Boolean; /* 0 or 1 */
 #endif
+
+  int system_no_deprecation(const char *command);
 
 /* Some fundamental constants */
 #define UNI_REPLACEMENT_CHAR (UTF32)0x0000FFFD
@@ -177,8 +182,10 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
   unsigned int utf8length(const wchar_t * wline);
 
 
-#if defined VISUALC || defined BESTA_OS
+#if defined VISUALC || defined BESTA_OS || defined FREERTOS
+#ifndef R_OK
   extern int R_OK;
+#endif
   int access(const char * ch,int mode);
   void usleep(int );
 #endif
@@ -206,7 +213,6 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
     smallint=256, // max small int to make modular oply operations with int
     max_series_expansion_order=64, // max auto order for series expansion
     max_texpand_expansion_order=64,
-    series_default_order=20,
     max_numexp=100
   };
   extern const char cas_suffixe[];
@@ -214,6 +220,7 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
   extern int history_begin_level;
 
   extern int debug_infolevel; // ==0 normal value
+  extern int printprog; // ==0 normal value, used to force program print at parse
   // >0 log some informations
   // <0 for internal use
   // ==-1:
@@ -228,10 +235,10 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
   extern bool CAN_USE_LAPACK;
   extern bool simplify_sincosexp_pi;
 #ifndef RTOS_THREADX
-#ifndef BESTA_OS
+  //#ifndef BESTA_OS
   extern int CALL_LAPACK; // lapack is used if dim of matrix is >= CALL_LAPACK
   // can be changed using shell variable GIAC_LAPACK in icas
-#endif
+  //#endif
 #endif
   extern int FACTORIAL_SIZE_LIMIT;
   extern int GAMMA_LIMIT;
@@ -291,7 +298,17 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
 #ifdef TIMEOUT
   void control_c();
 #else
+#if 0
 #define control_c() if (ctrl_c) { interrupted = true; CERR << "Throwing exception for user interruption." << std::endl; throw(std::runtime_error("Stopped by user interruption.")); }
+#else
+#define control_c() if (ctrl_c) { \
+interrupted = true; \
+std::string source_path = __FILE__; \
+std::string source_filename = source_path.substr(source_path.find_last_of("/\\") + 1); \
+CERR << "Throwing exception for user interruption (" << source_filename << ":" << __LINE__ << ")" << std::endl; \
+throw(std::runtime_error("Stopped by user interruption.")); \
+}
+#endif
 #endif // TIMEOUT
 #endif // !NSPIRE, !FIR
 
@@ -497,6 +514,7 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
     int _xcas_mode_;
     int _calc_mode_;
     int _decimal_digits_;
+    int _minchar_for_quote_as_string_;
     int _scientific_format_;
     int _integer_format_;
     int _latex_format_;
@@ -512,6 +530,7 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
     bool _eval_equaltosto_;
     bool _integer_mode_;
     bool _complex_mode_;
+    bool _escape_real_;
     bool _complex_variables_;
     bool _increasing_power_;
     bool _approx_mode_;
@@ -527,9 +546,12 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
     bool _try_parse_i_;
     bool _specialtexprint_double_;
     bool _atan_tan_no_floor_;
+    bool _keep_acosh_asinh_;
+    bool _keep_algext_;
+    int _python_compat_;
     int _angle_mode_;
     int _bounded_function_no_;
-    int _series_flags_; // bit1= full simplify, bit2=1 for truncation, bit3=atan does not rewrite sin/cos to tan
+    int _series_flags_; // 1= full simplify, 2=1 for truncation, bit3=atan does not rewrite sin/cos to tan, bit4=no back conversion, bit5=write<<1,1>> with series_variable_name, bit 6=write O() instead of order_size, bit7= 1 diff in subst does not variable substitution
     int _step_infolevel_; 
     int _default_color_;
     double _epsilon_;
@@ -552,7 +574,7 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
     parser_lexer _pl;
     int _prog_eval_level_val ;
     int _eval_level;
-#if defined(GIAC_HAS_STO_38) || defined(ConnectivityKit)
+#if 0 // defined(GIAC_HAS_STO_38) || defined(ConnectivityKit)
     unsigned int _rand_seed;
 #else
     tinymt32_t _rand_seed;
@@ -562,18 +584,22 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
     pthread_mutex_t * _mutexptr,* _mutex_eval_status_ptr ;
 #endif
     int _language_;
-    std::vector<const char *> _last_evaled_function_name_;
-    vecteur _last_evaled_arg_;
+    const char * _last_evaled_function_name_;
+    const gen * _last_evaled_argptr_;
     int _max_sum_sqrt_;
     int _max_sum_add_;
     logo_turtle _turtle_;
     std::string _autoname_;
     std::string _format_double_;
     std::string _autosimplify_;
+    std::string _lastprog_name_;
+    std::string _currently_scanned_;
     std::vector<logo_turtle> _turtle_stack_; 
     double _total_time_;
     void * _evaled_table_;
     void * _extra_ptr_;
+    char _series_variable_name_;
+    unsigned short _series_default_order_;
     global();  
     ~global();
     global & operator = (const global & g);
@@ -594,7 +620,7 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
     global * globalptr; 
     const context * parent;
     vecteur * quoted_global_vars, * rootofs;
-    vecteur * history_in_ptr, * history_out_ptr;
+    vecteur * history_in_ptr, * history_out_ptr,*history_plot_ptr;
     context();
     context(const context & c);
 #ifndef RTOS_THREADX
@@ -619,8 +645,9 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
   extern std::map<std::string,context *> * context_names ;
 #endif
 
-  std::vector<const char *> & last_evaled_function_name(GIAC_CONTEXT);
-  vecteur & last_evaled_arg(GIAC_CONTEXT);
+  const char * & last_evaled_function_name(GIAC_CONTEXT);
+  std::string & currently_scanned(GIAC_CONTEXT);
+  const gen * & last_evaled_argptr(GIAC_CONTEXT);
 
   bool make_thread(const giac::gen & g,int level,const giac_callback & f,void * f_param,const context * contextptr);
 
@@ -630,6 +657,7 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
   std::string autosimplify(GIAC_CONTEXT);
   std::string autosimplify(const std::string & s,GIAC_CONTEXT);
 
+  bool csv_guess(const char * data,int count,char & sep,char & nl,char & decsep);
   std::string & format_double(GIAC_CONTEXT);
 
   int check_thread(context * contextptr);
@@ -641,6 +669,11 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
   int & xcas_mode(GIAC_CONTEXT);
   void xcas_mode(int b,GIAC_CONTEXT);
 
+  int & python_compat(GIAC_CONTEXT);
+  void python_compat(int b,GIAC_CONTEXT);
+  int array_start(GIAC_CONTEXT);
+  extern bool python_color; // global variable for syntax highlighting
+
   int & calc_mode(GIAC_CONTEXT);
   int abs_calc_mode(GIAC_CONTEXT);
   void calc_mode(int b,GIAC_CONTEXT);
@@ -650,6 +683,9 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
 
   int & decimal_digits(GIAC_CONTEXT);
   void decimal_digits(int b,GIAC_CONTEXT);
+
+  int & minchar_for_quote_as_string(GIAC_CONTEXT);
+  void minchar_for_quote_as_string(int b,GIAC_CONTEXT);
 
   int & integer_format(GIAC_CONTEXT);
   void integer_format(int b,GIAC_CONTEXT);
@@ -669,6 +705,9 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
   bool & complex_mode(GIAC_CONTEXT);
   void complex_mode(bool b,GIAC_CONTEXT);
 
+  bool & escape_real(GIAC_CONTEXT); // default=true, if false sqrt(-1) errorsglo
+  void escape_real(bool b,GIAC_CONTEXT);
+
   bool & try_parse_i(GIAC_CONTEXT);
   void try_parse_i(bool b,GIAC_CONTEXT);
 
@@ -677,6 +716,12 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
 
   bool & atan_tan_no_floor(GIAC_CONTEXT);
   void atan_tan_no_floor(bool b,GIAC_CONTEXT);
+
+  bool & keep_acosh_asinh(GIAC_CONTEXT);
+  void keep_acosh_asinh(bool b,GIAC_CONTEXT);
+
+  bool & keep_algext(GIAC_CONTEXT);
+  void keep_algext(bool b,GIAC_CONTEXT);
 
   bool & do_lnabs(GIAC_CONTEXT);
   void do_lnabs(bool b,GIAC_CONTEXT);
@@ -696,8 +741,15 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
   bool & approx_mode(GIAC_CONTEXT);
   void approx_mode(bool b,GIAC_CONTEXT);
 
+  char & series_variable_name(GIAC_CONTEXT);
+  void series_variable_name(char b,GIAC_CONTEXT);
+
+  unsigned short & series_default_order(GIAC_CONTEXT);
+  void series_default_order(unsigned short b,GIAC_CONTEXT);
+
   vecteur & history_in(GIAC_CONTEXT);
   vecteur & history_out(GIAC_CONTEXT);
+  vecteur & history_plot(GIAC_CONTEXT);
 
   // True if we factor 2nd order polynomials using sqrt
   bool & withsqrt(GIAC_CONTEXT);
@@ -714,6 +766,9 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
 
   bool & rpn_mode(GIAC_CONTEXT);
   void rpn_mode(bool b,GIAC_CONTEXT);
+
+  std::string lastprog_name(GIAC_CONTEXT);
+  std::string lastprog_name(const std::string & b,GIAC_CONTEXT);
 
   logo_turtle & turtle(GIAC_CONTEXT);
   std::vector<logo_turtle> & turtle_stack(GIAC_CONTEXT);
@@ -768,6 +823,7 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
   double & epsilon(GIAC_CONTEXT);
   void epsilon(double c,GIAC_CONTEXT);
   double & proba_epsilon(GIAC_CONTEXT);
+  extern double min_proba_time; // in seconds, minimal time for proba early termination
 
 #ifdef NSPIRE
   nio::console * logptr(GIAC_CONTEXT);
@@ -781,7 +837,7 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
   // void eval_level(int b,GIAC_CONTEXT);
   thread_param * thread_param_ptr(const context * contextptr);
 
-#if defined(GIAC_HAS_STO_38) || defined(ConnectivityKit)
+#if 0 // defined(GIAC_HAS_STO_38) || defined(ConnectivityKit)
   unsigned int & rand_seed(GIAC_CONTEXT);
 #else
   tinymt32_t * rand_seed(GIAC_CONTEXT);
@@ -884,6 +940,10 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
   int equalposcomp(const std::vector<int> v,int i);
   int equalposcomp(const std::vector<short int> v,int i);
   int equalposcomp(int tab[],int f);
+  // replace c1 by c2 in s
+  std::string replace(const std::string & s,char c1,char c2);
+  // attempt to convert Python-like programming structures to Xcas
+  std::string python2xcas(const std::string & s_orig,GIAC_CONTEXT);
   std::string find_doc_prefix(int i);
   std::string find_lang_prefix(int i);
   int string2lang(const std::string & s); // convert "fr" to 1, "es" to 3 etc.
@@ -957,8 +1017,12 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
 
   extern void (*my_gprintf)(unsigned special,const std::string & format,const vecteur & v,GIAC_CONTEXT);
   void gprintf(const std::string & format,const vecteur & v,GIAC_CONTEXT);
+  void gprintf(const std::string & format,const vecteur & v,int step_info,GIAC_CONTEXT);
   void gprintf(unsigned special,const std::string & format,const vecteur & v,GIAC_CONTEXT);
+  void gprintf(unsigned special,const std::string & format,const vecteur & v,int step_info,GIAC_CONTEXT);
   gen make_symbolic(const gen & op,const gen & args);
+  // optional, call it just before exiting
+  int release_globals();
   
 #ifndef NO_NAMESPACE_GIAC
 } // namespace giac

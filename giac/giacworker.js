@@ -2,6 +2,7 @@
 // 3d plot additionnally refer to document
 var Module = {
     worker:true,
+    busy:0,
     preRun: [],
     postRun: [],
     print: function(text) {
@@ -19,7 +20,9 @@ console.log('giac.js loaded');
 
 onmessage = function(e){
     //console.log(e.data);
+    if (e.data[0]=='debug'){console.log('worker debug'); Module.busy=1; return;}
     if (e.data[0]!='eval'){ console.log(e.data[0]); return;}
+    Module.busy=1; 
     var docaseval = Module.cwrap('caseval',  'string', ['string']);
     var value=e.data[1];
     var n=value.search(';');
@@ -29,5 +32,6 @@ onmessage = function(e){
     var s,err;
     try {s=docaseval(value); } catch(err){ console.log(err);}
     //console.log('worker evaled '+s);
+    Module.busy=0;
     postMessage(['cas',s]);
 }
