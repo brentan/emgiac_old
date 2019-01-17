@@ -29,6 +29,7 @@ namespace giac {
   extern bool user_screen; 
   extern int user_screen_io_x,user_screen_io_y,user_screen_fontsize;
   extern const int rand_max2; // replace RAND_MAX if giac_rand(contextptr) is used
+  extern bool warn_equal_in_prog;
 
   struct user_function;
   struct module_info {
@@ -42,6 +43,7 @@ namespace giac {
   extern modules_tab giac_modules_tab;
 #endif
 
+  void alert(const std::string & s,GIAC_CONTEXT);
   gen check_secure(); // in secure mode error
   void set_decimal_digits(int n,GIAC_CONTEXT);
   int digits2bits(int n);
@@ -56,7 +58,8 @@ namespace giac {
   int bind(const vecteur & vals,const vecteur & vars,context * & contextptr);
   bool leave(int protect,vecteur & vars,context * & contextptr);
 
-  void increment_instruction(const vecteur & v,GIAC_CONTEXT);
+  void increment_instruction(const vecteur & v,debug_struct * dbgptr);
+  void increment_instruction(const gen & arg,debug_struct * dbgptr);
   void increment_instruction(const gen & arg,GIAC_CONTEXT);
   void debug_print(const vecteur & arg,std::vector<std::string> & v,GIAC_CONTEXT);
   void debug_print(const gen & e,std::vector<std::string>  & v,GIAC_CONTEXT);
@@ -156,6 +159,7 @@ namespace giac {
 
   gen _rand(const gen & args,GIAC_CONTEXT);
   extern const unary_function_ptr * const  at_rand;  
+  extern const unary_function_ptr * const  at_random;  
   gen rand_interval(const vecteur & v,bool entier,GIAC_CONTEXT);
 
   gen _srand(const gen & args,GIAC_CONTEXT);
@@ -302,6 +306,9 @@ namespace giac {
   gen _complex_mode(const gen & args,GIAC_CONTEXT);
   extern const unary_function_ptr * const  at_complex_mode;
 
+  gen _keep_algext(const gen & args,GIAC_CONTEXT);
+  extern const unary_function_ptr * const  at_keep_algext;
+
   gen _angle_radian(const gen & args,GIAC_CONTEXT);
   extern const unary_function_ptr * const  at_angle_radian;
 
@@ -357,6 +364,7 @@ namespace giac {
 
   gen _sort(const gen & args,GIAC_CONTEXT);
   extern const unary_function_ptr * const  at_sort;
+  extern const unary_function_ptr * const  at_sorted;
 
   gen _ans(const gen & args,GIAC_CONTEXT);
   extern const unary_function_ptr * const  at_ans;
@@ -408,6 +416,7 @@ namespace giac {
   extern const unary_function_ptr * const  at_tableseq;
 
   gen protecteval(const gen & g,int level,GIAC_CONTEXT);
+  gen protectevalf(const gen & g,int level,GIAC_CONTEXT);
 
   gen _nodisp(const gen & args);
   extern const unary_function_ptr * const  at_nodisp;
@@ -1058,6 +1067,7 @@ namespace giac {
   gen when2piecewise(const gen & g,GIAC_CONTEXT);
   gen when2sign(const gen & g,GIAC_CONTEXT);
   gen piecewise2when(const gen & g,GIAC_CONTEXT);
+  gen ifte2when(const gen & g,GIAC_CONTEXT);
   gen _geo2d(const gen & g,GIAC_CONTEXT);
   gen symb_double_deux_points(const gen & args);
   std::string printasinnerbloc(const gen & feuille,GIAC_CONTEXT);
@@ -1084,6 +1094,26 @@ namespace giac {
   bool is_array_index(const gen & m,const gen & i,GIAC_CONTEXT);
 
   gen _autosimplify(const gen & g,GIAC_CONTEXT);
+  extern const unary_function_ptr * const  at_struct_dot ;
+  gen _struct_dot(const gen & g,GIAC_CONTEXT);
+  // replace := by = in builtin commands (for Python compatible mode)
+  gen denest_sto(const gen & g);
+
+  extern const unary_function_ptr * const  at_index ;
+  gen _index(const gen & args,GIAC_CONTEXT);
+  extern const unary_function_ptr * const  at_extend ;
+  extern const unary_function_ptr * const  at_python_compat ;
+  extern const unary_function_ptr * const  at_randint ;
+  extern const unary_function_ptr * const  at_choice ;
+  extern const unary_function_ptr * const  at_randrange ;
+  extern const unary_function_ptr * const  at_giac_assert ;
+  extern const unary_function_ptr * const  at_heapify ;
+  extern const unary_function_ptr * const  at_heappop ;
+  extern const unary_function_ptr * const  at_heappush ;
+  extern const unary_function_ptr * const  at_giac_bool ;
+  extern const unary_function_ptr * const  at_shuffle ;
+  extern const unary_function_ptr * const  at_giac_bin ;
+  extern const unary_function_ptr * const  at_giac_hex ;
 
 #ifndef NO_NAMESPACE_GIAC
 } // namespace giac

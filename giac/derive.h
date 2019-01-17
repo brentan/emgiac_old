@@ -29,15 +29,19 @@ namespace giac {
   gen derive(const gen & e,const gen & vars,GIAC_CONTEXT);
   gen derive(const gen & e,const gen & vars,const gen & nderiv,GIAC_CONTEXT);
   gen _derive(const gen & args,GIAC_CONTEXT);
+  gen _diff(const gen & args,GIAC_CONTEXT);
   extern const unary_function_ptr * const  at_derive ;
   extern const unary_function_ptr * const  at_grad ;
   extern const unary_function_ptr * const  at_function_diff ;
   extern const unary_function_ptr * const  at_implicit_diff ;
+  extern const unary_function_ptr * const  at_domain ;
   symbolic symb_derive(const gen & a,const gen & b);
   gen symb_derive(const gen & a,const gen & b,const gen &c);
   gen _function_diff(const gen & g,GIAC_CONTEXT);
   bool depend(const gen & g,const identificateur & i);
   gen _grad(const gen & args,GIAC_CONTEXT);
+  gen domain(const gen & f,const gen & x,int mode,GIAC_CONTEXT);
+  gen critical(const gen & g,bool extrema_only,GIAC_CONTEXT);
 
 #ifndef NO_NAMESPACE_GIAC
 } // namespace giac

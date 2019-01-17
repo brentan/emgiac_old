@@ -793,6 +793,8 @@ namespace giac {
       tmp.subtype=_GLOBAL__EVAL;
       break;
     case _VECT:
+      if (lidnt(tmp).empty())
+	return g;
       tmp=apply(tmp,globalize);
       break;
     case _SYMB:
@@ -1076,23 +1078,33 @@ namespace giac {
     // if (!ref_count) return false; // does not work for cst ref identificateur
     if (contextptr){ // Look for local variables...
       // If 38 is there, let it look at variable priorities, but ONLY looking at local for the moment! We do not want to look as globals as they might need to be quoted...
-      if (storcl_38!=NULL && !No38Lookup && abs_calc_mode(contextptr)==38 && storcl_38(evaled,NULL,id_name,undef,false,contextptr, NULL, true)) return true;
+      if (storcl_38!=NULL && !No38Lookup && abs_calc_mode(contextptr)==38 && storcl_38(evaled,NULL,id_name,undef,false,contextptr, NULL, true)) 
+	return true;
       const context * cur=contextptr;
+      int pythoncompat=python_compat(contextptr)?2:0;
       for (;cur->previous;cur=cur->previous){
-      	sym_tab::const_iterator it=cur->tabptr->find(id_name);
-      	if (it!=cur->tabptr->end()){
-      	  if (!it->second.in_eval(level,evaled,contextptr->globalcontextptr)) {
-            evaled=it->second;
-          }
-      	  return true;
-      	}
+	sym_tab::const_iterator it=cur->tabptr->find(id_name);
+	if (it!=cur->tabptr->end()){
+	  if (!level || !it->second.in_eval(level,evaled,contextptr->globalcontextptr))
+	    evaled=it->second;
+	  return true;
+	}
+	if (pythoncompat){
+	  --pythoncompat;
+	  if (!pythoncompat){
+	    while (cur->previous) 
+	      cur=cur->previous;
+	    break;
+	  }
+	}
       }
       // now at global level
       // check for quoted
       if (cur->quoted_global_vars && !cur->quoted_global_vars->empty() && equalposcomp(*cur->quoted_global_vars,orig)) 
 	      return false;
       // If 38 is there, look again, but now it is allowed to look at local and globals!
-      if (storcl_38!=NULL && !No38Lookup && abs_calc_mode(contextptr)==38 && storcl_38(evaled,NULL,id_name,undef,false,contextptr, NULL, false)) return true;
+      if (storcl_38!=NULL && !No38Lookup && abs_calc_mode(contextptr)==38 && storcl_38(evaled,NULL,id_name,undef,false,contextptr, NULL, false))
+	return true;
       // printsymtab(cur->tabptr);
       sym_tab::const_iterator it=cur->tabptr->find(id_name);
       if (it==cur->tabptr->end()){
@@ -1208,11 +1220,11 @@ namespace giac {
     // index != sqrt(-1) wich has different notations
     if (xcas_mode(contextptr)==0){
       if (strcmp(id_name,"i")==0)
-	return "i_i";
+	return "i_i_";
     }
     else {
       if (strcmp(id_name,"I")==0)
-	return "i_i";
+	return "i_i_";
     }
     /*
     if (!localvalue->empty())

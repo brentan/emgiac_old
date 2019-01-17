@@ -58,11 +58,12 @@ namespace giac {
     gen x; // the name of the variable for construction
     gen a; // value as a vector polynomial or undef (whole field)
     virtual gen_user * memory_alloc() const { 
-      galois_field * ptr= new galois_field(*this);
+      galois_field * ptr= new galois_field(*this,false);
+      // if (a != smod(a,p) && smod(a,p))  CERR << "not reduced" << endl;
       return ptr; 
     }
-    galois_field(const galois_field & q);
-    galois_field(const gen p_,const gen & P_,const gen & x_,const gen & a_);
+    galois_field(const galois_field & q,bool doreduce=true);
+    galois_field(const gen p_,const gen & P_,const gen & x_,const gen & a_,bool doreduce=true);
     galois_field(const gen & g,bool primitive,GIAC_CONTEXT);
     void reduce(); // reduce a
     virtual gen operator + (const gen & g) const;
@@ -99,8 +100,20 @@ namespace giac {
   // Is the polynomial v irreducible and primitive modulo p?
   // If it is only irreducible, returns 2 and sets vmin
   int is_irreducible_primitive(const vecteur & v,const gen & p,vecteur & vmin,bool primitive,GIAC_CONTEXT);
-  vecteur find_irreducible_primitive(int p,int m,bool primitive,GIAC_CONTEXT);
+  vecteur find_irreducible_primitive(const gen & p,int m,bool primitive,GIAC_CONTEXT);
   gen _galois_field(const gen & args,GIAC_CONTEXT);
+
+  struct gen_context_t {
+    gen g;
+    context * ptr ;
+  };
+  // All Galois field in a map[p^m]=generator of GF(p,m)
+  // the generator might be replaced by some polynomial of a GF(p,m*m2)
+  // if a binary operation on two elements of different GF(p,.) happens
+  typedef std::map<gen,gen_context_t,comparegen > gfmap; 
+  gfmap & gf_list();
+  int gfsize(const gen & P);
+  bool has_gf_coeff(const gen & e,gen & p, gen & pmin);
 
 #endif // NO_RTTI
 

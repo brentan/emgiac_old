@@ -32,6 +32,8 @@ namespace giac {
   gen _sizes(const gen & args,GIAC_CONTEXT);
   gen _permuorder(const gen & args,GIAC_CONTEXT);
   gen _randperm(const gen & args,GIAC_CONTEXT);
+  std::vector<int> rand_k_n(int k,int n,bool sorted);
+  void shuffle(std::vector<int> & temp);
   gen _is_permu(const gen & args,GIAC_CONTEXT);
   gen _is_cycle(const gen & args,GIAC_CONTEXT);
   gen _cycle2perm(const gen & args,GIAC_CONTEXT);
@@ -111,6 +113,8 @@ namespace giac {
   gen _curl(const gen & args,GIAC_CONTEXT);
   extern const unary_function_ptr * const  at_curl;
   extern const unary_function_ptr * const  at_trn;
+  extern const unary_function_ptr * const  at_join ;
+  extern const unary_function_ptr * const  at_split ;
 
   gen _permu2mat(const gen & args,GIAC_CONTEXT); // permutation vector -> matrix
 

@@ -45,10 +45,10 @@
  */
 
 %{
+#include "giacPCH.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-#include "first.h"
 #include <iostream>
 #include <stdexcept>
 
@@ -82,11 +82,11 @@
 #include "permu.h"
 #include "input_parser.h"    
 
-#if defined(RTOS_THREADX) || defined(__MINGW_H) || defined NSPIRE || defined MS_SMART 
+#if defined(RTOS_THREADX) || defined(__MINGW_H) || defined NSPIRE || defined MS_SMART || defined(FREERTOS)
   int isatty (int ){ return 0; }
 #endif
 
-#ifdef BESTA_OS
+#if defined BESTA_OS || defined(FREERTOS)
 #define EINTR           4
 #endif
 
@@ -314,7 +314,7 @@ AN	[0-9a-zA-Z_~ ?\200-\355\357-\376]
 "_"                     opened_quote(yyextra) |= 2; return T_UNIT;
 "'"                     if (opened_quote(yyextra) & 1) { opened_quote(yyextra) &= 0x7ffffffe; return T_QUOTE; } if (index_status(yyextra) && !in_rpn(yyextra) && xcas_mode(yyextra)!= 1) return T_PRIME; opened_quote(yyextra) |= 1; return T_QUOTE;
 ";"			index_status(yyextra)=0; if (xcas_mode(yyextra)==3) return TI_SEMI; (*yylval)=0; return T_SEMI;
-";;"			index_status(yyextra)=0; if (xcas_mode(yyextra)==3) return TI_SEMI; (*yylval)=0; return T_SEMI;
+  /* commented otherwise for(;;) will not work ";;"			index_status(yyextra)=0; if (xcas_mode(yyextra)==3) return TI_SEMI; (*yylval)=0; return T_SEMI; */
 "§"                  index_status(yyextra)=0; if (xcas_mode(yyextra)==3) return T_SEMI; return TI_SEMI;
 ":"			if (spread_formula(yyextra)) return T_DEUXPOINTS; if ( xcas_mode(yyextra)==3 ) { index_status(yyextra)=0; return TI_DEUXPOINTS; }  index_status(yyextra)=0; if (xcas_mode(yyextra)>0) { (*yylval)=1; return T_SEMI; } else return T_DEUXPOINTS;
 ":;"                    index_status(yyextra)=0; (*yylval)=1; return T_SEMI;
@@ -350,7 +350,7 @@ AN	[0-9a-zA-Z_~ ?\200-\355\357-\376]
 
                /* integer values */
 "operator"              if (xcas_mode(yyextra)==2){ (*yylval) = gen(at_user_operator,6); index_status(yyextra)=0; return T_UNARY_OP; }  index_status(yyextra)=0; (*yylval) = _FUNC; (*yylval).subtype=_INT_TYPE; return T_TYPE_ID;
-"list"         if (xcas_mode(yyextra)==3) { index_status(yyextra)=1; return find_or_make_symbol(yytext,(*yylval),yyscanner,true,yyextra); } index_status(yyextra)=0; (*yylval) = _MAPLE_LIST ; (*yylval).subtype=_INT_MAPLECONVERSION ;return T_TYPE_ID;
+"list"         if (python_compat(yyextra)){ *yylval=at_python_list; return T_UNARY_OP; } if (xcas_mode(yyextra)==3) { index_status(yyextra)=1; return find_or_make_symbol(yytext,(*yylval),yyscanner,true,yyextra); } index_status(yyextra)=0; (*yylval) = _MAPLE_LIST ; (*yylval).subtype=_INT_MAPLECONVERSION ;return T_TYPE_ID;
 
 
     /* vector/polynom/matrice delimiters */
@@ -368,6 +368,7 @@ AN	[0-9a-zA-Z_~ ?\200-\355\357-\376]
 "ggbpnt["           (*yylval) = _GGB__VECT; return T_VECT_DISPATCH;
 "ggbvect["           (*yylval) = _GGBVECT; return T_VECT_DISPATCH;
 "point["            (*yylval) = _POINT__VECT; return T_VECT_DISPATCH;
+"tuple["            (*yylval) = _TUPLE__VECT; return T_VECT_DISPATCH;
 "curve["            (*yylval) = _CURVE__VECT; return T_VECT_DISPATCH;
 "halfline["         (*yylval) = _HALFLINE__VECT; return T_VECT_DISPATCH;
 "poly1["            (*yylval) = _POLY1__VECT; return T_VECT_DISPATCH;
@@ -381,7 +382,9 @@ AN	[0-9a-zA-Z_~ ?\200-\355\357-\376]
 "<"                     index_status(yyextra)=0; (*yylval)=gen(at_inferieur_strict,2);  return T_TEST_EQUAL;
 ">"                     index_status(yyextra)=0; (*yylval)=gen(at_superieur_strict,2); return T_TEST_EQUAL;
 "&lt;"                     index_status(yyextra)=0; (*yylval)=gen(at_inferieur_strict,2);  return T_TEST_EQUAL;
+"&lt;="                     index_status(yyextra)=0; (*yylval)=gen(at_inferieur_egal,2);  return T_TEST_EQUAL;
 "&gt;"                     index_status(yyextra)=0; (*yylval)=gen(at_superieur_strict,2); return T_TEST_EQUAL;
+"&gt;="                     index_status(yyextra)=0; (*yylval)=gen(at_superieur_egal,2); return T_TEST_EQUAL;
 ","                     index_status(yyextra)=0; return T_VIRGULE;
 ",,"                     index_status(yyextra)=0; return T_VIRGULE;
 "("                     index_status(yyextra)=0; *yylval = 0; return T_BEGIN_PAR;
@@ -405,21 +408,25 @@ AN	[0-9a-zA-Z_~ ?\200-\355\357-\376]
 "%%%%("                 index_status(yyextra)=0; (*yylval) = _CURVE__VECT; return T_VECT_DISPATCH; 
 "%%%%)"                 index_status(yyextra)=1; return T_VECT_END;
     /* gen delimiters */
-"{"                     index_status(yyextra)=0; if (rpn_mode(yyextra) ||calc_mode(yyextra)==1) { (*yylval)=0; return T_VECT_DISPATCH; } if (xcas_mode(yyextra)==3 || abs_calc_mode(yyextra)==38){ (*yylval) = _LIST__VECT;  return T_VECT_DISPATCH; } if (xcas_mode(yyextra) > 0 ){ (*yylval)=_SET__VECT; return T_VECT_DISPATCH; } else return T_BLOC_BEGIN;
-"}"                     index_status(yyextra)=1; if (rpn_mode(yyextra) || calc_mode(yyextra)==1) return T_VECT_END; if (xcas_mode(yyextra)==3 || abs_calc_mode(yyextra)==38) return T_VECT_END; if (xcas_mode(yyextra) > 0) return T_VECT_END; else return T_BLOC_END;
+"{/"                     index_status(yyextra)=0; (*yylval)=_TABLE__VECT;return T_VECT_DISPATCH; 
+"/}"                     index_status(yyextra)=1;  return T_VECT_END;
+"{"                     index_status(yyextra)=0;  if (rpn_mode(yyextra)||calc_mode(yyextra)==1) { (*yylval)=0; return T_VECT_DISPATCH; } if (xcas_mode(yyextra)==3 || abs_calc_mode(yyextra)==38){ (*yylval) = _LIST__VECT;  return T_VECT_DISPATCH; } if (xcas_mode(yyextra) > 0 ){ (*yylval)=_SET__VECT; return T_VECT_DISPATCH; } else return T_BLOC_BEGIN;
+"}"                     index_status(yyextra)=1; if (rpn_mode(yyextra) || calc_mode(yyextra)==1 || python_compat(yyextra)) return T_VECT_END; if (xcas_mode(yyextra)==3 || abs_calc_mode(yyextra)==38) return T_VECT_END; if (xcas_mode(yyextra) > 0) return T_VECT_END; else return T_BLOC_END;
 "%{"                    index_status(yyextra)=0;  (*yylval)=_SET__VECT; return T_VECT_DISPATCH;
 "%}"                    index_status(yyextra)=1; return T_VECT_END;
 "%%{"                   index_status(yyextra)=0; return T_ROOTOF_BEGIN;
 "%%}"                   index_status(yyextra)=1; return T_ROOTOF_END;
 "%%%{"                  index_status(yyextra)=0; return T_SPOLY1_BEGIN;
 "%%%}"                  index_status(yyextra)=1; return T_SPOLY1_END;
-"<<"                    index_status(yyextra)=0; ++in_rpn(yyextra); return T_RPN_BEGIN;
-">>"                    index_status(yyextra)=0; --in_rpn(yyextra); return T_RPN_END;
+"<<"                    index_status(yyextra)=0; if (abs_calc_mode(yyextra)!=38)return T_SPOLY1_BEGIN; ++in_rpn(yyextra); return T_RPN_BEGIN;
+">>"                    index_status(yyextra)=0; if (abs_calc_mode(yyextra)!=38)return T_SPOLY1_END; --in_rpn(yyextra); return T_RPN_END;
 
     /* binary operators */
 "->"                    index_status(yyextra)=0; return T_MAPSTO;
 "-<"                    (*yylval) = gen(at_couleur,2); index_status(yyextra)=0; return T_INTERVAL;
 "=="			index_status(yyextra)=0; (*yylval)=gen(at_same,2); return T_TEST_EQUAL;
+"==="			index_status(yyextra)=0; (*yylval)=gen(at_equal,2); return T_EQUAL;
+"-/-"			index_status(yyextra)=0; (*yylval)=gen(at_deuxpoints,2); return T_DEUXPOINTS;
 "'=='"                  index_status(yyextra)=0; (*yylval)=gen(at_same,2); return T_QUOTED_BINARY;
 "_equal"                  index_status(yyextra)=0; (*yylval)=gen(at_same,2); return T_QUOTED_BINARY;
 "!="			index_status(yyextra)=0; (*yylval)=gen(at_different,2); return T_TEST_EQUAL;
@@ -449,7 +456,9 @@ AN	[0-9a-zA-Z_~ ?\200-\355\357-\376]
 "▶"                index_status(yyextra)=0; (*yylval)=gen(at_sto,2); return TI_STO;
 "→"                    index_status(yyextra)=0; if (xcas_mode(yyextra)==3){ (*yylval)=gen(at_sto,2); return TI_STO; } else return T_MAPSTO;
 "=>"                    index_status(yyextra)=0; (*yylval)=gen(at_sto,2); return TI_STO;
+"=%"                    index_status(yyextra)=0; (*yylval)=gen(at_sto,2); return TI_STO;
 "=<"                    index_status(yyextra)=0; (*yylval)=gen(at_array_sto,2); return T_AFFECT;
+"=&lt;"                  index_status(yyextra)=0; (*yylval)=gen(at_array_sto,2); return T_AFFECT;
 "@"{D}+                   index_status(yyextra)=1; yytext[0]='0'; (*yylval) = symb_double_deux_points(makevecteur(_IDNT_id_at,chartab2gen(yytext,yyextra))); return T_SYMBOL;
 "@"                     if (xcas_mode(yyextra)!=3) {index_status(yyextra)=0; (*yylval)=gen(at_compose,2); return T_COMPOSE; } BEGIN(comment_hash);
 "@@"                     index_status(yyextra)=0; (*yylval)=gen(at_composepow,2); return T_POW;
@@ -458,6 +467,7 @@ AN	[0-9a-zA-Z_~ ?\200-\355\357-\376]
 "'@'"                  index_status(yyextra)=0; (*yylval)=gen(at_compose,2); return T_QUOTED_BINARY;
 "_fconcat"                  index_status(yyextra)=0; (*yylval)=gen(at_compose,2); return T_QUOTED_BINARY;
 "&&"                    index_status(yyextra)=0; (*yylval)=gen(at_and,2); return T_AND_OP;
+"&amp;&amp;"                    index_status(yyextra)=0; (*yylval)=gen(at_and,2); return T_AND_OP;
 "AND"                   index_status(yyextra)=0; (*yylval)=gen(at_and,2); return T_AND_OP;
 "'&&'"                  index_status(yyextra)=0; (*yylval)=gen(at_and,2); return T_QUOTED_BINARY;
 "'and'"                 index_status(yyextra)=0; (*yylval)=gen(at_and,2); return T_QUOTED_BINARY;
@@ -483,9 +493,9 @@ AN	[0-9a-zA-Z_~ ?\200-\355\357-\376]
 "Ans"                   index_status(yyextra)=1; (*yylval)=symbolic(at_Ans,0); return T_LITERAL;
 "+"                     index_status(yyextra)=0; (*yylval)=gen(at_plus,2); return T_PLUS;
 "++"                    index_status(yyextra)=0; (*yylval)=gen(at_increment,1); return T_FACTORIAL;
-"+="                    index_status(yyextra)=0; (*yylval)=gen(at_increment,1); return T_PLUS;
+"+="                    index_status(yyextra)=0; (*yylval)=gen(at_increment,1); return T_UNION;
 "--"                    index_status(yyextra)=0; (*yylval)=gen(at_decrement,1); return T_FACTORIAL;
-"-="                    index_status(yyextra)=0; (*yylval)=gen(at_decrement,1); return T_PLUS;
+"-="                    index_status(yyextra)=0; (*yylval)=gen(at_decrement,1); return T_UNION;
 ".+"                    index_status(yyextra)=0; (*yylval)=gen(at_pointplus,2); return T_PLUS;
 "&"                     index_status(yyextra)=0; (*yylval)=gen(at_plus,2); return T_PLUS;
 "√"                     index_status(yyextra)=0; (*yylval)=gen(at_sqrt,2); return T_NOT;
@@ -510,23 +520,28 @@ AN	[0-9a-zA-Z_~ ?\200-\355\357-\376]
 "_subtract"                   index_status(yyextra)=0; (*yylval)=gen(at_binary_minus,2); return T_QUOTED_BINARY;
 "*"                     index_status(yyextra)=0; (*yylval)=gen(at_prod,2); return T_FOIS;
 "⊗"                     index_status(yyextra)=0; (*yylval)=gen(at_cross,2); return T_FOIS;
-"*="                    index_status(yyextra)=0; (*yylval)=gen(at_multcrement,1); return T_FOIS;
-"."                     index_status(yyextra)=0; if (abs_calc_mode(yyextra)==38){return T_DOUBLE_DEUX_POINTS; } else {(*yylval)=gen(at_prod,2); return T_FOIS;}
+"*="                    index_status(yyextra)=0; (*yylval)=gen(at_multcrement,1); return T_UNION;
+"."                     index_status(yyextra)=0; if (abs_calc_mode(yyextra)==38){return T_DOUBLE_DEUX_POINTS; } else {(*yylval)=gen(at_struct_dot,2); return T_COMPOSE;}
 "&*"                     index_status(yyextra)=0; (*yylval)=gen(at_ampersand_times,2); return T_FOIS;
 "&^"                     index_status(yyextra)=0; (*yylval)=gen(at_quote_pow,2); return T_POW;
 ".*"                     index_status(yyextra)=0; (*yylval)=gen(at_pointprod,2); return T_FOIS;
 "'*'"                   index_status(yyextra)=0; (*yylval)=gen(at_prod,2); return T_QUOTED_BINARY;
 "_mult"                   index_status(yyextra)=0; (*yylval)=gen(at_prod,2); return T_QUOTED_BINARY;
 "/"                     index_status(yyextra)=0; (*yylval)=gen(at_division,2); return T_DIV;
+"/%"                     index_status(yyextra)=0; (*yylval)=gen(at_iquo,2); return T_UNION;
+"%/"                     index_status(yyextra)=0; (*yylval)=gen(at_irem,2); return T_UNION;
+"/%="                     index_status(yyextra)=0; (*yylval)=gen(at_iquosto,2); return T_UNION;
+"%/="                     index_status(yyextra)=0; (*yylval)=gen(at_iremsto,2); return T_UNION;
 "/="                    index_status(yyextra)=0; (*yylval)=gen(at_divcrement,1); return T_DIV;
 "./"                     index_status(yyextra)=0; (*yylval)=gen(at_pointdivision,2); return T_DIV;
 "'/'"                   index_status(yyextra)=0; (*yylval)=gen(at_division,2); return T_QUOTED_BINARY;
 "_divide"                   index_status(yyextra)=0; (*yylval)=gen(at_division,2); return T_QUOTED_BINARY;
-"%"                     index_status(yyextra)=0; if (abs_calc_mode(yyextra)==38){ (*yylval)=gen(at_PERCENT); return T_UNARY_OP_38; } if (xcas_mode(yyextra)==3 || calc_mode(yyextra)==1) { (*yylval)=gen(at_pourcent); return T_FACTORIAL; } if (xcas_mode(yyextra)==1) { (*yylval)=symbolic(at_ans,vecteur(0)); return T_NUMBER; }  if (xcas_mode(yyextra)) (*yylval)=gen(at_irem,2); else (*yylval)=0; return T_MOD;
+"%"                     index_status(yyextra)=0; if (abs_calc_mode(yyextra)==38){ (*yylval)=gen(at_PERCENT); return T_UNARY_OP_38; } if (xcas_mode(yyextra)==3 || calc_mode(yyextra)==1) { (*yylval)=gen(at_pourcent); return T_FACTORIAL; } if (xcas_mode(yyextra)==1) { (*yylval)=symbolic(at_ans,vecteur(0)); return T_NUMBER; }  if (xcas_mode(yyextra) || python_compat(yyextra)) (*yylval)=gen(at_irem,2); else (*yylval)=0; return T_MOD;
 "%%"                     index_status(yyextra)=0; if (xcas_mode(yyextra)==0){ (*yylval)=gen(at_iquorem,2); return T_MOD;} (*yylval)=symbolic(at_ans,-2); return T_NUMBER; 
   /* \xe2\x88\xa1             index_status(yyextra)=0; (*yylval)=gen(at_polar_complex,2); return T_MOD; */
 "%%%"                     if (xcas_mode(yyextra)==0){ (*yylval)=gen(at_quorem,2); return T_MOD;} index_status(yyextra)=0; (*yylval)=symbolic(at_ans,-3); return T_NUMBER; 
 "'%'"                  index_status(yyextra)=0; (*yylval)=gen(at_irem,2); return T_QUOTED_BINARY;
+"'%='"                  index_status(yyextra)=0; (*yylval)=gen(at_equal2,2); return T_QUOTED_BINARY;
 "mod"                   index_status(yyextra)=0; if (xcas_mode(yyextra)==3) { (*yylval)=gen(at_irem,2); return T_UNARY_OP; } else { if (xcas_mode(yyextra)) (*yylval)=gen(at_irem,2); else (*yylval)=0; return T_MOD; }
 "'mod'"                  index_status(yyextra)=0; (*yylval)=gen(at_irem,2); return T_QUOTED_BINARY;
 "_mod"                  index_status(yyextra)=0; (*yylval)=gen(at_irem,2); return T_QUOTED_BINARY;
@@ -551,7 +566,9 @@ AN	[0-9a-zA-Z_~ ?\200-\355\357-\376]
 "approx_mode"		(*yylval) = gen(at_approx_mode,0); index_status(yyextra)=0; return T_DIGITS;
 "all_trig_solutions"		(*yylval) = gen(at_all_trig_solutions,1); index_status(yyextra)=0; return T_DIGITS;
 "ntl_on"		(*yylval) = gen(at_ntl_on,1); index_status(yyextra)=0; return T_DIGITS;
-"complex_mode"    (*yylval) = gen(at_complex_mode,1); index_status(yyextra)=0; return T_DIGITS;
+"complex_mode"		(*yylval) = gen(at_complex_mode,1); index_status(yyextra)=0; return T_DIGITS;
+"step_infolevel"		(*yylval) = gen(at_step_infolevel,1); index_status(yyextra)=0; return T_DIGITS;
+"keep_algext"		(*yylval) = gen(at_keep_algext,1); index_status(yyextra)=0; return T_DIGITS;
 "complex_variables"	(*yylval) = gen(at_complex_variables,0); index_status(yyextra)=0; return T_DIGITS;
 "epsilon"               (*yylval) = gen(at_epsilon,0); index_status(yyextra)=0; return T_DIGITS;
 "proba_epsilon"               (*yylval) = gen(at_proba_epsilon,0); index_status(yyextra)=0; return T_DIGITS;
@@ -606,8 +623,9 @@ AN	[0-9a-zA-Z_~ ?\200-\355\357-\376]
 "tan"                  (*yylval) = gen(at_atan,1); index_status(yyextra)=1; return T_UNARY_OP;
 "'minus'"                  index_status(yyextra)=0; (*yylval)=gen(at_minus,2); return T_QUOTED_BINARY;
 "_minus"                  index_status(yyextra)=0; (*yylval)=gen(at_minus,2); return T_QUOTED_BINARY;
-"not"                 (*yylval) = gen(at_not,1); if (xcas_mode(yyextra)) return T_NOT;  index_status(yyextra)=0; return T_UNARY_OP;
+"not"                 (*yylval) = gen(at_not,1); if (xcas_mode(yyextra) || python_compat(yyextra)) return T_NOT;  index_status(yyextra)=0; return T_UNARY_OP;
 "NOT"                 (*yylval) = gen(at_not,1); return T_NOT;  
+"not in"                 (*yylval) = gen(at_not,1); return T_IN;  
 "neg"		(*yylval) = gen(at_neg,1); index_status(yyextra)=0; return T_UNARY_OP;
 "'not'"                  index_status(yyextra)=0; (*yylval)=gen(at_not,1); return T_QUOTED_BINARY;
 "_not"                  index_status(yyextra)=0; (*yylval)=gen(at_not,1); return T_QUOTED_BINARY;
@@ -817,7 +835,7 @@ AN	[0-9a-zA-Z_~ ?\200-\355\357-\376]
     double d=evalf_double(*yylval,1,context0)._DOUBLE_val;
     if (d<0 && interv>1)
       --interv;
-    double tmp=std::floor(std::log(std::abs(d))/std::log(10));
+    double tmp=std::floor(std::log(std::abs(d))/std::log(10.0));
     tmp=(std::pow(10.,1+tmp-interv));
     *yylval=eval(gen(makevecteur(d-tmp,d+tmp),_INTERVAL__VECT),1,context0);
   }
@@ -888,6 +906,7 @@ AN	[0-9a-zA-Z_~ ?\200-\355\357-\376]
 	int nfunc=builtin_lexer_functions_number;
 	if (debug_infolevel==-2 || debug_infolevel==-4 || debug_infolevel==-5){
 	  CERR << "Writing " << nfunc << " in static_lexer.h and static_extern.h "<< endl;
+	  CERR << "Check at_FP->at_FRAC, at_IP->at_INT, at_lgamma->at_lower_incomplete_gamma, at_is_inside->at_est_dans, at_regroup->at_regrouper, at_ugamma->at_upper_incomplete_gamma, at_∡ -> at_polar_complex, at_LINEAR? -> at_IS_LINEAR" << endl;
 	  /*
 	  ofstream static_add_ll("static_add.ll");
 	  for (int i=0;i<nfunc;i++){
@@ -936,10 +955,12 @@ AN	[0-9a-zA-Z_~ ?\200-\355\357-\376]
 	  ofstream static_extern("static_extern.h");
 	  static_extern << "#ifndef STATIC_EXTERN" << endl;
 	  static_extern << "#define STATIC_EXTERN" << endl;
+	  static_extern << "namespace giac{" << endl;
 	  static_extern << "struct unary_function_ptr;" << endl;
 	  for (int i=0;i<nfunc;i++){
 	    static_extern << "extern const unary_function_ptr * const  at_" << translate_at(builtin_lexer_functions_begin()[i].first) << ";" << endl;
 	  }
+	  static_extern << "}" << endl;
 	  static_extern << "#endif // STATIC_EXTERN" << endl;
 	  static_extern.close();
 	}
@@ -968,6 +989,10 @@ AN	[0-9a-zA-Z_~ ?\200-\355\357-\376]
 	    }
 	    continue;
 	  }
+	  if (!instring && i>=2 && ( (s[i-2]=='-' && s[i-1]=='-') || (s[i-2]=='+' && s[i-1]=='+') ) && (s[i]=='.'|| (s[i]>='0' && s[i]<='9')) ){
+	    s[i-2]='+';
+	    s[i-1]=' ';
+	  }
 	  if (!instring && i && s[i]=='*' && s[i-1]=='/'){
 	    // skip comment 
 	    for (;i<l;++i){
@@ -986,13 +1011,13 @@ AN	[0-9a-zA-Z_~ ?\200-\355\357-\376]
 	      break;
 	  }
 	  if (instring){
-	    if (s[i]=='"')
+	    if (s[i]=='"'&& (i==0 || s[i-1]!='\\'))
 	      instring=false;
 	  }
 	  else {
 	    switch (s[i]){
 	    case '"':
-	      instring=true;
+	      instring=i==0 || s[i-1]!='\\';
 	      break;
 	    case '(':
 	      ++np;
@@ -1009,6 +1034,10 @@ AN	[0-9a-zA-Z_~ ?\200-\355\357-\376]
 	    }
 	  }
 	}
+	if (nb<0)
+	  *logptr(contextptr) << "Too many ]" << endl;
+	if (np<0)
+	  *logptr(contextptr) << "Too many )" << endl;
 	while (np<0 && i>=0 && s[i-1]==')'){
 	  --i;
 	  ++np;
@@ -1018,10 +1047,6 @@ AN	[0-9a-zA-Z_~ ?\200-\355\357-\376]
 	  ++nb;
 	}
 	s=s.substr(0,i);
-	if (nb<0)
-	  CERR << "Too many ]" << endl;
-	if (np<0)
-	  CERR << "Too many )" << endl;
 	if (nb>0){
 	  *logptr(contextptr) << "Warning adding " << nb << " ] at end of input" << endl;
 	  s=s+string(nb,']');
@@ -1182,6 +1207,7 @@ AN	[0-9a-zA-Z_~ ?\200-\355\357-\376]
       lexer_string = ss+" \n ÿ";
       yylex_init(&scanner);
       yyset_extra(contextptr, scanner);
+      currently_scanned(contextptr)=lexer_string;
       YY_BUFFER_STATE state=yy_scan_string(lexer_string.c_str(),scanner);
       return state;
     }

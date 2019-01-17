@@ -127,6 +127,12 @@ namespace giac {
     }
     if (s.sommet==at_prod){
       bool do_step=step_infolevel(contextptr)>1 && count_noncst(s.feuille,i)>1;
+      if (s.feuille.type==_VECT && s.feuille._VECTptr->size()==2 && s.feuille._VECTptr->back().is_symb_of_sommet(at_inv) && !is_constant_wrt(s.feuille._VECTptr->back()._SYMBptr->feuille,i,contextptr)){
+	gen u=s.feuille._VECTptr->front(),v=s.feuille._VECTptr->back()._SYMBptr->feuille;
+	if (do_step)
+	  gprintf(gettext("Derivative of %gen/%gen, a quotient: (u/v)'=(u'*v-u*v')/v^2"),makevecteur(u,v),contextptr);
+	return (derive(u,i,contextptr)*v-u*derive(v,i,contextptr))/pow(v,2,contextptr);
+      }
       if (do_step)
 	gprintf(gettext("Derivative of %gen, apply product rule: (u*v*...)'=u'*v*...+u*v'*...+..."),makevecteur(s),contextptr);
       if (s.feuille.type!=_VECT)
@@ -306,38 +312,47 @@ namespace giac {
 	  return exponent*dbase*s/v[1];
 	return dexponent*ln(base,contextptr)*s+exponent*dbase*s/v[1];
       }
-      if (vs==3 && s.sommet==at_Beta){
+      if (vs>=3 && s.sommet==at_Beta){
 	gen v0=v[0],v1=v[1],v2=v[2]; 
 	if (!is_zero(derive(v0,i,contextptr)) || !is_zero(derive(v1,i,contextptr)) )
 	  return gensizeerr("diff of incomplete beta with respect to non constant 1st or 2nd arg not implemented");
-	// diff/v2(int_0^v2 t^(v0-1)*(1-t)^(v1-1) dt)
+	// diff/v2 of int_0^v2 t^(v0-1)*(1-t)^(v1-1) dt
 	gen tmp=pow(v2,v0-1,contextptr)*pow(1-v2,v1-1,contextptr)*derive(v2,i,contextptr);
+	if (vs==4){
+	  gen v3=v[3];
+	  if (is_one(v3))
+	    return tmp/Beta(v0,v1,contextptr);
+	  return gensizeerr(contextptr);
+	  gen v3p=derive(v3,i,contextptr);
+	  if (!is_zero(v3p))
+	    return tmp-pow(v3,v0-1,contextptr)*pow(1-v3,v1-1,contextptr)*v3p;
+	}
 	return tmp;
       }
       if (vs==4 && s.sommet==at_sum){
 	gen v0=v[0],v1=v[1],v2=v[2],v3=v[3];
 	if (!is_zero(derive(v1,i,contextptr)) || !is_zero(derive(v2,i,contextptr)) || ! is_zero(derive(v3,i,contextptr)) )
-	  return gensizeerr("diff of sum with boundaries or mute variable depending on differentiation variable");
+	  return gensizeerr(gettext("diff of sum with boundaries or mute variable depending on differentiation variable"));
 	if (is_inf(v2) || is_inf(v3))
-	  *logptr(contextptr) << "Warning, assuming derivative commutes with infinite sum" << endl;
+	  *logptr(contextptr) << gettext("Warning, assuming derivative commutes with infinite sum") << endl;
 	return _sum(makesequence(derive(v0,i,contextptr),v1,v2,v3),contextptr);
       }
       if ( (vs==2 || (vs==3 && is_zero(v[2]))) && (s.sommet==at_upper_incomplete_gamma || s.sommet==at_lower_incomplete_gamma || s.sommet==at_Gamma)){
 	gen v0=v[0],v1=v[1]; 
 	if (!is_zero(derive(v0,i,contextptr)))
-	  return gensizeerr("diff of incomplete gamma with respect to non constant 1st arg not implemented");
+	  return gensizeerr(gettext("diff of incomplete gamma with respect to non constant 1st arg not implemented"));
 	// diff(int_v1^inf exp(-t)*t^(v0-1) dt)
 	gen tmp1=exp(-v1,contextptr)*pow(v1,v0-1,contextptr)*derive(v1,i,contextptr);
 	return (s.sommet==at_lower_incomplete_gamma)?tmp1:-tmp1;
       }
-      if (vs==3 && (s.sommet==at_lower_incomplete_gamma || s.sommet==at_lower_incomplete_gamma || s.sommet==at_Gamma)){
+      if (vs==3 && (s.sommet==at_upper_incomplete_gamma || s.sommet==at_lower_incomplete_gamma || s.sommet==at_Gamma)){
 	return derive(symbolic(s.sommet,makesequence(v[0],v[1]))/symbolic(at_Gamma,v[0]),i,contextptr);
       }
     }
     // now look at other operators, first onearg operator
     if (s.sommet.ptr()->D){
       if (s.feuille.type!=_VECT)
-	return (*s.sommet.ptr()->D)(1)(s.feuille,contextptr)*derive(s.feuille,i,contextptr);
+	return derive(s.feuille,i,contextptr)*(*s.sommet.ptr()->D)(1)(s.feuille,contextptr);
       // multiargs operators
       int taille=int(s.feuille._VECTptr->size());
       vecteur v;
@@ -358,7 +373,7 @@ namespace giac {
       return symbolic(at_plus,gen(v,_SEQ__VECT));
     }
     // integrate
-    if (s.sommet==at_integrate){
+    if (s.sommet==at_integrate || s.sommet==at_HPINT){
       if (s.feuille.type!=_VECT)
 	return s.feuille;
       vecteur v=*s.feuille._VECTptr;
@@ -479,6 +494,9 @@ namespace giac {
 	}
       }
     }
+    if (s.sommet==at_re || s.sommet==at_im || s.sommet==at_conj){
+      return s.sommet(derive(s.feuille,i,contextptr),contextptr);
+    }
     // no info about derivative
     return symbolic(at_derive,gen(makevecteur(s,i),_SEQ__VECT));
     //i.dbgprint();
@@ -499,6 +517,15 @@ namespace giac {
   }
 
   gen derive(const gen & e,const identificateur & i,GIAC_CONTEXT){
+    if (abs_calc_mode(contextptr)==38 && i.id_name[0]>='A' && i.id_name[0]<='Z'){
+      identificateur tmp("xdiff");
+      gen ee=subst(e,i,tmp,true,contextptr);
+      ee=eval(ee,1,contextptr);
+      ee=subst(ee,i,tmp,true,contextptr);
+      ee=derive(ee,tmp,contextptr);
+      ee=subst(ee,tmp,i,true,contextptr);
+      return ee;
+    }
     switch (e.type){
     case _INT_: case _DOUBLE_: case _ZINT: case _CPLX: case _MOD: case _REAL: case _USER: case _FLOAT_:
       return 0;
@@ -574,7 +601,7 @@ namespace giac {
       gen ecopie(e),eprime(e);
       int j=1;
       for (;j<=n;++j){
-	eprime=ratnormal(derive(ecopie,vars,contextptr));
+	eprime=ratnormal(derive(ecopie,vars,contextptr),contextptr);
 	if (is_undef(eprime))
 	  return eprime;
 	if ( (eprime.type==_SYMB) && (eprime._SYMBptr->sommet==at_derive))
@@ -629,7 +656,7 @@ namespace giac {
       v[1]=eval(v[1],1,contextptr);
     if (is_undef(v))
       return v;
-    if (step_infolevel(contextptr) && v.size()==2)
+    if (step_infolevel(contextptr) && v.size()==2 && v[0].type==_SYMB)
       gprintf(step_derive_header,gettext("===== Derive %gen with respect to %gen ====="),makevecteur(v[0],v[1]),contextptr);
     gen var,res;
     if (args.type!=_VECT && is_algebraic_program(v[0],var,res)){
@@ -645,7 +672,17 @@ namespace giac {
 	int ss=int(w.size());
 	gen res=v[0];
 	for (int i=0;i<ss;++i)
-	  res=ratnormal(derive(res,w[i],contextptr));
+	  res=ratnormal(derive(res,w[i],contextptr),contextptr);
+	return res;
+      }
+      if (v[0].type==_SPOL1){
+	sparse_poly1 res=*v[0]._SPOL1ptr;
+	sparse_poly1::iterator it=res.begin(),itend=res.end();
+	for (;it!=itend;++it){
+	  gen e=it->exponent;
+	  it->coeff=it->coeff*e;
+	  it->exponent=e-1;
+	}
 	return res;
       }
       if (args.type!=_VECT && v[0].type==_VECT && v[0].subtype==_POLY1__VECT)
@@ -664,7 +701,7 @@ namespace giac {
     const_iterateur it=v.begin()+1,itend=v.end();
     res=v[0];
     for (;it!=itend;++it)
-      res=ratnormal(_derive(gen(makevecteur(res,*it),_SEQ__VECT),contextptr));
+      res=ratnormal(_derive(gen(makevecteur(res,*it),_SEQ__VECT),contextptr),contextptr);
     return res;
   }
   // "unary" version
@@ -676,6 +713,7 @@ namespace giac {
     try {
       res=_derive(args,contextptr);
     } catch (std::runtime_error & e){
+      last_evaled_argptr(contextptr)=NULL;
       res=string2gen(e.what(),false);
       res.subtype=-1;
     }
@@ -686,10 +724,13 @@ namespace giac {
       --step_infolevel(contextptr);
     return res;
   }
+  gen _diff(const gen & g,GIAC_CONTEXT){
+    return _derive(g,contextptr);
+  }
   static const char _derive_s []="diff";
   static string printasderive(const gen & feuille,const char * sommetstr,GIAC_CONTEXT){
     if (feuille.type!=_VECT){
-      if (need_parenthesis(feuille))
+      if (feuille.type>=_POLY && feuille.type!=_IDNT)
 	return "("+feuille.print()+")'";
       return feuille.print()+"'";
     }
@@ -768,7 +809,7 @@ namespace giac {
     vecteur ls=lidnt(s);
     for (int i=0;i<int(ls.size());++i){
       if (ls[i]==var || (var.type==_VECT && equalposcomp(*var._VECTptr,ls[i])))
-	return gensizeerr("solve error while finding critical points");
+	return gensizeerr(gettext("solve error while finding critical points"));
     }
     if (s.type==_VECT){
       vecteur res;
@@ -826,7 +867,7 @@ namespace giac {
 	gen curd=d2;
 	if (is_zero(g)){
 	  for (++d;d< NEWTON_DEFAULT_ITERATION;++d){
-	    curd=ratnormal(_derive(makesequence(curd,var),contextptr));
+	    curd=ratnormal(_derive(makesequence(curd,var),contextptr),contextptr);
 	    g=simplify(subst(curd,var,v[i],false,contextptr),contextptr);
 	    if (!is_zero(g))
 	      break;
@@ -861,12 +902,15 @@ namespace giac {
     else
       return s;
   }
+
+#if defined USE_GMP_REPLACEMENTS || defined GIAC_GGB
   gen _extrema(const gen & g,GIAC_CONTEXT){
     return critical(g,true,contextptr);
   }
   static const char _extrema_s []="extrema";
   static define_unary_function_eval_quoted (__extrema,&_extrema,_extrema_s);
   define_unary_function_ptr5( at_extrema ,alias_at_extrema,&__extrema,_QUOTE_ARGUMENTS,true);
+#endif
 
   gen _critical(const gen & g,GIAC_CONTEXT){
     return critical(g,false,contextptr);
@@ -918,10 +962,24 @@ namespace giac {
 
   gen _implicit_diff(const gen & args,GIAC_CONTEXT){
     if (is_undef(args)) return args;
-    if (args.type!=_VECT || args._VECTptr->size()!=3)
+    if (args.type!=_VECT || (args._VECTptr->size()!=3 && args._VECTptr->size()!=4))
       return gensizeerr(contextptr);
-    gen eq(remove_equal(args._VECTptr->front())),x((*args._VECTptr)[1]),y(args._VECTptr->back());
-    return -derive(eq,x,contextptr)/derive(eq,y,contextptr);
+    int ndiff=1;
+    if (args._VECTptr->size()==4){
+      gen g=args._VECTptr->back();
+      if (!is_integral(g) || g.type!=_INT_ || g.val<1)
+	return gensizeerr(contextptr);
+      ndiff=g.val;
+    }
+    gen eq(remove_equal(args._VECTptr->front())),x((*args._VECTptr)[1]),y((*args._VECTptr)[2]);
+    gen yprime=-derive(eq,x,contextptr)/derive(eq,y,contextptr);
+    if (ndiff==1)
+      return yprime;
+    gen yn=yprime;
+    for (int n=2;n<=ndiff;++n){
+      yn=ratnormal(derive(yn,x,contextptr)+derive(yn,y,contextptr)*yprime,contextptr);
+    }
+    return yn;
   }
   static const char _implicit_diff_s []="implicit_diff";
   static define_unary_function_eval (__implicit_diff,&_implicit_diff,_implicit_diff_s);
@@ -951,7 +1009,7 @@ namespace giac {
 	  excluded=mergevecteur(excluded,gen2vecteur(_solve(makesequence(symb_equal(gf[0],0),x),contextptr)));
 	  continue;
 	}
-	if (is_greater(gf[1],0,contextptr))
+	if (is_constant_wrt(gf[1],x,contextptr) && is_greater(gf[1],0,contextptr))
 	  eqs.push_back(symb_superieur_egal(gf[0],0));
 	else
 	  eqs.push_back(symb_superieur_strict(gf[0],0));
@@ -976,10 +1034,7 @@ namespace giac {
 	continue;
       }
       if (u==at_tan){
-	if (mode==1)
-	  excluded=mergevecteur(excluded,gen2vecteur(_solve(makesequence(symb_equal(symb_cos(gf),0),x),contextptr)));
-	else
-	  eqs.push_back(symb_cos(gf));
+	excluded=mergevecteur(excluded,gen2vecteur(_solve(makesequence(symb_equal(symb_cos(gf),0),x),contextptr)));
 	continue;
       }
       if (u==at_sin || u==at_cos || u==at_exp || u==at_atan)
@@ -988,7 +1043,7 @@ namespace giac {
 	continue;
       if (u==at_floor || u==at_ceil || u==at_round || u==at_abs || u==at_sign || u==at_max || u==at_min)
 	continue;
-      *logptr(contextptr) << g << " function not supported, doing like if it was defined" << endl;
+      *logptr(contextptr) << g << gettext(" function not supported, doing like if it was defined") << endl;
     }
   }
   gen domain(const gen & f,const gen & x,int mode,GIAC_CONTEXT){
@@ -1006,7 +1061,10 @@ namespace giac {
       domain(f,x,eqs,excluded,mode,contextptr);
       res=gen2vecteur(_solve(makesequence(eqs,x),contextptr));
 #ifndef NO_STDEXCEPT
-    } catch (std::runtime_error & e ) { *logptr(contextptr) << e.what() << endl;}
+    } catch (std::runtime_error & e ) { 
+      last_evaled_argptr(contextptr)=NULL;
+      *logptr(contextptr) << e.what() << endl;
+    }
 #endif
     complex_mode(b,contextptr);
     comprim(excluded);
@@ -1015,7 +1073,7 @@ namespace giac {
     if (excluded.empty())
       return res.size()==1?res.front():res;
     vecteur tmp;
-    for (int i=0;i<excluded.size();++i){
+    for (int i=0;i<int(excluded.size());++i){
       tmp.push_back(symbolic(at_different,makesequence(x,excluded[i])));
     }
     if (res.size()==1 && res.front()==x)
@@ -1029,7 +1087,7 @@ namespace giac {
 	  if (is_zero(resi))
 	    continue;
 	  if (!res[i].is_symb_of_sommet(at_and)){
-	    res[i]=symbolic(at_and,makesequence(res[i],tmp));
+	    res[i]=symbolic(at_and,makesequence(res[i],tmp[j]));
 	    continue;
 	  }
 	  vecteur v=gen2vecteur(res[i]._SYMBptr->feuille);

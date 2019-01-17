@@ -24,6 +24,8 @@ namespace giac {
 #endif // ndef NO_NAMESPACE_GIAC
   typedef unsigned char octet;
   class gen;
+  extern const unary_function_ptr * const  at_entry;
+  extern const unary_function_ptr * const  at_ans;
   gen _seq(const gen & g,GIAC_CONTEXT);
   gen _logb(const gen & g,GIAC_CONTEXT);
   gen _getType(const gen & g,GIAC_CONTEXT);
@@ -61,7 +63,9 @@ namespace giac {
   extern const unary_function_ptr * const  at_right;
   gen _mid(const gen & g,GIAC_CONTEXT);
   gen _ord(const gen & g,GIAC_CONTEXT);
+  extern const unary_function_ptr * const  at_rotate;
   gen _rotate(const gen & g,GIAC_CONTEXT);
+  extern const unary_function_ptr * const  at_shift;
   gen _shift(const gen & g,GIAC_CONTEXT);
   gen _augment(const gen & g,GIAC_CONTEXT);
   gen _semi_augment(const gen & g,GIAC_CONTEXT);
@@ -74,6 +78,7 @@ namespace giac {
   gen _polyEval(const gen & g,GIAC_CONTEXT);
   extern const unary_function_ptr * const  at_product;
   gen _product(const gen & g,GIAC_CONTEXT);
+  gen sortad(const vecteur & v,bool ascend,GIAC_CONTEXT);
   gen _SortA(const gen & g,GIAC_CONTEXT);
   gen _sorta(const gen & g,GIAC_CONTEXT);
   gen _SortD(const gen & g,GIAC_CONTEXT);

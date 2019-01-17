@@ -48,7 +48,7 @@ namespace giac {
     return ptr()->s;
   }
 
-#if 0 // def __x86_64__
+#if 0 // def x86_64
   bool unary_function_ptr::quoted() const { return (ptr()->index_quoted_function & 0x1) || ( ((longlong) _ptr) & 0x1); }
 #else
   bool unary_function_ptr::quoted() const { return (ptr()->index_quoted_function & 0x1) || ( ((size_t) _ptr) & 0x1); }
@@ -387,7 +387,9 @@ namespace giac {
     if (e1.type!=_VECT)
       return f(e1,e2);
     const_iterateur it=e1._VECTptr->begin(),itend=e1._VECTptr->end();
-    vecteur v;
+    gen res=new ref_vecteur;
+    res.subtype=e1.subtype;
+    vecteur &v=*res._VECTptr;
     v.reserve(itend-it);
     for (;it!=itend;++it){
       gen tmp=f(*it,e2);
@@ -395,14 +397,16 @@ namespace giac {
 	return gen2vecteur(tmp);
       v.push_back(tmp);
     }
-    return gen(v,e1.subtype);
+    return res;//gen(v,e1.subtype);
   }
 
   gen apply1st(const gen & e1, const gen & e2,const context * contextptr, gen (* f) (const gen &, const gen &,const context *) ){
     if (e1.type!=_VECT)
       return f(e1,e2,contextptr);
     const_iterateur it=e1._VECTptr->begin(),itend=e1._VECTptr->end();
-    vecteur v;
+    gen res=new ref_vecteur;
+    res.subtype=e1.subtype;
+    vecteur &v=*res._VECTptr;
     v.reserve(itend-it);
     for (;it!=itend;++it){
       gen tmp=f(*it,e2,contextptr);
@@ -410,14 +414,16 @@ namespace giac {
 	return gen2vecteur(tmp);
       v.push_back(tmp);
     }
-    return gen(v,e1.subtype);
+    return res;//gen(v,e1.subtype);
   }
 
   gen apply2nd(const gen & e1, const gen & e2,gen (* f) (const gen &, const gen &) ){
     if (e2.type!=_VECT)
       return f(e1,e2);
     const_iterateur it=e2._VECTptr->begin(),itend=e2._VECTptr->end();
-    vecteur v;
+    gen res=new ref_vecteur;
+    res.subtype=e2.subtype;
+    vecteur &v=*res._VECTptr;
     v.reserve(itend-it);
     for (;it!=itend;++it){
       gen tmp=f(e1,*it);
@@ -425,14 +431,16 @@ namespace giac {
 	return gen2vecteur(tmp);
       v.push_back(tmp);
     }
-    return gen(v,e2.subtype);
+    return res; // gen(v,e2.subtype);
   }
 
   gen apply2nd(const gen & e1, const gen & e2,const context * contextptr, gen (* f) (const gen &, const gen &,const context *) ){
     if (e2.type!=_VECT)
       return f(e1,e2,contextptr);
     const_iterateur it=e2._VECTptr->begin(),itend=e2._VECTptr->end();
-    vecteur v;
+    gen res=new ref_vecteur;
+    res.subtype=e2.subtype;
+    vecteur &v=*res._VECTptr; //   vecteur v;
     v.reserve(itend-it);
     for (;it!=itend;++it){
       gen tmp=f(e1,*it,contextptr);
@@ -440,7 +448,7 @@ namespace giac {
 	return gen2vecteur(tmp);
       v.push_back(tmp);
     }
-    return gen(v,e2.subtype);
+    return res;//gen(v,e2.subtype);
   }
 
 #ifdef NO_UNARY_FUNCTION_COMPOSE
@@ -598,7 +606,7 @@ namespace giac {
     for (;;){
       if (itb==itend)
 	return s;
-      if ( itb->type==_SYMB || itb->type==_FRAC || itb->type==_CPLX || (itb->type==_VECT && itb->subtype==_SEQ__VECT) )
+      if ( (itb->type==_SYMB || itb->type==_FRAC || itb->type==_CPLX || (itb->type==_VECT && itb->subtype==_SEQ__VECT) ) && sommetstr!="." )
 	s += sommetstr + '('+itb->print(contextptr)+")";
       else
 	s += sommetstr + itb->print(contextptr);

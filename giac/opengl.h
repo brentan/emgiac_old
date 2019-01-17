@@ -1,3 +1,4 @@
+#ifndef SWIFT_CALCS_OPTIONS
 #ifndef _OPENGL_H
 #define _OPENGL_H
 #ifdef HAVE_CONFIG_H
@@ -240,3 +241,4 @@ namespace giac {
 #endif // ndef NO_NAMESPACE_GIAC
 
 #endif // _GRAPH3D_H
+#endif

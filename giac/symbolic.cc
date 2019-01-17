@@ -37,11 +37,13 @@ namespace giac {
 #endif // ndef NO_NAMESPACE_GIAC
 
   // unary_function_ptr quoted_op[]={at_of,at_for,at_bloc,at_local,at_program,at_rpn_prog,at_ifte,at_try_catch,at_print,at_signal,at_as_function_of,at_lieu,at_legende,at_debug,at_sst,at_sst_in,at_cont,at_kill,at_halt,at_watch,at_rmwatch,at_breakpoint,at_maple2mupad,at_mupad2maple,at_maple2xcas,at_mupad2xcas,at_purge,0};
-#if defined(GIAC_GENERIC_CONSTANTS) || defined(VISUALC) || defined(__x86_64__)
+  // functions here must be declared with define_unary_function_eval?_index
+  // index is even for on quoted, odd for quoted (1+)
+#if defined(GIAC_GENERIC_CONSTANTS) || defined(VISUALC) || defined(x86_64)
   const unary_function_ptr * archive_function_tab(){
     static const unary_function_ptr archive_function_tab_ptr[]={*at_plus,*at_neg,*at_binary_minus,*at_prod,*at_division,*at_inv,*at_pow,*at_exp,*at_ln,*at_abs,*at_arg,*at_pnt,*at_point,*at_segment,*at_sto,*at_sin,
-								*at_cos,*at_tan,*at_asin,*at_acos,*at_atan,*at_sinh,*at_cosh,*at_tanh,*at_asinh,*at_acos,*at_atanh,*at_interval,*at_union,*at_minus,*at_intersect,*at_not,
-								*at_and,*at_ou,*at_inferieur_strict,*at_inferieur_egal,*at_superieur_strict,*at_superieur_egal,*at_different,*at_equal,*at_rpn_prog,*at_local,*at_return,*at_Dialog,*at_double_deux_points,*at_pointprod,*at_pointdivision,*at_pointpow,*at_hash,*at_pourcent,*at_tilocal,*at_break,*at_continue,*at_ampersand_times,*at_maple_lib,*at_unit,*at_plot_style,*at_xor,*at_check_type,*at_quote_pow,*at_case,*at_dollar,*at_IFTE,*at_RPN_CASE,*at_RPN_LOCAL,*at_RPN_FOR,*at_RPN_WHILE,*at_NOP,*at_unit,*at_ifte,*at_for,*at_bloc,*at_program,*at_same,*at_increment,*at_decrement,*at_multcrement,*at_divcrement,*at_sq,*at_display,*at_of,*at_at,*at_normalmod,*at_equal2,*at_pointplus,*at_pointminus,0};
+								*at_cos,*at_tan,*at_asin,*at_acos,*at_atan,*at_sinh,*at_cosh,*at_tanh,*at_asinh,*at_acosh,*at_atanh,*at_interval,*at_union,*at_minus,*at_intersect,*at_not,
+								*at_and,*at_ou,*at_inferieur_strict,*at_inferieur_egal,*at_superieur_strict,*at_superieur_egal,*at_different,*at_equal,*at_rpn_prog,*at_local,*at_return,*at_Dialog,*at_double_deux_points,*at_pointprod,*at_pointdivision,*at_pointpow,*at_hash,*at_pourcent,*at_tilocal,*at_break,*at_continue,*at_ampersand_times,*at_maple_lib,*at_unit,*at_plot_style,*at_xor,*at_check_type,*at_quote_pow,*at_case,*at_dollar,*at_IFTE,*at_RPN_CASE,*at_RPN_LOCAL,*at_RPN_FOR,*at_RPN_WHILE,*at_NOP,*at_unit,*at_ifte,*at_for,*at_bloc,*at_program,*at_same,*at_increment,*at_decrement,*at_multcrement,*at_divcrement,*at_sq,*at_display,*at_of,*at_at,*at_normalmod,*at_equal2,*at_pointplus,*at_pointminus,*at_struct_dot,*at_try_catch,0};
     archive_function_tab_length=sizeof(archive_function_tab_ptr)/sizeof(const unary_function_ptr *);
     return archive_function_tab_ptr;
   }
@@ -84,7 +86,7 @@ namespace giac {
     // 162
     alias_at_of,alias_at_at,alias_at_normalmod,alias_at_equal2,alias_at_pointplus,
     // 172
-    alias_at_pointminus,
+    alias_at_pointminus,alias_at_struct_dot,alias_at_try_catch,
     0
   };
   const unary_function_ptr * _archive_function_tab = (const unary_function_ptr *) &archive_function_tab_alias;
@@ -242,7 +244,8 @@ namespace giac {
       s[l-1]='-';
       isneg=false;
     }
-    if ( !(f.type==_SYMB && ((f._SYMBptr->sommet==at_plus) || (f._SYMBptr->sommet==at_prod) || need_parenthesis(f._SYMBptr->sommet) || f._SYMBptr->sommet==at_inv )) && (f.type!=_CPLX) && (f.type!=_MOD)){
+    bool bt=f.type==_SYMB && (f._SYMBptr->sommet==at_plus || f._SYMBptr->sommet==at_inv || f._SYMBptr->sommet==at_prod || need_parenthesis(f._SYMBptr->sommet));
+    if ( !bt && (f.type!=_CPLX) && (f.type!=_MOD)){
       s += (isneg?(calc38?"−1/":"-1/"):"1/");
       return add_print(s,f,contextptr);
     }
@@ -331,8 +334,11 @@ namespace giac {
   }
 
   static string & add_print_pow(string & s,const symbolic & g,GIAC_CONTEXT){
-    if (g.feuille.type!=_VECT || g.feuille._VECTptr->size()!=2)
-      return add_print(s,g.feuille,contextptr);
+    if (g.feuille.type!=_VECT || g.feuille._VECTptr->size()!=2){
+      s += "pow(";
+      add_print(s,g.feuille,contextptr);
+      return s+=')';
+    }
     gen pui=g.feuille._VECTptr->back();
     gen arg=g.feuille._VECTptr->front();
 #ifndef GIAC_HAS_STO_38
@@ -346,6 +352,15 @@ namespace giac {
     }
 #endif
     bool argpar = ( (arg.type>_CPLX && arg.type!=_FLOAT_) || !is_positive(arg,contextptr)) && arg.type!=_IDNT ;
+#ifdef EMCC
+    bool need=need_parenthesis(arg) || arg.type==_SYMB;
+    if (pui==plus_one_half){
+      s += (need?"√(":"√");
+      add_print(s,arg,contextptr);
+      s += (need?")":"");
+      return s;
+    }
+#endif
     if (abs_calc_mode(contextptr)==38){
       bool need=need_parenthesis(arg) || arg.type==_SYMB;
       if (pui==plus_one_half){
@@ -389,15 +404,18 @@ namespace giac {
       return s;
     }
     if (arg.type==_IDNT || (arg.type==_SYMB && arg._SYMBptr->sommet!=at_neg && (arg._SYMBptr->sommet!=at_exp || calc_mode(contextptr)!=1) && !arg._SYMBptr->sommet.ptr()->printsommet)){
-      argpar=(arg.is_symb_of_sommet(at_exp) && abs_calc_mode(contextptr)==38);
+      argpar=arg.is_symb_of_sommet(at_inv) || (arg.is_symb_of_sommet(at_exp) && abs_calc_mode(contextptr)==38);
       if (argpar) s +='(';
-      if (pui.type==_SYMB || pui.type==_FRAC){
+      if (pui.type==_SYMB || pui.type==_FRAC || pui.type==_CPLX){
 	add_print(s,arg,contextptr);
 	if (argpar) s +=')';
 #ifdef GIAC_HAS_STO_38
 	s += '^';
 #else
-	s += __pow.s;
+	if (python_compat(contextptr))
+	  s += "**";
+	else 
+	  s += __pow.s;
 #endif
 	s += '(';
 	add_print(s,pui,contextptr);
@@ -410,7 +428,10 @@ namespace giac {
 #ifdef GIAC_HAS_STO_38
 	s += '^';
 #else
-	s += __pow.s;
+	if (python_compat(contextptr))
+	  s += "**";
+	else
+	  s += __pow.s;
 #endif
 	return add_print(s,pui,contextptr);
       }
@@ -490,7 +511,11 @@ namespace giac {
       return add_print_neg(s,g.feuille,contextptr);
     if (g.sommet==at_inv)
       return add_print_inv(s,g.feuille,contextptr);
-    if (g.sommet==at_exp && (calc_mode(contextptr)==1 || abs_calc_mode(contextptr)==38)){
+    if (g.sommet==at_exp 
+#ifndef EMCC
+	&& (calc_mode(contextptr)==1 || abs_calc_mode(contextptr)==38)
+#endif
+	){
       s += printasexp(g.feuille,0,contextptr);
       return s;
     }
@@ -590,7 +615,8 @@ namespace giac {
   /* EVAL without system stack */
 
   static void eval_sto_pnt_symb(const gen & feuille,gen & e,GIAC_CONTEXT){
-    if (e.type==_SYMB && e.ref_count()==1 && e._SYMBptr->feuille.type==_VECT && e._SYMBptr->feuille.ref_count()==1){
+    // e is also in history_plot(), ref_count==2
+    if (e.type==_SYMB && e.ref_count()<=2 && e._SYMBptr->feuille.type==_VECT && e._SYMBptr->feuille.ref_count()==1){
       vecteur & v=*e._SYMBptr->feuille._VECTptr;
       // legende not converted to string to avoid malloc ->faster
       v.push_back(feuille._VECTptr->back());
@@ -626,36 +652,30 @@ namespace giac {
     e=gen(v,e.subtype);
   }
 
-  static gen eval_sto(const gen & feuille,std::vector<const char *> & last,int level,GIAC_CONTEXT){ // autoname function
+  static gen eval_sto(const gen & feuille,int level,GIAC_CONTEXT){ // autoname function
     // detect vector/matrix addressing with () parsed as function definition
     // e.g. M(j,k):=j+k+1 parsed as M:=(j,k)->j+k+1
     // these affectations are marked by a subtype==1 by the parser
     // if destination is a matrix
-    if (feuille.type==_VECT && feuille.subtype==_SORTED__VECT && feuille._VECTptr->size()==2 && feuille._VECTptr->front().is_symb_of_sommet(at_program)){
-      gen prog=feuille._VECTptr->front()._SYMBptr->feuille;
+    vecteur & feuillev=*feuille._VECTptr;
+    gen & feuilleback=feuillev.back();
+    if (feuille.type==_VECT && feuille.subtype==_SORTED__VECT && feuillev.size()==2 && feuillev.front().is_symb_of_sommet(at_program)){
+      gen prog=feuillev.front()._SYMBptr->feuille;
       if (prog.type==_VECT && prog._VECTptr->size()==3 && (prog._VECTptr->front()!=_VECT || prog._VECTptr->front()._VECTptr->size()==2)){
 	gen val=prog._VECTptr->back();
-	if (feuille._VECTptr->back().type==_IDNT && feuille._VECTptr->back()._IDNTptr->eval(1,feuille._VECTptr->back(),contextptr).type==_VECT){
-	  prog=symbolic(at_of,makesequence(feuille._VECTptr->back(),prog._VECTptr->front()));
-	  return eval_sto(gen(makevecteur(val,prog),_SORTED__VECT),last,level,contextptr);
+	if (feuilleback.type==_IDNT && feuilleback._IDNTptr->eval(1,feuilleback,contextptr).type==_VECT){
+	  prog=symbolic(at_of,makesequence(feuilleback,prog._VECTptr->front()));
+	  return eval_sto(gen(makevecteur(val,prog),_SORTED__VECT),level,contextptr);
 	}
       }
     }
-    gen ans;
-    gen & feuilleback=feuille._VECTptr->back();
-    vecteur & lastarg=last_evaled_arg(contextptr);
     if ( feuilleback.type==_SYMB && (feuilleback._SYMBptr->sommet==at_unquote || feuilleback._SYMBptr->sommet==at_hash ) ){
-      ans=_sto(feuille.eval(level,contextptr),contextptr);
-      if (!last.empty())
-	last.pop_back();
-      if (!lastarg.empty())
-	lastarg.pop_back();
+      gen ans(_sto(feuille.eval(level,contextptr),contextptr));
       return ans;
     }
-    bool b=show_point(contextptr),quotearg=false;
+    bool & showpoint=show_point(contextptr),b=showpoint,quotearg=false;
     if (b)
-      show_point(false,contextptr);
-    gen e=feuille._VECTptr->front();
+      showpoint=false;
 #ifdef GIAC_HAS_STO_38 // quote STO> E, STO> F, STO>R, STO> X, STO>Y
     if (feuilleback.type==_IDNT){
       const char * ch = feuilleback._IDNTptr->id_name;
@@ -663,20 +683,42 @@ namespace giac {
 	quotearg=true;
     }
 #endif
-    if (!quotearg)
-      e=e.eval(level,contextptr);
+    gen e;
+    if (quotearg)
+      e=feuillev.front();
+    else {
+      gen * feuillevfront=&feuillev.front();
+      // avoid self-modifying code in multi-assign
+      if (feuilleback.type==_VECT && feuillevfront->type==_VECT &&feuilleback._VECTptr->size()==feuillevfront->_VECTptr->size()){
+	gen tmp;
+	e =gen(*feuillevfront->_VECTptr,feuillevfront->subtype);
+	iterateur it=e._VECTptr->begin(),itend=e._VECTptr->end();
+	for (;it!=itend;++it){
+	  if (it->in_eval(level,tmp,contextptr))
+	    *it=tmp;
+	  else {
+	    if (it->type==_VECT)
+	      *it=gen(*it->_VECTptr,tmp.subtype);
+	  }
+	}
+      }
+      else {
+	// e=feuillev.front().eval(level,contextptr);
+	if (!feuillevfront->in_eval(level,e,contextptr)){
+	  if (feuillevfront->type==_VECT) // avoid self-modifying code
+	    e=gen(*feuillevfront->_VECTptr,feuillevfront->subtype);
+	  else
+	    e=*feuillevfront;
+	}
+      }
+    }
     if (b)
-      show_point(b,contextptr);
+      showpoint=true;
     if (e.type==_SYMB && e._SYMBptr->sommet==at_pnt && e._SYMBptr->feuille.type==_VECT && e._SYMBptr->feuille._VECTptr->size()==2 && (contextptr?!contextptr->previous:!protection_level) )
       eval_sto_pnt_symb(feuille,e,contextptr);
     if ( e.type==_VECT && !e._VECTptr->empty() && e._VECTptr->back().type==_SYMB && e._VECTptr->back()._SYMBptr->sommet==at_pnt && (contextptr?!contextptr->previous:!protection_level))
       eval_sto_pnt_vect(feuilleback,e,contextptr);
-    ans=sto(e,feuilleback,contextptr);
-    if (!last.empty())
-      last.pop_back();
-    if (!lastarg.empty())
-      lastarg.pop_back();
-    return ans;
+    return sto(e,feuilleback,python_compat(contextptr),contextptr);
   } // end sommet==at_sto
 
   // http://mitpress.mit.edu/sicp/full-text/book/book-Z-H-34.html#%_sec_5.4
@@ -737,9 +779,10 @@ namespace giac {
   // name changed: BESTA compiler see this as repeated code with same sig as passing the itor itself 
   // - compiler whinges like a wounded pig --
   static void increment_instruction_ptr(const gen * it0,const gen * itend,GIAC_CONTEXT){
+    debug_struct *dbgptr=debug_ptr(contextptr);
     const gen * it=it0;
     for (;it!=itend;++it)
-      increment_instruction(*it,contextptr);
+      increment_instruction(*it,dbgptr);
   }
 
   // nr_eval is slower than usual eval because it saves what is usually saved
@@ -1338,6 +1381,7 @@ namespace giac {
 #ifndef NO_STDEXCEPT
       }
       catch (std::runtime_error & e) {
+	last_evaled_argptr(contextptr)=NULL;
 	res=string2gen(e.what(),false);
 	res.subtype=-1;
 	*destination=res;
@@ -1350,39 +1394,37 @@ namespace giac {
   gen symbolic::eval(int level,const context * contextptr) const {
     if (level==0 || !sommet.ptr())
       return *this;
-    gen ans;
     // FIXME test should be removed later, it's here for tests. See global.cc DEFAULT_EVAL_LEVEL
-    if (eval_level(contextptr)==26)
+    int & elevel=eval_level(contextptr);
+    if (elevel==26)
       return nr_eval(*this,level,contextptr);
-    std::vector<const char *> & last =last_evaled_function_name(contextptr);
-    last.push_back(sommet.ptr()->s);
-    vecteur & lastarg=last_evaled_arg(contextptr);
-    lastarg.push_back(feuille);
     if (sommet==at_sto && feuille.type==_VECT)
-      return eval_sto(feuille,last,level,contextptr);
+      return eval_sto(feuille,level,contextptr);
+    const char * & last =last_evaled_function_name(contextptr);
+    const char * save_last=last;
+    last=sommet.ptr()->s;
+    const gen * & lastarg=last_evaled_argptr(contextptr);
+    const gen * save_lastarg=lastarg;
+    lastarg=&feuille;
+    gen ans;
     if (sommet.quoted()){ 
 #ifndef RTOS_THREADX
       if (feuille.type==_SYMB){ 
 	unary_function_ptr & u=feuille._SYMBptr->sommet;
 	if (u==at_unquote){
 	  ans=sommet(feuille.eval(level,contextptr),contextptr);
-	  if (!last.empty())
-	    last.pop_back();
-	  if (!lastarg.empty())
-	    lastarg.pop_back();
+	  last=save_last;
+	  lastarg=save_lastarg;
 	  return ans;
 	}
 	if (u==at_hash){
 	  ans=sommet(gen(*feuille._SYMBptr->feuille._STRNGptr,contextptr),contextptr);
-	  if (!last.empty())
-	    last.pop_back();
-	  if (!lastarg.empty())
-	    lastarg.pop_back();
+	  last=save_last;
+	  lastarg=save_lastarg;
 	  return ans;
 	}
       }
 #endif
-      int & elevel=eval_level(contextptr);
       int save_level=elevel;
       elevel=level;
 #ifdef NO_STDEXCEPT
@@ -1392,39 +1434,32 @@ namespace giac {
 	ans=sommet(feuille,contextptr);
       }
       catch (std::runtime_error & err){
+	lastarg=&feuille;
 	elevel=save_level;
 	throw(err);
       }
 #endif
       elevel=save_level;
-      if (!last.empty())
-	last.pop_back();
-      if (!lastarg.empty())
-	lastarg.pop_back();
+      last=save_last;
+      lastarg=save_lastarg;
       return ans;
     } // if (sommet.quoted())
     else {
       // pnt check required because pnt name might be the identifier->recursion
-      if (sommet==at_pnt && feuille.type==_VECT && feuille._VECTptr->size()==3){
+      if (feuille.type==_VECT && sommet==at_pnt && feuille._VECTptr->size()==3){
 	ans=(*sommet.ptr())(gen(vecteur(feuille._VECTptr->begin(),feuille._VECTptr->begin()+2),feuille.subtype).in_eval(level,ans,contextptr)?ans:feuille,contextptr);
-	if (!last.empty())
-	  last.pop_back();
-	if (!lastarg.empty())
-	  lastarg.pop_back();
+	last=save_last;
+	lastarg=save_lastarg;
 	return ans;
       }
-      if ((sommet==at_neg) && (feuille.type==_IDNT) && !strcmp(feuille._IDNTptr->id_name,string_infinity)){
-	if (!last.empty())
-	  last.pop_back();
-	if (!lastarg.empty())
-	  lastarg.pop_back();
+      if (feuille.type==_IDNT && sommet==at_neg && !strcmp(feuille._IDNTptr->id_name,string_infinity)){
+	last=save_last;
+	lastarg=save_lastarg;
 	return minus_inf;
       }
       if (sommet==at_quote){
-	if (!last.empty())
-	  last.pop_back();
-	if (!lastarg.empty())
-	  lastarg.pop_back();
+	last=save_last;
+	lastarg=save_lastarg;
 	return quote(feuille,contextptr);
       }
       ans=(*sommet.ptr())(feuille.in_eval(level,ans,contextptr)?ans:feuille,contextptr);
@@ -1434,10 +1469,8 @@ namespace giac {
 	else
 	ans=(*sommet.ptr())(feuille,contextptr);
       */
-      if (!last.empty())
-	last.pop_back();
-      if (!lastarg.empty())
-	lastarg.pop_back();
+      last=save_last;
+      lastarg=save_lastarg;
       return ans;
     }
   }
@@ -1504,10 +1537,12 @@ namespace giac {
   gen symbolic::evalf(int level,const context * contextptr) const {
     if (level==0)
       return *this;
-    std::vector<const char *> & last =last_evaled_function_name(contextptr);
-    last.push_back(sommet.ptr()->s);
-    vecteur & lastarg=last_evaled_arg(contextptr);
-    lastarg.push_back(feuille);
+    const char * & last =last_evaled_function_name(contextptr);
+    const char * save_last=last;
+    last=sommet.ptr()->s;
+    const gen * & lastarg=last_evaled_argptr(contextptr);
+    const gen * save_lastarg=lastarg;
+    lastarg=&feuille;
     if (sommet==at_sto){ // autoname function
       gen e=feuille._VECTptr->front().evalf(level,contextptr);
       if ((e.type==_SYMB) && (e._SYMBptr->sommet==at_pnt) && (e._SYMBptr->feuille.type==_VECT) && (e._SYMBptr->feuille._VECTptr->size()==2))
@@ -1521,10 +1556,8 @@ namespace giac {
 	}
 	e=v;
       }
-      if (!last.empty())
-	last.pop_back();
-      if (!lastarg.empty())
-	lastarg.pop_back();
+      last=save_last;
+      lastarg=save_lastarg;
       return sto(e,feuille._VECTptr->back(),contextptr);
     }
     gen ans;
@@ -1541,10 +1574,8 @@ namespace giac {
 	  ans=ans+it->evalf(level,contextptr);
 	}
       }
-      if (!last.empty())
-	last.pop_back();
-      if (!lastarg.empty())
-	lastarg.pop_back();
+      last=save_last;
+      lastarg=save_lastarg;
       return ans;
     }
     if (sommet==at_prod){
@@ -1557,33 +1588,25 @@ namespace giac {
 	  ans=operator_times(ans,it->evalf(level,contextptr),contextptr);
 	}
       }
-      if (!last.empty())
-	last.pop_back();
-      if (!lastarg.empty())
-	lastarg.pop_back();
+      last=save_last;
+      lastarg=save_lastarg;
       return ans;
     }
     if (sommet.quoted() && sommet!=at_and && !equalposcomp(plot_sommets,sommet) ){ 
       ans=sommet(feuille,contextptr);
-      if (!last.empty())
-	last.pop_back();
-      if (!lastarg.empty())
-	lastarg.pop_back();
+      last=save_last;
+      lastarg=save_lastarg;
       return ans;
     }
     else {
       if ((sommet==at_neg) && (feuille.type==_IDNT) && !strcmp(feuille._IDNTptr->id_name,string_infinity)){
-	if (!last.empty())
-	  last.pop_back();
-	if (!lastarg.empty())
-	  lastarg.pop_back();
+	last=save_last;
+	lastarg=save_lastarg;
 	return minus_inf;
       }
       if (sommet==at_quote){
-	if (!last.empty())
-	  last.pop_back();
-	if (!lastarg.empty())
-	  lastarg.pop_back();
+	last=save_last;
+	lastarg=save_lastarg;
 	return quote(feuille,contextptr);
       }
       if (sommet==at_and || (sommet!=at_cercle && equalposcomp(plot_sommets,sommet))){
@@ -1591,17 +1614,13 @@ namespace giac {
 	// is_inevalf=true;
 	ans=new_ref_symbolic(symbolic(sommet,feuille.evalf(1,contextptr)));
 	// is_inevalf=save_is_inevalf;
-	if (!last.empty())
-	  last.pop_back();
-	if (!lastarg.empty())
-	  lastarg.pop_back();
+	last=save_last;
+	lastarg=save_lastarg;
 	return ans;
       }
       ans=(*sommet.ptr())(feuille.evalf(level,contextptr),contextptr);
-      if (!last.empty())
-	last.pop_back();
-      if (!lastarg.empty())
-	lastarg.pop_back();
+      last=save_last;
+      lastarg=save_lastarg;
       return ans;
     }
   }
@@ -1628,6 +1647,29 @@ namespace giac {
       return res;
     }
     return 2;
+  }
+
+  int print_max_depth=100;
+  unsigned depth(const gen & g,unsigned add,unsigned max){
+    gen g_(g);
+    for (;g_.type==_SYMB;++add){
+      g_=g_._SYMBptr->feuille;
+    }
+    if (add>=max)
+      return add;
+    if (g_.type==_VECT){
+      unsigned res=add;
+      const_iterateur it=g_._VECTptr->begin(),itend=g_._VECTptr->end();
+      for (;it!=itend;++it){
+	unsigned cur=depth(*it,add,max);
+	if (max && cur>max)
+	  return res;
+	if (cur>res)
+	  res=cur;
+      }
+      return res;
+    }
+    return add;
   }
 
 #ifdef NSPIRE

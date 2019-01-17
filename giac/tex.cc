@@ -615,6 +615,10 @@ namespace giac {
     n=utf8(w,s.c_str(),n);
     for (int j=0;j<n;j++){
       switch(w[j]){
+      case 8599: if (!mathmode) texs+="$"; texs+="\\nearrow"; texs+=mathmode?' ':'$'; res++; break;       
+      case 8600: if (!mathmode) texs+="$"; texs+="\\searrow"; texs+=mathmode?' ':'$'; res++; break;
+      case 8595: if (!mathmode) texs+="$"; texs+="\\downarrow"; texs+=mathmode?' ':'$'; res++; break;
+      case 8593: if (!mathmode) texs+="$"; texs+="\\uparrow"; texs+=mathmode?' ':'$'; res++; break;
       case 0x0386:  texs+="\\'A"; break;
       case 0x0388:  texs+="\\'E"; break;
       case 0x0389:  texs+="\\'H"; break;
@@ -1091,6 +1095,7 @@ namespace giac {
       e=a.evalf_double(1,contextptr); // FIXME? level 1 does not work for non 0 context
 #ifndef NO_STDEXCEPT
     } catch (std::runtime_error & error ){
+      last_evaled_argptr(contextptr)=NULL;
       CERR << error.what() << endl;
     }
 #endif
@@ -1127,7 +1132,13 @@ namespace giac {
     if (g.is_symb_of_sommet(at_curve)){
       gen & gf=g._SYMBptr->feuille;
       if (gf.type==_VECT && gf._VECTptr->size()>1){
-	in_autoscale((*gf._VECTptr)[1],vx,vy,vz,contextptr);
+	gen tmp=(*gf._VECTptr)[1];
+	if (is_undef(tmp)){
+	  tmp=(*gf._VECTptr)[0];
+	  if (tmp.type==_VECT && tmp._VECTptr->size()>4)
+	    tmp=(*tmp._VECTptr)[4];
+	}
+	in_autoscale(tmp,vx,vy,vz,contextptr);
       }
       return false;
     }
@@ -1148,15 +1159,16 @@ namespace giac {
       vecteur v;
       if (g._SYMBptr->feuille.type==_VECT && g._SYMBptr->feuille._VECTptr->size()>=3){
 	v=*g._SYMBptr->feuille._VECTptr;
-	gen delta=v[2]-v[1];
-	v=makevecteur(c-r*exp(cst_i*(v[1]-0.1*delta),contextptr),
-		      c-r*exp(cst_i*v[1],contextptr),
-		      c-r*exp(cst_i*(3*v[1]+v[2])/gen(4),contextptr),
-		      c-r*exp(cst_i*(v[1]+v[2])/gen(2),contextptr),
-		      c-r*exp(cst_i*(v[1]+3*v[2])/gen(4),contextptr),
-		      c-r*exp(cst_i*v[2],contextptr),
-		      c-r*exp(cst_i*(v[2]+0.1*delta),contextptr)); 
-	// FIXME? centre_rayon returns (a-b)/2 for rayon instead of (b-a)/2...
+	gen v2=evalf_double(v[2],1,contextptr);
+	gen v1=evalf_double(v[1],1,contextptr);
+	gen delta=v2-v1;
+	v=makevecteur(c,c+r*exp(cst_i*(v1-0.1*delta),contextptr),
+		      c+r*exp(cst_i*v1,contextptr),
+		      c+r*exp(cst_i*(3*v1+v2)/gen(4),contextptr),
+		      c+r*exp(cst_i*(v1+v2)/gen(2),contextptr),
+		      c+r*exp(cst_i*(v1+3*v2)/gen(4),contextptr),
+		      c+r*exp(cst_i*v2,contextptr),
+		      c+r*exp(cst_i*(v2+0.1*delta),contextptr)); 
       }
       else
 	v=makevecteur(c-r,c+r,c-cst_i*r,c+cst_i*r);
@@ -1190,20 +1202,28 @@ namespace giac {
 	return in_autoscale(f,vx,vy,vz,contextptr);
       }
     }
+    if (g.is_symb_of_sommet(at_equal) && g._SYMBptr->feuille.type==_VECT && g._SYMBptr->feuille._VECTptr->size()==2 && g._SYMBptr->feuille._VECTptr->front()==_GL_ORTHO && !is_zero(g._SYMBptr->feuille._VECTptr->back()))
+      return true;
     return false;
   }
 
-  void overwrite_viewbox(const gen & g,double & window_xmin,double & window_xmax,double & window_ymin,double & window_ymax,double &window_zmin,double & window_zmax){
+  // returns true if axes are drawn
+  bool overwrite_viewbox(const gen & g,double & window_xmin,double & window_xmax,double & window_ymin,double & window_ymax,double &window_zmin,double & window_zmax){
+    bool res=true;
     if (g.type==_VECT){
       vecteur v =*g._VECTptr;
       for (int i=0;i<int(v.size());++i){
-	overwrite_viewbox(v[i],window_xmin,window_xmax,window_ymin,window_ymax,window_zmin,window_zmax);
+	if (!overwrite_viewbox(v[i],window_xmin,window_xmax,window_ymin,window_ymax,window_zmin,window_zmax))
+	  res=false;
       }
+      return res;
     }
     if (g.is_symb_of_sommet(at_equal)){
       gen f=g._SYMBptr->feuille;
       if (f.type==_VECT && f._VECTptr->size()==2){
 	gen optname= f._VECTptr->front(),optvalue=f._VECTptr->back();
+	if (optname.type==_INT_ && optname.subtype==_INT_PLOT && optname.val==_AXES && optvalue==0)
+	  res=false;
 	if (optvalue.is_symb_of_sommet(at_interval) && optname.type==_INT_ && optname.subtype==_INT_PLOT && optname.val>=_GL_X && optname.val<=_GL_Z){
 	  gen optvf=evalf_double(optvalue._SYMBptr->feuille,1,context0);
 	  if (optvf.type==_VECT && optvf._VECTptr->size()==2){
@@ -1229,13 +1249,48 @@ namespace giac {
 	}
       }
     }
+    return res;
+  }
+
+  void title_legende(const gen & g,plot_attr & p){
+    if (g.type==_VECT){
+      vecteur v =*g._VECTptr;
+      for (int i=0;i<int(v.size());++i){
+	title_legende(v[i],p);
+      }
+      return;
+    }
+    if (g.is_symb_of_sommet(at_equal)){
+      gen f=g._SYMBptr->feuille;
+      if (f.type==_VECT && f._VECTptr->size()==2){
+	gen optname= f._VECTptr->front(),optvalue=f._VECTptr->back();
+	if (optname.type==_INT_ && optname.subtype==_INT_PLOT){
+	  string s=optvalue.type==_STRNG?*optvalue._STRNGptr:optvalue.print(context0);
+	  switch (optname.val){
+	  case _TITLE:
+	    p.title=s;
+	    break;
+	  case _GL_X_AXIS_NAME:
+	    p.xlegende=s;
+	    break;
+	  case _GL_Y_AXIS_NAME:
+	    p.ylegende=s;
+	    break;
+	  }
+	}
+      }
+    }
   }
 
   static void zoom(double &m,double & M,double d){
     double x_center=(M+m)/2;
     double dx=(M-m);
-    if (dx==0)
-      dx=1;
+    double s=std::abs(m)+std::abs(M);
+    if (dx<=1e-5*s){
+      dx=s;
+      if (dx<=1e-5)
+	dx=1;
+    }
     dx *= d/2;
     m = x_center - dx;
     M = x_center + dx;
@@ -1243,6 +1298,14 @@ namespace giac {
 
   void autoscaleminmax(vector<double> & v,double & m,double & M,bool fullview){
     int s=int(v.size());
+    if (s==0){
+      v.push_back(0);
+      ++s;
+    }
+    if (s==1){
+      v.push_back(v.front());
+      ++s;
+    }
     if (s>1){    
       sort(v.begin(),v.end());
       m=v[s/10];
@@ -1286,6 +1349,8 @@ namespace giac {
       return vectpnt2tex(mys,contextptr);
     if (mys.sommet.ptr()->texprint)
       return mys.sommet.ptr()->texprint(feu,mys.sommet.ptr()->s,contextptr);
+    if (mys.sommet==at_abs)
+      return '|'+gen2tex(feu,contextptr)+'|';
     string opstring=idnt2tex(mys.sommet.ptr()->print(contextptr));
     if ( (feu.type==_VECT) && (feu._VECTptr->empty()) )
       return opstring+string("()");
@@ -1300,7 +1365,9 @@ namespace giac {
 #ifdef SWIFT_CALCS_OPTIONS
       if (mys.sommet==at_inv && (feu.is_symb_of_sommet(at_prod) || feu.is_symb_of_sommet(at_plus) || giac::unit_mode || feu.type<=_IDNT) ){
 #else
-      if (mys.sommet==at_inv && (feu.is_symb_of_sommet(at_prod) || feu.is_symb_of_sommet(at_plus) || feu.type<=_IDNT) ){
+      if (mys.sommet==at_inv && (feu.is_symb_of_sommet(at_prod) || feu.is_symb_of_sommet(at_plus) || feu.is_symb_of_sommet(at_pow) || feu.type<=_IDNT) ){
+  if (feu.type==_IDNT)
+    return gen2tex(feu,contextptr)+"^{-1}";
 #endif
 	return string("\\frac{1}{") + gen2tex(feu,contextptr) +string("}");
       }
@@ -1375,7 +1442,7 @@ namespace giac {
 	return "\\frac{1}{\\sqrt{"+gen2tex(v.front(),contextptr)+"}}";
       string res=gen2tex(v.front(),contextptr);
       bool par = (v.front().type>=_CPLX || is_strictly_positive(-v.front(),contextptr) ) && v.front().type!=_IDNT && !ckmatrix(v.front());
-      if (par){
+      if (par && !v.front().is_symb_of_sommet(at_plus)){
 	int ress=int(res.size()),i;
 	for (i=1;i<ress;++i){
 	  if (res[i]<=32 || !isalpha(res[i]))
@@ -1513,6 +1580,8 @@ namespace giac {
 	return _VECT2tex(*e._VECTptr,e.subtype,contextptr);
     case _POLY:
       return mbox_begin+string("polynome")+mbox_end+" "; 
+    case _SPOL1:
+      return gen2tex(spol12gen(*e._SPOL1ptr,contextptr),contextptr);
     case _FRAC:
       return string("\\frac{")+gen2tex(e._FRACptr->num,contextptr)+"}{"+gen2tex(e._FRACptr->den,contextptr)+'}';
     case _EXT: 
@@ -1537,7 +1606,7 @@ namespace giac {
   gen _latex(const gen & g,GIAC_CONTEXT){
     if ( g.type==_STRNG && g.subtype==-1) return  g;
 #ifndef NSPIRE
-    if (!secure_run && g.type==_VECT && g.subtype==_SEQ__VECT && g._VECTptr->size()>1 && (*g._VECTptr)[1].type==_STRNG){
+    if (!secure_run && g.type==_VECT && g.subtype==_SEQ__VECT && g._VECTptr->size()==2 && (*g._VECTptr)[1].type==_STRNG){
       ofstream of((*g._VECTptr)[1]._STRNGptr->c_str());
       of << gen2tex(g._VECTptr->front(),contextptr) << endl;
       return plus_one;

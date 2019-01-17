@@ -1,12 +1,18 @@
 CACHE MANIFEST
-# v1 2011-08-14
+# v1.2.3-37c
 giac.js
 # giac.js.mem
 xcasmode.js
-codemirror.css
-codemirror.js
-matchbrackets.js
+codemirror/codemirror.css
+codemirror/codemirror.js
+codemirror/matchbrackets.js
 FileSaver.js
 logo.png
 longhelp.js
 giacworker.js
+xcasfr.html
+xcasen.html
+algoxcas.html
+codemirror/show-hint.js
+codemirror/show-hint.css
+w3data.js

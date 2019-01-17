@@ -21,6 +21,15 @@
 #ifndef _GIAC_FIRST_H_
 #define _GIAC_FIRST_H_
 
+#ifndef GIAC_VERSION
+#define GIAC_VERSION VERSION
+#endif
+//#include <stdint.h>
+
+#ifdef __x86_64__
+#define x86_64 1
+#endif
+
 // Thanks to Jason Papadopoulos, author of msieve
 #ifdef BESTA_OS
 #include <time.h>
@@ -37,7 +46,7 @@
 #define EMCC
 #undef HAVE_LIBPTHREAD
 #undef HAVE_PTHREAD_H
-#undef __x86_64__
+#undef x86_64
 #undef SMARTPTR64
 #undef HAVE_LONG_DOUBLE
 #endif
@@ -62,8 +71,10 @@
 #ifdef EMCC
 #define CERR std::cout
 extern "C" double emcctime(); 
+#ifndef SWIFT_CALCS_OPTIONS
 extern "C" int glinit(int,int,int,int,int);
 extern "C" void glcontext(int);
+#endif
 #define CLOCK emcctime
 #define CLOCK_T clock_t
 #else
@@ -81,6 +92,10 @@ extern "C" void glcontext(int);
 #ifdef __sparc__
 #define DOUBLEVAL
 #define GIAC_NO_OPTIMIZATIONS
+#endif
+
+#if defined(BUILDING_NODE_EXTENSION) && defined(_WIN64)
+#define DOUBLEVAL
 #endif
 
 #ifndef DOUBLEVAL
@@ -107,7 +122,7 @@ int my_sprintf(char * s, const char * format, ...);
 #define my_ostream std::ostream
 #endif
 
-#ifdef __x86_64__
+#ifdef x86_64
 #define alias_type ulonglong
 #else
 #define alias_type size_t
@@ -122,6 +137,10 @@ int my_sprintf(char * s, const char * format, ...);
 #undef CLOCK_T
 #define CLOCK() PrimeGetNow()
 #define CLOCK_T int
+#endif
+
+#if !defined HAVE_ALLOCA_H && !defined GIAC_HAS_STO_38
+#define alloca _alloca
 #endif
 
 #ifdef NO_UNARY_FUNCTION_COMPOSE
@@ -180,7 +199,7 @@ int my_sprintf(char * s, const char * format, ...);
 
 #endif //  NO_UNARY_FUNCTION_COMPOSE
 
-#ifdef __x86_64__
+#ifdef x86_64
 #define define_unary_function_ptr(name,alias_name,ptr) const ulonglong alias_name = (ulonglong)(ptr); const unary_function_ptr * const name = (const unary_function_ptr *) &alias_name
 #else
 #define define_unary_function_ptr(name,alias_name,ptr) const size_t alias_name = (size_t)(ptr); const unary_function_ptr * const name = (const unary_function_ptr *) &alias_name
@@ -192,13 +211,13 @@ int my_sprintf(char * s, const char * format, ...);
 #endif
 
 #ifdef STATIC_BUILTIN_LEXER_FUNCTIONS
-#ifdef __x86_64__
+#ifdef x86_64
 #define define_unary_function_ptr5(name,alias_name,ptr,quoted,token) const ulonglong alias_name = ulonglong(ptr); const unary_function_ptr * const name = (const unary_function_ptr *) &alias_name;
 #else
 #define define_unary_function_ptr5(name,alias_name,ptr,quoted,token) const size_t alias_name = (size_t)(ptr); const unary_function_ptr * const name = (const unary_function_ptr *) &alias_name;
 #endif
 #else
-#ifdef __x86_64__
+#ifdef x86_64
 #define define_unary_function_ptr5(name,alias_name,ptr,quoted,token) static const unary_function_ptr alias_name##_(ptr,quoted,token); const ulonglong alias_name=(ulonglong)ptr; const unary_function_ptr * const name = &alias_name##_;
 #else
 #define define_unary_function_ptr5(name,alias_name,ptr,quoted,token) static const unary_function_ptr alias_name##_(ptr,quoted,token); const size_t alias_name=(size_t)ptr; const unary_function_ptr * const name = &alias_name##_;
@@ -206,7 +225,9 @@ int my_sprintf(char * s, const char * format, ...);
 #endif
 
 #ifdef GIAC_HAS_STO_38
+#ifndef GIAC_GENERIC_CONSTANTS
 #define GIAC_GENERIC_CONSTANTS
+#endif
 #endif
 
 #ifdef __VISUALC__ 
@@ -232,20 +253,20 @@ typedef unsigned __int64 ulonglong ;
 #else // __VISUALC__
 typedef long long longlong;
 typedef unsigned long long ulonglong;
-#ifdef __x86_64__
+#ifdef x86_64
   typedef int int128_t __attribute__((mode(TI)));
   typedef unsigned int uint128_t __attribute__((mode(TI)));
 #ifndef INT128
 #define INT128 1
 #endif
-#endif // __x86_64__
+#endif // x86_64
 
 // do not define PSEUDO_MOD if a negative unsigned longlong >> 63 is != 0xffffffffffffffff
 // #define PSEUDO_MOD accelerates cyclic* gbasis computation significantly
 // from int_multilinear_combination in vecteur.cc (from rref?)
 #ifdef FIR
-#if !(defined(BESTA_OS) || defined(WINDOWS))
-// #if !(defined(IOS) || defined(__ANDROID__)) && !defined(OSX) && !defined(LINUX)
+#if !(defined(BESTA_OS) || defined(WINDOWS) || defined(OSXIOS) || defined(FIR_LINUX) || defined(FIR_ANDROID) || defined(FREERTOS) )
+// was #if !(defined(IOS) || defined(__ANDROID__)) && !defined(OSX) && !defined(LINUX)
 #define PSEUDO_MOD 
 #endif
 #else
@@ -260,7 +281,7 @@ inline void swap_giac_double(double & a,double & b){ double c=a; a=b; b=c; }
 #define swap_giac_double(a,b) std::swap<giac_double>(a,b)
 #endif
 
-#if defined WIN32 && defined __x86_64__
+#if defined WIN32 && defined x86_64
 typedef longlong ref_count_t;
 #else
 typedef int ref_count_t;
@@ -269,19 +290,35 @@ typedef int ref_count_t;
 #ifdef WINSTORE
 //tw  **NOTE** this is pulled out of winnt.h!!! I don't know why it is not found there.
 //             there is some sort of interaction in windows ARM builds... 
-#define CP15_TPIDRURW          15, 0, 13,  0, 2         // Software Thread ID Register, User Read/Write
+//#define CP15_TPIDRURW          15, 0, 13,  0, 2         // Software Thread ID Register, User Read/Write
 #endif
 
-#ifndef __x86_64__
+#ifndef SIZEOF_VOID_P
+#ifdef __APPLE__
+#ifdef __LP64__
+#define SIZEOF_VOID_P 8
+#else
+#define SIZEOF_VOID_P 4
+#endif
+#endif //__APPLE__
+
+#ifndef SIZEOF_VOID_P
+//#error "No SIZEOF_VOID_P defined on this system!!!!"
+#endif
+#endif
+
+#if __BYTE_ORDER__ ==__ORDER_LITTLE_ENDIAN__ && SIZEOF_VOID_P==8 //(defined(__LP64__) || defined(_WIN64) || (defined(x86_64) && !defined(__ILP32__)) || defined(_M_X64) || defined(__ia64) || defined (_M_IA64) || defined(__aarch64__) || defined(__powerpc64__))
+#if !defined(BUILDING_NODE_EXTENSION) || !defined(_WIN64)
+#define SMARTPTR64
+#endif
+#else // x86_64
 #ifdef SMARTPTR64
 #undef SMARTPTR64
 #endif // SMARTPTR64
 #ifdef _I386_
 #undef _I386_
 #endif // _I386_
-#else // __x86_64__
-#define SMARTPTR64
-#endif // __x86_64__
+#endif // x86_64
 
 #ifdef USE_GMP_REPLACEMENTS
 //#define GIAC_TYPE_ON_8BITS
@@ -289,8 +326,9 @@ typedef int ref_count_t;
 #undef HAVE_LIBMPFR
 #include "gmp_replacements.h"
 #else
+#include <cstddef>
 #include "gmp.h"
-#endif
+#endif // USE_GMP_REPLACEMENTS
 
 #include <cassert>
 
@@ -475,4 +513,8 @@ inline float atan2f(float f1,float f2,int rad){ if (rad) return atan2f(f1,f2); e
 #define fis_inf my_isinf
 #endif // BCD
 
+#ifdef FIR_ANDROID
+#undef B0 //this conflicts with a define
+#undef bcopy //this conflicts with a define
+#endif
 #endif // _GIAC_FIRST_H_

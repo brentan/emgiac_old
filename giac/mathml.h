@@ -26,6 +26,9 @@ namespace giac {
 #endif // ndef NO_NAMESPACE_GIAC */
 
 #ifndef GIAC_HAS_STO_38
+  // k is reduced modulo 126
+  void arc_en_ciel(int k,int & r,int & g,int & b);
+
   extern const char mathml_preamble[];
   extern const char mathml_end[];
   class gen;  
@@ -37,14 +40,21 @@ namespace giac {
   std::string matrix2mathml(const matrice & m,GIAC_CONTEXT);
   std::string gen2mathml(const gen & e,GIAC_CONTEXT);
   std::string gen2mathml(const gen & e, std::string &svg,GIAC_CONTEXT);
-  std::string gen2svg(const gen &e,GIAC_CONTEXT);
-  std::string gen2svg(const gen &e,double xmin,double xmax,double ymin,double ymax,GIAC_CONTEXT);
+  std::string gen2svg(const gen &e,GIAC_CONTEXT,bool withpreamble=false);
+  //std::string gen2svg(const gen &e,double xmin,double xmax,double ymin,double ymax,GIAC_CONTEXT);
+  std::string gen2svg(const gen &e,double xmin,double xmax,double ymin,double ymax,double ysurx,GIAC_CONTEXT,bool withpreamble=false);
+  std::string svg_preamble_pixel(const gen & g,double width_cm, double height_cm,bool xml=true);
   std::string svg_preamble(double width_cm, double height_cm,bool xml=true);
+  std::string svg_preamble_pixel(const gen & g,double svg_width_cm, double svg_height_cm,double xmin,double xmax,double ymin,double ymax,bool ortho,bool xml);
   std::string svg_preamble(double svg_width_cm, double svg_height_cm,double xmin,double xmax,double ymin,double ymax,bool ortho,bool xml);
   std::string svg_grid();
   std::string svg_grid(double xmin,double xmax,double ymin,double ymax);
+  std::string svg_grid(double xmin,double xmax,double ymin,double ymax,const plot_attr & p);
   extern const char svg_end[];
   std::string ingen2mathml(const gen & g,bool html5,GIAC_CONTEXT);
+  // greek letter support 
+  std::string idnt2mathml(const std::string & s0);
+  std::string idnt2mathml_(const std::string & s0);
 
 #endif // RTOS_THREADX
 

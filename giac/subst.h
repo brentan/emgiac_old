@@ -71,7 +71,7 @@ namespace giac {
   }
   typedef gen (* gen_op_context) (const gen &,GIAC_CONTEXT);
   gen subst(const gen & e,const std::vector<const unary_function_ptr *> & v,const std::vector< gen_op_context > & w,bool quotesubst,GIAC_CONTEXT);
-  gen subst(const gen & e,const unary_function_ptr * v,const gen_op_context * w,bool quotesubst,GIAC_CONTEXT);
+  gen subst(const gen & e,const unary_function_ptr * v,const gen_op_context * w,bool quotesubst,GIAC_CONTEXT,bool recursive_nonrat=true);
 
   gen subst(const gen & e,const std::vector<const unary_function_ptr *> & v,const std::vector< gen (*) (const gen &) > & w,bool quotesubst,GIAC_CONTEXT);
 
@@ -200,6 +200,8 @@ namespace giac {
 
   gen Heavisidetosign(const gen & args,GIAC_CONTEXT);
   gen _Heavisidetosign(const gen & args,GIAC_CONTEXT);
+  gen Heavisidetopiecewise(const gen & args,GIAC_CONTEXT);
+  gen _Heavisidetopiecewise(const gen & args,GIAC_CONTEXT);
   gen expln2trig(const gen & g,GIAC_CONTEXT);
   gen _mult_conjugate(const gen & g0,GIAC_CONTEXT);
   gen _mult_c_conjugate(const gen & g0,GIAC_CONTEXT);

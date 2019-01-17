@@ -55,9 +55,13 @@ namespace giac {
   // check type of coefficients
   int coefftype(const polynome & p,gen & coefft);
   // remove MODulo coefficients
-  void unmodularize(const polynome p,polynome & res);
+  void unmodularize(const polynome & p,polynome & res);
   polynome unmodularize(const polynome & p);
   void modularize(polynome & d,const gen & m);
+  // remove EXT, also checks that pmin is the min poly
+  bool unext(const polynome & p,const gen & pmin,polynome & res);
+  bool ext(polynome & res,const gen & pmin);
+  void ext(const polynome & p,const gen & pmin,polynome & res);
   // arithmetic
   bool is_one(const polynome & p);
   bool operator < (const polynome & f,const polynome & g);
@@ -96,6 +100,7 @@ namespace giac {
   inline polynome operator * (const gen & fact, const polynome & th){ return th*fact; }
   // a*b+c*d
   gen foisplus(const polynome & a,const polynome & b,const polynome & c,const polynome & d);
+  gen foisplus(const gen & a,const gen & b,const gen & c,const gen & d);
   polynome operator - (const polynome & th) ;
   polynome operator / (const polynome & th,const polynome & other);
   polynome operator / (const polynome & th,const gen & fact );
@@ -134,6 +139,8 @@ namespace giac {
   // set i to i+(j-i)*B mod A, inplace operation
   void ichrem_smod_inplace(mpz_t * Az,mpz_t * Bz,mpz_t * iz,mpz_t * tmpz,gen & i,const gen & j);
   polynome resultant(const polynome & p,const polynome & q);
+  bool resultant_sylvester(const polynome &p,const polynome &q,matrice & S,polynome & res);
+  bool resultant_sylvester(const polynome &p,const polynome &q,vecteur &pv,vecteur &qv,matrice & S,gen & determinant);
   polynome lgcd(const polynome & p);
   gen ppz(polynome & p,bool divide=true);
   void lgcdmod(const polynome & p,const gen & modulo,polynome & pgcd);
@@ -168,12 +175,17 @@ namespace giac {
   bool sqff_evident(const polynome & p,factorization & f,bool withsqrt,bool complexmode);
   // factorization over Z[i]
   bool cfactor(const polynome & p, gen & an,factorization & f,bool withsqrt,gen & extra_div);
+  // add a dimension in front of pcur for algebraic extension variable
+  bool algext_convert(const polynome & pcur,const gen & e,polynome & p_y);
+  // convert minimal polynomial of algebraic extension
+  void algext_vmin2pmin(const vecteur & v_mini,polynome & p_mini);
+
   // factorization over an algebraic extension
   // the main variable of G is the algebraic extension variable
   // the minimal polynomial of this variable is p_mini
   // G is assumed to be square-free
   // See algorithm 3.6.4 in Henri Cohen book starting at step 3
-  bool algfactor(const polynome & G,const polynome & p_mini,int & k,factorization & f,bool complexmode,gen & extra_div);
+  bool algfactor(const polynome & G,const polynome & p_mini,int & k,factorization & f,bool complexmode,gen & extra_div,polynome & Gtry);
   // sqff factorization over a finite field
   factorization squarefree_fp(const polynome & p,unsigned n,unsigned exposant);
   // univariate factorization over a finite field, once sqff
@@ -413,6 +425,44 @@ namespace giac {
     return true;
   }
 
+#ifdef INT128
+  template <class U>
+  bool convert_int(const polynome & p,const index_t & deg,std::vector< T_unsigned<int128_t,U> >  & v,int128_t & maxp){
+    typename std::vector< monomial<gen> >::const_iterator it=p.coord.begin(),itend=p.coord.end();
+    v.clear();
+    v.reserve(itend-it);
+    T_unsigned<int128_t,U> gu;
+    U u;
+    maxp=0;
+    int128_t tmp;
+    mpz_t tmpz;
+    mpz_init(tmpz);
+    index_t::const_iterator itit,ditbeg=deg.begin(),ditend=deg.end(),dit;
+    for (;it!=itend;++it){
+      u=0;
+      itit=it->index.begin();
+      for (dit=ditbeg;dit!=ditend;++itit,++dit)
+	u=u*unsigned(*dit)+unsigned(*itit);
+      gu.u=u;
+      if (it->value.type==_INT_)
+	gu.g=it->value.val;
+      else {
+	if (it->value.type!=_ZINT || mpz_sizeinbase(*it->value._ZINTptr,2)>124){
+	  mpz_clear(tmpz);
+	  return false;
+	}
+	mpz2int128(it->value._ZINTptr,&tmpz,gu.g);
+      }
+      tmp=gu.g>0?gu.g:-gu.g;
+      if (tmp>maxp)
+	maxp=tmp;
+      v.push_back(gu);
+    }
+    mpz_clear(tmpz);
+    return true;
+  }
+#endif
+
   template<class U> void convert_longlong(const std::vector< T_unsigned<gen,U> > & p,std::vector< T_unsigned<longlong,U> > & pd){
     typename std::vector< T_unsigned<gen,U> >::const_iterator it=p.begin(),itend=p.end();
     pd.reserve(itend-it);
@@ -550,17 +600,17 @@ namespace giac {
     p.coord=std::vector< monomial<gen> >(itend-it);
     std::vector< monomial<gen> >::iterator jt=p.coord.begin();
     int nthreads=threads;
-    if (nthreads==1 || !threaded ||p.dim>POLY_VARS){
+    if (nthreads==1 || !threaded || p.dim>POLY_VARS){
       convert_from<T,U>(it,itend,deg,jt,0); 
       return;
     }
-#if defined(HAVE_PTHREAD_H) && !defined(EMCC) && !defined(__clang__)
+#if defined(HAVE_PTHREAD_H) && !defined(EMCC) // && !defined(__clang__)
     unsigned taille=itend-it;
     if (nthreads>1 
 	&& int(taille)>nthreads*1000
 	){
       pthread_t tab[nthreads];
-      convert_t<T,U> arg[nthreads];
+      std::vector< convert_t<T,U> > arg(nthreads);
       for (int i=0;i<nthreads;i++){
 	convert_t<T,U> tmp={it+i*(taille/nthreads),it+(i+1)*taille/nthreads,&deg,jt+i*(taille/nthreads),0};
 	if (i==nthreads-1){
