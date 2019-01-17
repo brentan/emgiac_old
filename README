@@ -1,2 +1,5 @@
 
-An emscripten port of giac for use with SwiftCalcs.  Most of this software is created by the giac creators, especially Bernard Parisse.  Some modifications have been added for SwiftCalcs usage.  These modifications can be enabled/disabled using the SWIFT_CALCS_OPTIONS compiler flag.
+THIS REPOSITORY IS NO LONGER MAINTAINED.  
+
+Please see my fork of the official emgiac repository at:
+https://github.com/brentan/emgiac
